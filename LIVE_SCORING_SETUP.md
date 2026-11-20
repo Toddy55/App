@@ -1,50 +1,60 @@
 # Live scoring setup (one-off, about 5 minutes)
 
-Live scoring uses a free Firebase Realtime Database. You only do this once, and your mates never need to.
+Live scoring needs a free Firebase database. You do this once, on a computer (it's easier than on a phone). Your mates never need to do anything.
 
-## 1. Create the Firebase project
-1. Go to https://console.firebase.google.com and sign in with a Google account.
-2. **Create a project** and call it something like `fairway-coach`. You can switch Google Analytics off.
+## Step 1: Create a project
+1. Go to **https://console.firebase.google.com** and sign in with your Google account.
+2. Click **Create a project** (or **Get started**).
+3. Name it `fairway-coach` and click **Continue**.
+4. When it asks about **Google Analytics**, switch it **off**, then click **Create project**. When it's done, click **Continue**.
 
-## 2. Turn on anonymous sign-in
-This lets phones connect without anyone making an account.
-1. In the left menu, go to **Build → Authentication → Get started**.
-2. On the **Sign-in method** tab, choose **Anonymous**, switch it on and **Save**.
-3. On the **Settings** tab, go to **Authorized domains → Add domain** and add `toddy55.github.io` (the address the app is published at).
+## Step 2: Turn on sign-in
+1. In the left-hand menu, click **Build**, then **Authentication**, then **Get started**.
+2. Under **Native providers**, click **Anonymous**, flick the switch to **Enable**, and click **Save**.
 
-## 3. Create the database
-1. Go to **Build → Realtime Database → Create database**.
-2. For the location, choose **Singapore (asia-southeast1)**, the closest to Australia.
-3. Choose **Start in locked mode**.
-4. Open the **Rules** tab, replace everything with the contents of [`database.rules.json`](database.rules.json) and click **Publish**.
+## Step 3: Create the database
+1. In the left-hand menu, click **Build**, then **Realtime Database**, then **Create Database**.
+2. For the location, pick **Singapore**, then click **Next**.
+3. Leave **Start in locked mode** selected and click **Enable**.
+4. Click the **Rules** tab at the top. Select everything in the box, delete it, and paste this in:
 
-The rules mean that each scorer can only change their own group's card, anyone with the code can watch (or join as another group's scorer), and nobody can list or browse other rounds.
+```json
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "events": {
+      "$code": {
+        ".read": "auth != null && $code.length >= 6",
+        "groups": {
+          "$group": {
+            ".write": "auth != null && $group.length <= 12 && (!data.exists() || data.child('owner').val() === auth.uid)",
+            ".validate": "newData.hasChildren(['owner', 'data', 'status', 'updatedAt']) && newData.child('owner').val() === auth.uid && newData.child('data').isString() && newData.child('data').val().length < 300000",
+            "status": { ".validate": "newData.val() === 'live' || newData.val() === 'final'" }
+          }
+        }
+      }
+    }
+  }
+}
+```
 
-## 4. Connect the app
-1. Click the gear icon, then **Project settings → General → Your apps**. Click the **Web** icon `</>`, give it a nickname and click **Register app**. You don't need Firebase Hosting.
-2. Copy the `firebaseConfig` values it shows. They look like this:
-   ```js
-   const firebaseConfig = {
-     apiKey: "AIza...",
-     authDomain: "fairway-coach.firebaseapp.com",
-     databaseURL: "https://fairway-coach-default-rtdb.asia-southeast1.firebasedatabase.app",
-     projectId: "fairway-coach",
-     appId: "1:123:web:abc"
-   };
-   ```
-3. In the GitHub repo, go to **Settings → Secrets and variables → Actions → Variables → New repository variable**:
-   - Name: `VITE_FIREBASE_CONFIG`
-   - Value: the same values as JSON (every key and value in double quotes), e.g.
-     `{"apiKey":"AIza...","authDomain":"fairway-coach.firebaseapp.com","databaseURL":"https://fairway-coach-default-rtdb.asia-southeast1.firebasedatabase.app","projectId":"fairway-coach","appId":"1:123:web:abc"}`
-4. Re-run the **Deploy to GitHub Pages** workflow (Actions tab), or just push a change.
+5. Click **Publish**.
 
-The Firebase web config is not a secret: it identifies the project, and the database rules control access. Alternatively, paste it into `web/src/live/config.ts` (`PASTED_CONFIG`).
+These rules mean each scorer can only change their own group's card, anyone with the code can watch, and nobody can browse other people's rounds.
 
-## Using it on the day
-- **First group's scorer:** start the round, tap **Go live** on the hole screen and share the link to the group chat.
-- **Other groups' scorers:** open the link, tap **I'm scoring another group**, add your group's players and tee off. Your card joins the same leaderboard.
-- **Everyone else:** open the link (or type the code under "Watch a live round" on the home screen) and leave it open.
-- **After the round:** everyone (scorers too) taps **Add the full-field round to my app**, so the comp ranks the whole field together.
+## Step 4: Get the config and send it to Thoth
+1. Click the **gear icon** next to "Project Overview" at the top left, then **Project settings**.
+2. Scroll down to **Your apps** and click the **`</>`** (Web) icon.
+3. Type a nickname (e.g. `fairway`). Leave "Firebase Hosting" **unticked** and click **Register app**.
+4. You'll see a block of code containing `const firebaseConfig = { ... }`. **Copy that block and paste it into the chat with Thoth.** It's fine to share: it's not a password, and the rules above control who can do what.
 
-## Cost
-Firebase's free Spark plan covers 1 GB stored and 10 GB downloaded a month. A live round is a few KB per update, so a weekly group will use a tiny fraction of that.
+Thoth puts it into the app and republishes. Live scoring then appears on everyone's phone.
+
+---
+
+### Doing it yourself instead of sending it to Thoth
+Put the values in `web/src/live/config.ts` (`PASTED_CONFIG`), or add them as JSON in a GitHub repository variable named `VITE_FIREBASE_CONFIG` (**Settings → Secrets and variables → Actions → Variables**), then re-run the **Deploy to GitHub Pages** workflow.
+
+### Cost
+The free Spark plan covers 1 GB stored and 10 GB downloaded a month. A live round is a few KB per update, so a weekly group uses a tiny fraction of that.
