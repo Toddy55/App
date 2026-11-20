@@ -1,0 +1,293 @@
+import { useState } from 'react';
+import type { Format, Round, RoundPlayer, Team } from '../types';
+import { store, uid } from '../lib/storage';
+import { ambroseTeamHandicap, dailyHandicap, DEFAULT_ALLOWANCE, playingHandicap } from '../lib/handicap';
+import { FORMAT_BLURB, FORMAT_LABELS } from '../lib/scoring';
+import { Card, Header, Segmented, type Go } from '../components/ui';
+
+interface P {
+  id: string;
+  name: string;
+  ga: number;
+}
+
+const FORMATS: Format[] = ['stableford', 'stroke', 'par', 'ambrose', 'fourball', 'matchplay', 'skins'];
+
+export function Setup({ go, courseId }: { go: Go; courseId?: string }) {
+  const settings = store.settings();
+  const courses = store.courses();
+  const [cid, setCid] = useState(courseId ?? courses[0]?.id);
+  const course = courses.find((c) => c.id === cid);
+  const [format, setFormat] = useState<Format>('stableford');
+  const [which, setWhich] = useState<'18' | 'front' | 'back'>('18');
+  const [players, setPlayers] = useState<P[]>([{ id: 'me', name: settings.me.name, ga: settings.me.gaHandicap }]);
+  const [allowance, setAllowance] = useState<number>(DEFAULT_ALLOWANCE.stableford);
+  const [ambroseSize, setAmbroseSize] = useState<2 | 3 | 4>(4);
+  const [skinsNet, setSkinsNet] = useState(false);
+  const [carry, setCarry] = useState(true);
+  const [newName, setNewName] = useState('');
+  const [newGa, setNewGa] = useState('');
+  const friends = store.friends();
+
+  const pickFormat = (f: Format) => {
+    setFormat(f);
+    setAllowance(DEFAULT_ALLOWANCE[f]);
+  };
+
+  if (!course) {
+    return (
+      <div className="screen">
+        <Header title="New round" onBack={() => go({ name: 'home' })} />
+        <div className="content">
+          <Card>
+            <p>First up, find your course.</p>
+            <button className="btn primary" onClick={() => go({ name: 'courses', pick: true })}>
+              Find a course
+            </button>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  const holes =
+    course.holes.length <= 9 || which === '18'
+      ? course.holes
+      : which === 'front'
+        ? course.holes.filter((h) => h.number <= 9)
+        : course.holes.filter((h) => h.number > 9);
+  const par18 = course.holes.reduce((s, h) => s + h.par, 0) * (course.holes.length <= 9 ? 2 : 1);
+  const nine = holes.length <= 9;
+
+  const addPlayer = (p: P) => {
+    if (players.some((x) => x.id === p.id)) return;
+    setPlayers([...players, p]);
+  };
+
+  const maxPlayers = format === 'ambrose' ? 8 : format === 'matchplay' || format === 'fourball' ? 4 : 6;
+  const teamsNeeded = format === 'ambrose' || format === 'fourball' || (format === 'matchplay' && players.length === 4);
+  const teamSize = format === 'ambrose' ? ambroseSize : 2;
+
+  const problems: string[] = [];
+  if (format === 'matchplay' && players.length !== 2 && players.length !== 4) problems.push('Match play needs 2 players (singles) or 4 (two pairs).');
+  if (format === 'fourball' && players.length !== 4 && players.length !== 2) problems.push('4BBB needs 2 or 4 players.');
+  if (format === 'ambrose' && players.length % ambroseSize !== 0) problems.push(`${ambroseSize}-person Ambrose needs players in groups of ${ambroseSize}. You have ${players.length}.`);
+  if (format === 'skins' && players.length < 2) problems.push('Skins needs at least 2 players.');
+
+  const start = () => {
+    const rp: RoundPlayer[] = players.map((p) => {
+      const dh = dailyHandicap(p.ga, par18, course.slopeRating, course.scratchRating, holes.length);
+      return { id: p.id, name: p.name, gaHandicap: p.ga, dailyHandicap: dh, playingHandicap: playingHandicap(dh, allowance) };
+    });
+    let teams: Team[] | undefined;
+    if (teamsNeeded) {
+      teams = [];
+      for (let i = 0; i < rp.length; i += teamSize) {
+        const members = rp.slice(i, i + teamSize);
+        const t: Team = {
+          id: `t${teams.length + 1}`,
+          name: members.map((m) => m.name.split(' ')[0]).join(' & '),
+          playerIds: members.map((m) => m.id),
+          handicap: format === 'ambrose' ? ambroseTeamHandicap(members.map((m) => m.dailyHandicap)) : 0,
+        };
+        members.forEach((m) => (m.teamId = t.id));
+        teams.push(t);
+      }
+    }
+    const meId = format === 'ambrose' ? (teams?.find((t) => t.playerIds.includes('me'))?.id ?? teams?.[0]?.id ?? 'me') : 'me';
+    const round: Round = {
+      id: uid(),
+      courseId: course.id,
+      courseName: course.name,
+      date: new Date().toISOString(),
+      format,
+      holes,
+      players: rp,
+      teams,
+      meId,
+      scores: {},
+      stats: {},
+      shots: {},
+      pins: {},
+      options: { allowance, skinsNet, skinsCarryOver: carry, ambroseSize: format === 'ambrose' ? ambroseSize : undefined },
+      completed: false,
+      startedAt: Date.now(),
+    };
+    store.saveRound(round);
+    // remember playing partners for next time
+    const known = store.friends();
+    for (const p of players) if (p.id !== 'me' && !known.some((k) => k.id === p.id)) known.push({ id: p.id, name: p.name, gaHandicap: p.ga });
+    store.saveFriends(known);
+    go({ name: 'play', roundId: round.id });
+  };
+
+  return (
+    <div className="screen">
+      <Header title="New round" onBack={() => go({ name: 'home' })} />
+      <div className="content">
+        <Card title="Course">
+          <div className="row between">
+            <div>
+              <strong>{course.name}</strong>
+              <div className="muted small">
+                Par {holes.reduce((s, h) => s + h.par, 0)}
+                {course.slopeRating ? ` · slope ${course.slopeRating}` : ''}
+                {course.scratchRating ? ` · scratch ${course.scratchRating}` : ' · no ratings set (Daily Handicap = GA Handicap)'}
+              </div>
+            </div>
+            <button className="btn small" onClick={() => go({ name: 'courses', pick: true })}>
+              Change
+            </button>
+          </div>
+          {courses.length > 1 && (
+            <select value={cid} onChange={(e) => setCid(e.target.value)}>
+              {courses.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          )}
+          {course.holes.length > 9 && (
+            <Segmented
+              value={which}
+              onChange={setWhich}
+              options={[
+                { value: '18', label: '18 holes' },
+                { value: 'front', label: 'Front 9' },
+                { value: 'back', label: 'Back 9' },
+              ]}
+            />
+          )}
+        </Card>
+
+        <Card title="Format">
+          <div className="format-grid">
+            {FORMATS.map((f) => (
+              <button key={f} className={`format ${format === f ? 'on' : ''}`} onClick={() => pickFormat(f)}>
+                {FORMAT_LABELS[f]}
+              </button>
+            ))}
+          </div>
+          <p className="muted small">{FORMAT_BLURB[format]}</p>
+          {format === 'ambrose' && (
+            <Segmented
+              value={String(ambroseSize) as '2' | '3' | '4'}
+              onChange={(v) => setAmbroseSize(Number(v) as 2 | 3 | 4)}
+              options={[
+                { value: '2', label: '2-person' },
+                { value: '3', label: '3-person' },
+                { value: '4', label: '4-person' },
+              ]}
+            />
+          )}
+          {format === 'skins' && (
+            <div className="row gap wrap">
+              <label className="check">
+                <input type="checkbox" checked={skinsNet} onChange={(e) => setSkinsNet(e.target.checked)} /> Net skins
+              </label>
+              <label className="check">
+                <input type="checkbox" checked={carry} onChange={(e) => setCarry(e.target.checked)} /> Ties carry over
+              </label>
+            </div>
+          )}
+          {format !== 'ambrose' && (
+            <label className="field narrow">
+              <span>Handicap allowance %</span>
+              <input inputMode="numeric" value={allowance} onChange={(e) => setAllowance(Number(e.target.value) || 0)} />
+            </label>
+          )}
+        </Card>
+
+        <Card title={`Players (${players.length}/${maxPlayers})`}>
+          {teamsNeeded && <p className="muted small">Teams are made in order: {teamSize === 2 ? 'players 1 & 2 v 3 & 4' : `groups of ${teamSize}`}.</p>}
+          <ul className="list">
+            {players.map((p, i) => {
+              const dh = dailyHandicap(p.ga, par18, course.slopeRating, course.scratchRating, holes.length);
+              return (
+                <li key={p.id} className="row between">
+                  <div>
+                    {teamsNeeded && <span className="team-tag">T{Math.floor(i / teamSize) + 1}</span>}
+                    <strong>{p.name}</strong>
+                    <div className="muted small">
+                      GA {p.ga} → Daily {dh}
+                      {nine ? ' (9 holes)' : ''}
+                      {format !== 'ambrose' && allowance !== 100 ? ` → Playing ${playingHandicap(dh, allowance)}` : ''}
+                    </div>
+                  </div>
+                  <div className="row gap">
+                    {i > 0 && (
+                      <button
+                        className="icon-btn small"
+                        aria-label="Move up"
+                        onClick={() => {
+                          const n = [...players];
+                          [n[i - 1], n[i]] = [n[i], n[i - 1]];
+                          setPlayers(n);
+                        }}
+                      >
+                        ↑
+                      </button>
+                    )}
+                    {p.id !== 'me' && (
+                      <button className="icon-btn small" aria-label="Remove" onClick={() => setPlayers(players.filter((x) => x.id !== p.id))}>
+                        ✕
+                      </button>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+          {format === 'ambrose' && players.length >= ambroseSize && (
+            <p className="muted small">
+              Team handicaps:{' '}
+              {Array.from({ length: Math.ceil(players.length / ambroseSize) }, (_, t) => {
+                const members = players.slice(t * ambroseSize, (t + 1) * ambroseSize);
+                return `T${t + 1} ${ambroseTeamHandicap(members.map((m) => dailyHandicap(m.ga, par18, course.slopeRating, course.scratchRating, holes.length)))}`;
+              }).join(' · ')}
+            </p>
+          )}
+          {players.length < maxPlayers && (
+            <>
+              <form
+                className="row gap"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (!newName.trim()) return;
+                  addPlayer({ id: uid(), name: newName.trim(), ga: Number(newGa) || 0 });
+                  setNewName('');
+                  setNewGa('');
+                }}
+              >
+                <input className="grow" placeholder="Player name" value={newName} onChange={(e) => setNewName(e.target.value)} />
+                <input className="narrow-input" inputMode="decimal" placeholder="GA" value={newGa} onChange={(e) => setNewGa(e.target.value)} />
+                <button className="btn">Add</button>
+              </form>
+              {friends.filter((f) => !players.some((p) => p.id === f.id)).length > 0 && (
+                <div className="row gap wrap">
+                  {friends
+                    .filter((f) => !players.some((p) => p.id === f.id))
+                    .map((f) => (
+                      <button key={f.id} className="chip" onClick={() => addPlayer({ id: f.id, name: f.name, ga: f.gaHandicap })}>
+                        + {f.name} ({f.gaHandicap})
+                      </button>
+                    ))}
+                </div>
+              )}
+            </>
+          )}
+        </Card>
+
+        {problems.map((p) => (
+          <p key={p} className="error">
+            {p}
+          </p>
+        ))}
+        <button className="btn primary block big" disabled={problems.length > 0} onClick={start}>
+          Tee off
+        </button>
+      </div>
+    </div>
+  );
+}
