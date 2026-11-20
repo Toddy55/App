@@ -1,16 +1,17 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Round } from '../types';
 import { liveAvailable } from './config';
-import { livePayload, liveUrl } from './payload';
+import { livePayload, liveUrl, newEventCode, newGroupId } from './payload';
 import { shareLink } from '../lib/share';
-import { Card } from '../components/ui';
+import { Card, type Go } from '../components/ui';
 
 /**
  * Scorer's control on the hole screen: go live, share the link, and keep the
- * watchers up to date on every score change.
+ * watchers up to date on every score change. Each group's scorer pushes only
+ * their own card; the watchers' screens merge the groups.
  */
-export function LiveControl({ round, hole, onCode }: { round: Round; hole: number; onCode: (code: string) => void }) {
-  const [state, setState] = useState<'idle' | 'starting' | 'synced' | 'pending' | 'error'>(round.liveCode ? 'pending' : 'idle');
+export function LiveControl({ round, hole, onLive, go }: { round: Round; hole: number; onLive: (code: string, group: string) => void; go: Go }) {
+  const [state, setState] = useState<'idle' | 'synced' | 'pending' | 'error'>(round.liveCode ? 'pending' : 'idle');
   const [err, setErr] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const [syncedAt, setSyncedAt] = useState<number | null>(null);
@@ -19,14 +20,15 @@ export function LiveControl({ round, hole, onCode }: { round: Round; hole: numbe
 
   // Push every change (debounced so quick taps on +/− send one update)
   useEffect(() => {
-    if (!round.liveCode) return;
+    if (!round.liveCode || !round.liveGroup) return;
     const code = round.liveCode;
+    const group = round.liveGroup;
     setState('pending');
     if (timer.current) clearTimeout(timer.current);
     timer.current = setTimeout(async () => {
       try {
-        const [{ pushLive }, payload] = await Promise.all([import('./live'), livePayload(round, hole)]);
-        await pushLive(code, payload);
+        const [{ pushGroup }, payload] = await Promise.all([import('./live'), livePayload(round, hole)]);
+        await pushGroup(code, group, payload);
         setState('synced');
         setSyncedAt(Date.now());
         setErr(null);
@@ -47,25 +49,13 @@ export function LiveControl({ round, hole, onCode }: { round: Round; hole: numbe
 
   if (!liveAvailable()) return null;
 
-  const goLive = async () => {
-    setState('starting');
-    setErr(null);
-    try {
-      const [{ startLive }, payload] = await Promise.all([import('./live'), livePayload(round, hole)]);
-      const code = await startLive(payload);
-      onCode(code);
-      setSyncedAt(Date.now());
-      setState('synced');
-      await share(code);
-    } catch (e) {
-      setState('error');
-      setErr(e instanceof Error ? e.message : String(e));
-    }
-  };
-
   const share = async (code: string) => {
     try {
-      const how = await shareLink('Live scores', `Follow our round at ${round.courseName} live (code ${code}):`, liveUrl(code));
+      const how = await shareLink(
+        'Live scores',
+        `Follow us live at ${round.courseName} (code ${code}). Scoring another group? Open this and tap "I'm scoring another group":`,
+        liveUrl(code),
+      );
       setMsg(how === 'copied' ? 'Link copied. Paste it in the group chat.' : null);
     } catch {
       setMsg(`Code: ${code}`);
@@ -78,13 +68,19 @@ export function LiveControl({ round, hole, onCode }: { round: Round; hole: numbe
         <div className="row between">
           <div>
             <strong>📡 Live scoring</strong>
-            <div className="muted small">Your mates open the link and watch the scores update as you enter them.</div>
+            <div className="muted small">Your mates watch the scores update as you enter them. Other groups' scorers can join the same leaderboard.</div>
           </div>
-          <button className="btn primary small" disabled={state === 'starting'} onClick={goLive}>
-            {state === 'starting' ? 'Starting…' : 'Go live'}
+          <button
+            className="btn primary small"
+            onClick={() => {
+              const code = newEventCode();
+              onLive(code, newGroupId());
+              share(code);
+            }}
+          >
+            Go live
           </button>
         </div>
-        {err && <p className="error small">{err}</p>}
       </Card>
     );
   }
@@ -98,24 +94,33 @@ export function LiveControl({ round, hole, onCode }: { round: Round; hole: numbe
             <span className={`live-dot ${state}`} /> LIVE · {round.liveCode}
           </strong>
           <div className="muted small">
-            {state === 'synced' && ago != null ? `Everyone's up to date${ago > 4 ? ` (${ago}s ago)` : ''}` : state === 'error' ? `Not sent: ${err ?? 'error'}` : 'Sending… (no signal? it\'ll send when you\'re back in range)'}
+            {state === 'synced' && ago != null
+              ? `Your group's card is up to date${ago > 4 ? ` (${ago}s ago)` : ''}`
+              : state === 'error'
+                ? `Not sent: ${err ?? 'error'}`
+                : "Sending… (no signal? it'll send when you're back in range)"}
           </div>
         </div>
-        <button className="btn small" onClick={() => share(round.liveCode!)}>
-          Share link
-        </button>
+        <div className="row gap">
+          <button className="btn small ghost" onClick={() => go({ name: 'live', code: round.liveCode! })}>
+            Field
+          </button>
+          <button className="btn small" onClick={() => share(round.liveCode!)}>
+            Share
+          </button>
+        </div>
       </div>
       {msg && <p className="ok small">{msg}</p>}
     </Card>
   );
 }
 
-/** Send the final scores straight away (used when the round is finished). */
+/** Send the final card straight away (used when the round is finished). */
 export async function pushFinal(round: Round, hole: number) {
-  if (!round.liveCode || !liveAvailable()) return;
+  if (!round.liveCode || !round.liveGroup || !liveAvailable()) return;
   try {
-    const [{ pushLive }, payload] = await Promise.all([import('./live'), livePayload(round, hole)]);
-    await pushLive(round.liveCode, payload);
+    const [{ pushGroup }, payload] = await Promise.all([import('./live'), livePayload(round, hole)]);
+    await pushGroup(round.liveCode, round.liveGroup, payload);
   } catch {
     /* the next edit will retry */
   }

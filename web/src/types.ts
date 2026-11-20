@@ -136,6 +136,8 @@ export interface Round {
   sharedBy?: string;
   /** Code of the live scoring session, if the scorer has gone live. */
   liveCode?: string;
+  /** This phone's group within the live event (each group has its own scorer). */
+  liveGroup?: string;
   /** Not saved: when set, only these holes are counted (used for mid-round "if it finished now" tables). */
   scoreHoles?: number[];
   startedAt: number;

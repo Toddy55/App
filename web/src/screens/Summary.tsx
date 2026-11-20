@@ -100,6 +100,11 @@ export function Summary({ go, roundId }: { go: Go; roundId: string }) {
           </button>
           {shareMsg && <p className="ok small">{shareMsg}</p>}
           {round.sharedBy && <p className="muted small">Shared to you by {round.sharedBy}.</p>}
+          {round.liveCode && round.liveGroup && (
+            <button className="btn" onClick={() => go({ name: 'live', code: round.liveCode! })}>
+              📡 See the whole field &amp; save the combined round
+            </button>
+          )}
           {comps.length > 0 && (
             <>
               <p className="muted small">Counts towards:</p>

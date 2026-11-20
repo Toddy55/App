@@ -45,7 +45,7 @@ export default function App() {
     case 'course':
       return <CourseEditor key={key} go={go} id={route.id} />;
     case 'setup':
-      return <Setup key={key} go={go} courseId={route.courseId} />;
+      return <Setup key={key} go={go} courseId={route.courseId} join={route.liveCode ? { code: route.liveCode, format: route.format, holes: route.holes, compIds: route.compIds } : undefined} />;
     case 'play':
       return <Play key={key} go={go} roundId={route.roundId} />;
     case 'summary':

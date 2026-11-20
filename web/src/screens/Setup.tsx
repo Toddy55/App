@@ -4,6 +4,7 @@ import { store, uid } from '../lib/storage';
 import { ambroseTeamHandicap, dailyHandicap, DEFAULT_ALLOWANCE, playingHandicap } from '../lib/handicap';
 import { FORMAT_BLURB, FORMAT_LABELS } from '../lib/scoring';
 import { suggestedComps } from '../lib/comps';
+import { newGroupId } from '../live/payload';
 import { Card, Header, Segmented, type Go } from '../components/ui';
 
 interface P {
@@ -14,15 +15,17 @@ interface P {
 
 const FORMATS: Format[] = ['stableford', 'stroke', 'par', 'ambrose', 'fourball', 'matchplay', 'skins'];
 
-export function Setup({ go, courseId }: { go: Go; courseId?: string }) {
+export function Setup({ go, courseId, join }: { go: Go; courseId?: string; join?: { code: string; format?: Format; holes?: number[]; compIds?: string[] } }) {
   const settings = store.settings();
   const courses = store.courses();
   const [cid, setCid] = useState(courseId ?? courses[0]?.id);
   const course = courses.find((c) => c.id === cid);
-  const [format, setFormat] = useState<Format>('stableford');
-  const [which, setWhich] = useState<'18' | 'front' | 'back'>('18');
+  const [format, setFormat] = useState<Format>(join?.format ?? 'stableford');
+  const [which, setWhich] = useState<'18' | 'front' | 'back'>(() =>
+    !join?.holes || join.holes.length > 9 ? '18' : join.holes[0] === 1 ? 'front' : 'back',
+  );
   const [players, setPlayers] = useState<P[]>([{ id: 'me', name: settings.me.name, ga: settings.me.gaHandicap }]);
-  const [allowance, setAllowance] = useState<number>(DEFAULT_ALLOWANCE.stableford);
+  const [allowance, setAllowance] = useState<number>(DEFAULT_ALLOWANCE[join?.format ?? 'stableford']);
   const [ambroseSize, setAmbroseSize] = useState<2 | 3 | 4>(4);
   const [skinsNet, setSkinsNet] = useState(false);
   const [carry, setCarry] = useState(true);
@@ -31,7 +34,7 @@ export function Setup({ go, courseId }: { go: Go; courseId?: string }) {
   const friends = store.friends();
   const comps = store.comps();
   // null = follow the suggestion; otherwise the user's explicit picks
-  const [compPick, setCompPick] = useState<string[] | null>(null);
+  const [compPick, setCompPick] = useState<string[] | null>(join?.compIds ?? null);
   const compIds = compPick ?? suggestedComps(comps, players.map((p) => p.id));
   const activeComps = comps.filter((c) => !c.end || c.end >= new Date().toISOString().slice(0, 10));
 
@@ -118,6 +121,8 @@ export function Setup({ go, courseId }: { go: Go; courseId?: string }) {
       options: { allowance, skinsNet, skinsCarryOver: carry, ambroseSize: format === 'ambrose' ? ambroseSize : undefined },
       completed: false,
       compIds,
+      liveCode: join?.code,
+      liveGroup: join ? newGroupId() : undefined,
       startedAt: Date.now(),
     };
     store.saveRound(round);
@@ -155,7 +160,7 @@ export function Setup({ go, courseId }: { go: Go; courseId?: string }) {
               ))}
             </select>
           )}
-          {course.holes.length > 9 && (
+          {course.holes.length > 9 && !join && (
             <Segmented
               value={which}
               onChange={setWhich}
@@ -168,14 +173,23 @@ export function Setup({ go, courseId }: { go: Go; courseId?: string }) {
           )}
         </Card>
 
+        {join && (
+          <Card className="live-card on">
+            <strong>✍️ Scoring another group · live code {join.code}</strong>
+            <p className="muted small">
+              Add the players in your group and tee off. Your card joins the same live leaderboard as the other groups. Format and holes match the first group.
+            </p>
+          </Card>
+        )}
         <Card title="Format">
-          <div className="format-grid">
+          {!join && <div className="format-grid">
             {FORMATS.map((f) => (
               <button key={f} className={`format ${format === f ? 'on' : ''}`} onClick={() => pickFormat(f)}>
                 {FORMAT_LABELS[f]}
               </button>
             ))}
-          </div>
+          </div>}
+          {join && <strong>{FORMAT_LABELS[format]}</strong>}
           <p className="muted small">{FORMAT_BLURB[format]}</p>
           {format === 'ambrose' && (
             <Segmented

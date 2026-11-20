@@ -22,7 +22,9 @@ export function Import({ go, data }: { go: Go; data: string }) {
         // Skip rounds that look like ones we've already got (same course, same day, entered on this phone)
         const s: Record<string, boolean> = {};
         for (const r of b.rounds) {
-          const dupe = local.find((l) => l.id !== r.id && l.courseName === r.courseName && roundDay(l) === roundDay(r) && !l.sharedBy);
+          const dupe = local.find(
+            (l) => l.id !== r.id && l.courseName === r.courseName && roundDay(l) === roundDay(r) && !l.sharedBy && !(r.liveCode && l.liveCode === r.liveCode),
+          );
           if (dupe) s[r.id] = true;
         }
         setSkip(s);
@@ -40,6 +42,24 @@ export function Import({ go, data }: { go: Go; data: string }) {
       store.saveComp(mine ? { ...c, memberIds: [...new Set([...mine.memberIds, ...c.memberIds])] } : c);
     }
     for (const r of plan.rounds) {
+      // A full-field live round replaces this phone's own group card, keeping our personal stats
+      if (r.liveCode) {
+        for (const g of store.rounds().filter((l) => l.liveCode === r.liveCode && l.id !== r.id)) {
+          if (r.meId === 'me' && g.meId === 'me') {
+            r.stats = g.stats;
+            r.shots = g.shots;
+            r.pins = g.pins;
+          } else if (g.teams?.some((t) => t.id === g.meId && t.playerIds.includes('me'))) {
+            const myTeam = r.teams?.find((t) => t.playerIds.includes('me'));
+            if (myTeam) {
+              r.meId = myTeam.id;
+              r.stats = g.stats;
+            }
+          }
+          r.sharedBy = undefined;
+          store.deleteRound(g.id);
+        }
+      }
       const mine = store.round(r.id);
       // Keep anything personal we already had for this round (our stats, shots, AI report)
       store.saveRound(

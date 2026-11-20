@@ -167,3 +167,32 @@ describe('mid-round projection', () => {
     expect(e.find((x) => x.playerId === 'd')!.stableford).toBe(4);
   });
 });
+
+describe('multi-group live events', () => {
+  it('merges two groups into one field so the comp ranks everyone together', async () => {
+    const { mergeGroupRounds } = await import('./merge');
+    const comp = newComp('friday', ['me', 'd', 's', 'b'], { start: '2026-11-01', pointsTable: [10, 8, 6, 5], participationPoints: 0, birdieBonus: 0 });
+    const g1 = round('g1', '2026-11-06', [P('me', 'Toddy', 18), P('d', 'Dazza', 18)], { me: 1, d: 0 }, { liveCode: 'EV1', liveGroup: 'ga' });
+    const g2 = round('g2', '2026-11-06', [P('s', 'Shazza', 18), P('b', 'Bazza', 18)], { s: 2, b: -1 }, { liveCode: 'EV1', liveGroup: 'gb', startedAt: g1.startedAt + 600000 });
+    const field = mergeGroupRounds([g2, g1], 'EV1');
+    expect(field.id).toBe('ev-EV1');
+    expect(field.players.map((p) => p.id)).toEqual(['me', 'd', 's', 'b']);
+    const res = computeComp(comp, [field], nameOf, '2026-11-20');
+    const by = Object.fromEntries(res.standings.map((s) => [s.playerId, s.value]));
+    // Bazza 72 pts, Dazza 54, Toddy 36, Shazza 18: ranked across both groups
+    expect(by).toEqual({ b: 10, d: 8, me: 6, s: 5 });
+  });
+  it('keeps Ambrose teams from different groups apart', async () => {
+    const { mergeGroupRounds } = await import('./merge');
+    const mk = (id: string, ids: string[]) =>
+      round(id, '2026-11-06', ids.map((x) => P(x, nameOf(x), 10)), {}, {
+        format: 'ambrose',
+        teams: [{ id: 't1', name: ids.join('&'), playerIds: ids, handicap: 5 }],
+        meId: 't1',
+        scores: { t1: Object.fromEntries(holes.map((h) => [h.number, h.par])) },
+      });
+    const field = mergeGroupRounds([mk('a', ['me', 'd']), { ...mk('b', ['s', 'b']), startedAt: Date.parse('2026-11-07') }], 'EV2');
+    expect(field.teams!.map((t) => t.id)).toEqual(['g1-t1', 'g2-t1']);
+    expect(Object.keys(field.scores).sort()).toEqual(['g1-t1', 'g2-t1']);
+  });
+});

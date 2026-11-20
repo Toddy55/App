@@ -170,7 +170,7 @@ export function Play({ go, roundId }: { go: Go; roundId: string }) {
         </div>
       ) : (
         <div className="content">
-          <LiveControl round={round} hole={hole.number} onCode={(code) => update((r) => ({ ...r, liveCode: code }))} />
+          <LiveControl round={round} hole={hole.number} go={go} onLive={(code, group) => update((r) => ({ ...r, liveCode: code, liveGroup: group }))} />
           {/* Distances */}
           <Card className="yardage">
             {!hole.green ? (

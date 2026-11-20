@@ -37,7 +37,8 @@ It runs in the browser and installs to your home screen (Share → Add to Home S
 **Live scoring**
 - The chosen scorer taps **Go live** on the hole screen and shares the link (or the 8-letter code). Everyone with it open sees scores, the leaderboard and the "if it finished now" comp table update within about a second of each score going in
 - No logins for anyone. If the scorer loses signal, scores queue on their phone and send when it's back
-- When the round's finished, watchers tap "Add this round to my app" to keep it
+- **More than one group?** Each group has its own scorer. The second group's scorer opens the same link and taps "I'm scoring another group" (course, format and holes are copied across). Everyone sees one combined leaderboard for the whole field, which hole each group is on, and the comp table ranked across all groups
+- When everyone's finished, tap "Add the full-field round to my app". For scorers it replaces their own group's card, keeping their personal stats
 - Needs a free Firebase project, a one-off setup: see [LIVE_SCORING_SETUP.md](LIVE_SCORING_SETUP.md)
 
 **Coaching**
@@ -65,5 +66,5 @@ npm run build    # production build in web/dist
 - Handicap allowances default to 100% (85% for 4BBB) and can be changed for each round to match your club's conditions of play.
 - The "plays like" maths uses caddie rules of thumb and the coach's benchmarks are typical amateur averages. Treat both as a guide, not gospel.
 - Data is stored on the device. Use Settings → Export backup now and then.
-- Comp tables sync by link (or by watching a live round and saving it). Live scoring covers one group's round at a time.
+- Comp tables sync by link, or by watching a live round and saving it.
 - Satellite imagery © Esri; course data © OpenStreetMap contributors; weather by Open-Meteo.

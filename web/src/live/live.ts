@@ -1,14 +1,15 @@
 import { initializeApp, type FirebaseApp } from 'firebase/app';
 import { connectAuthEmulator, getAuth, signInAnonymously } from 'firebase/auth';
-import { connectDatabaseEmulator, getDatabase, onValue, ref, set, update, type Database } from 'firebase/database';
+import { connectDatabaseEmulator, getDatabase, onValue, ref, set, type Database } from 'firebase/database';
 import { emulator, firebaseConfig } from './config';
 
 /**
- * Live scoring sessions live at /live/{code}. Only the scorer's phone (the
- * anonymous user who created the session) can write; anyone with the code
- * can watch. The payload is the same compressed bundle used for share links.
+ * A live event lives at /events/{code}. Each group on the course has its own
+ * scorer, who writes only their own card at /events/{code}/groups/{groupId}.
+ * Anyone with the code can watch every group. The payload is the same
+ * compressed bundle used for share links.
  */
-export interface LiveDoc {
+export interface GroupDoc {
   owner: string;
   data: string;
   status: 'live' | 'final';
@@ -22,7 +23,7 @@ let app: FirebaseApp | null = null;
 let db: Database | null = null;
 
 async function init(): Promise<{ db: Database; uid: string }> {
-  if (!firebaseConfig) throw new Error('Live scoring isn\'t set up yet (no Firebase config).');
+  if (!firebaseConfig) throw new Error("Live scoring isn't set up yet (no Firebase config).");
   if (!app) {
     app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
@@ -38,33 +39,21 @@ async function init(): Promise<{ db: Database; uid: string }> {
   return { db: db!, uid: user.uid };
 }
 
-const ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no 0/O/1/I mix-ups
-export function newCode(): string {
-  const bytes = crypto.getRandomValues(new Uint8Array(8));
-  return Array.from(bytes, (b) => ALPHABET[b % ALPHABET.length]).join('');
-}
-
-export function normaliseCode(input: string): string {
-  return input.toUpperCase().replace(/[^A-Z0-9]/g, '');
-}
-
-export async function startLive(payload: Omit<LiveDoc, 'owner' | 'updatedAt'>, code = newCode()): Promise<string> {
+/** Push this group's latest card. Firebase queues it while offline and sends it when signal returns. */
+export async function pushGroup(code: string, groupId: string, payload: Omit<GroupDoc, 'owner' | 'updatedAt'>): Promise<void> {
   const { db, uid } = await init();
-  await set(ref(db, `live/${code}`), { ...payload, owner: uid, updatedAt: Date.now() });
-  return code;
+  await set(ref(db, `events/${code}/groups/${groupId}`), { ...payload, owner: uid, updatedAt: Date.now() });
 }
 
-/** Push the latest scores. Firebase queues this while offline and sends it when signal returns. */
-export async function pushLive(code: string, payload: Omit<LiveDoc, 'owner' | 'updatedAt'>): Promise<void> {
-  const { db, uid } = await init();
-  await update(ref(db, `live/${code}`), { ...payload, owner: uid, updatedAt: Date.now() });
-}
-
-export async function watchLive(code: string, onDoc: (doc: LiveDoc | null) => void, onError: (e: Error) => void): Promise<() => void> {
+export async function watchEvent(
+  code: string,
+  onGroups: (groups: Record<string, GroupDoc> | null) => void,
+  onError: (e: Error) => void,
+): Promise<() => void> {
   const { db } = await init();
   return onValue(
-    ref(db, `live/${code}`),
-    (snap) => onDoc(snap.exists() ? (snap.val() as LiveDoc) : null),
+    ref(db, `events/${code}/groups`),
+    (snap) => onGroups(snap.exists() ? (snap.val() as Record<string, GroupDoc>) : null),
     (e) => onError(e),
   );
 }
