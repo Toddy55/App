@@ -15,7 +15,15 @@ export interface FirebaseWebConfig {
   [k: string]: string | undefined;
 }
 
-const PASTED_CONFIG: FirebaseWebConfig | null = null;
+const PASTED_CONFIG: FirebaseWebConfig | null = {
+  apiKey: 'AIzaSyB4x4dlP0NpRxceTT-QJxoZlJlzqZDmpmw',
+  authDomain: 'fairway-coach-ad388.firebaseapp.com',
+  databaseURL: 'https://fairway-coach-ad388-default-rtdb.asia-southeast1.firebasedatabase.app',
+  projectId: 'fairway-coach-ad388',
+  storageBucket: 'fairway-coach-ad388.firebasestorage.app',
+  messagingSenderId: '643537033304',
+  appId: '1:643537033304:web:8323fa16c5f1205964922d',
+};
 
 function fromEnv(): FirebaseWebConfig | null {
   const raw = import.meta.env.VITE_FIREBASE_CONFIG as string | undefined;
