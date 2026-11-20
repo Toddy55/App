@@ -95,8 +95,9 @@ export function sideRows(round: Round, sides: Side[]): LeaderRow[] {
       net = 0,
       points = 0,
       parScore = 0;
+    const only = round.scoreHoles ? new Set(round.scoreHoles) : null;
     for (const hole of round.holes) {
-      const g = scores[hole.number];
+      const g = only && !only.has(hole.number) ? undefined : scores[hole.number];
       const strokes = (alloc as Record<number, number>)[hole.number] ?? 0;
       if (g == null || g <= 0) {
         cells[hole.number] = { strokes };
@@ -113,7 +114,11 @@ export function sideRows(round: Round, sides: Side[]): LeaderRow[] {
       points += pts;
       parScore += pr;
     }
-    if (isAmbrose) net = Math.round((gross - side.handicap) * 10) / 10;
+    if (isAmbrose) {
+      // Pro-rata the team handicap when only part of the round is counted
+      const share = only ? only.size / round.holes.length : 1;
+      net = Math.round((gross - side.handicap * share) * 10) / 10;
+    }
     return {
       id: side.id,
       name: side.name,

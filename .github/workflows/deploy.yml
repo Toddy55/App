@@ -30,6 +30,9 @@ jobs:
       - run: npm ci
       - run: npx vitest run
       - run: npm run build
+        env:
+          # Firebase web config for live scoring (Settings → Secrets and variables → Actions → Variables)
+          VITE_FIREBASE_CONFIG: ${{ vars.VITE_FIREBASE_CONFIG }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: web/dist

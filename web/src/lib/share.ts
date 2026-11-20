@@ -51,8 +51,9 @@ export function makeBundle(opts: { me: Player; friends: Player[]; rounds: Round[
   const rounds = opts.rounds.map((r) => {
     r.players.forEach((p) => toKey(p.id, p.name, p.gaHandicap));
     const lookup = (id: string) => toKey(id, r.players.find((p) => p.id === id)?.name);
-    // Shots, AI write-ups and pins are personal; leave them on the sender's phone.
-    const { aiReport: _a, ...rest } = remapRound({ ...r, shots: {}, pins: {} }, lookup);
+    // Shots, stats, AI write-ups and pins are personal; leave them on the sender's phone.
+    const { aiReport: _a, liveCode: _l, ...rest } = remapRound({ ...r, shots: {}, pins: {}, stats: {} }, lookup);
+    void _l;
     void _a;
     return rest as Round;
   });

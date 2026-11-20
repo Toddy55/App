@@ -154,3 +154,16 @@ describe('sharing between phones', () => {
     expect(res.rounds.length).toBe(1);
   });
 });
+
+describe('mid-round projection', () => {
+  it('counts only the holes played so far, with full-round handicap strokes', () => {
+    const comp = newComp('friday', ['me', 'd'], { start: '2026-11-01', pointsTable: [10, 8], participationPoints: 0 });
+    const r = round('live', '2026-11-06', crew.slice(0, 2), { me: 0, d: 1 }, { completed: false });
+    const projected = { ...r, completed: true, scoreHoles: [1, 2] };
+    const res = computeComp(comp, [projected], nameOf, '2026-11-20');
+    const e = res.rounds[0].entries;
+    // Off 18, SI 1-2 holes get one shot each: par = 3 pts, bogey = 2 pts
+    expect(e.find((x) => x.playerId === 'me')!.stableford).toBe(6);
+    expect(e.find((x) => x.playerId === 'd')!.stableford).toBe(4);
+  });
+});

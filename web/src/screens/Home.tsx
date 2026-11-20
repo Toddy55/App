@@ -2,6 +2,7 @@ import { store } from '../lib/storage';
 import { computeResult, FORMAT_LABELS, toParLabel } from '../lib/scoring';
 import { Card, Header, type Go } from '../components/ui';
 import { computeComp } from '../lib/comps';
+import { JoinLive } from '../live/LiveView';
 
 const ordinal = (n: number) => (n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] ?? 'th');
 
@@ -66,6 +67,8 @@ export function Home({ go }: { go: Go }) {
             <span>Settings</span>
           </button>
         </div>
+
+        <JoinLive go={go} />
 
         {liveComps.length > 0 && (
           <Card title="Comps">

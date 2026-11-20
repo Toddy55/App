@@ -1,0 +1,122 @@
+import { useEffect, useRef, useState } from 'react';
+import type { Round } from '../types';
+import { liveAvailable } from './config';
+import { livePayload, liveUrl } from './payload';
+import { shareLink } from '../lib/share';
+import { Card } from '../components/ui';
+
+/**
+ * Scorer's control on the hole screen: go live, share the link, and keep the
+ * watchers up to date on every score change.
+ */
+export function LiveControl({ round, hole, onCode }: { round: Round; hole: number; onCode: (code: string) => void }) {
+  const [state, setState] = useState<'idle' | 'starting' | 'synced' | 'pending' | 'error'>(round.liveCode ? 'pending' : 'idle');
+  const [err, setErr] = useState<string | null>(null);
+  const [msg, setMsg] = useState<string | null>(null);
+  const [syncedAt, setSyncedAt] = useState<number | null>(null);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [, tick] = useState(0);
+
+  // Push every change (debounced so quick taps on +/− send one update)
+  useEffect(() => {
+    if (!round.liveCode) return;
+    const code = round.liveCode;
+    setState('pending');
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(async () => {
+      try {
+        const [{ pushLive }, payload] = await Promise.all([import('./live'), livePayload(round, hole)]);
+        await pushLive(code, payload);
+        setState('synced');
+        setSyncedAt(Date.now());
+        setErr(null);
+      } catch (e) {
+        setState('error');
+        setErr(e instanceof Error ? e.message : String(e));
+      }
+    }, 600);
+    return () => {
+      if (timer.current) clearTimeout(timer.current);
+    };
+  }, [round, hole]);
+
+  useEffect(() => {
+    const t = setInterval(() => tick((n) => n + 1), 5000);
+    return () => clearInterval(t);
+  }, []);
+
+  if (!liveAvailable()) return null;
+
+  const goLive = async () => {
+    setState('starting');
+    setErr(null);
+    try {
+      const [{ startLive }, payload] = await Promise.all([import('./live'), livePayload(round, hole)]);
+      const code = await startLive(payload);
+      onCode(code);
+      setSyncedAt(Date.now());
+      setState('synced');
+      await share(code);
+    } catch (e) {
+      setState('error');
+      setErr(e instanceof Error ? e.message : String(e));
+    }
+  };
+
+  const share = async (code: string) => {
+    try {
+      const how = await shareLink('Live scores', `Follow our round at ${round.courseName} live (code ${code}):`, liveUrl(code));
+      setMsg(how === 'copied' ? 'Link copied. Paste it in the group chat.' : null);
+    } catch {
+      setMsg(`Code: ${code}`);
+    }
+  };
+
+  if (!round.liveCode) {
+    return (
+      <Card className="live-card">
+        <div className="row between">
+          <div>
+            <strong>📡 Live scoring</strong>
+            <div className="muted small">Your mates open the link and watch the scores update as you enter them.</div>
+          </div>
+          <button className="btn primary small" disabled={state === 'starting'} onClick={goLive}>
+            {state === 'starting' ? 'Starting…' : 'Go live'}
+          </button>
+        </div>
+        {err && <p className="error small">{err}</p>}
+      </Card>
+    );
+  }
+
+  const ago = syncedAt ? Math.round((Date.now() - syncedAt) / 1000) : null;
+  return (
+    <Card className="live-card on">
+      <div className="row between">
+        <div>
+          <strong>
+            <span className={`live-dot ${state}`} /> LIVE · {round.liveCode}
+          </strong>
+          <div className="muted small">
+            {state === 'synced' && ago != null ? `Everyone's up to date${ago > 4 ? ` (${ago}s ago)` : ''}` : state === 'error' ? `Not sent: ${err ?? 'error'}` : 'Sending… (no signal? it\'ll send when you\'re back in range)'}
+          </div>
+        </div>
+        <button className="btn small" onClick={() => share(round.liveCode!)}>
+          Share link
+        </button>
+      </div>
+      {msg && <p className="ok small">{msg}</p>}
+    </Card>
+  );
+}
+
+/** Send the final scores straight away (used when the round is finished). */
+export async function pushFinal(round: Round, hole: number) {
+  if (!round.liveCode || !liveAvailable()) return;
+  try {
+    const [{ pushLive }, payload] = await Promise.all([import('./live'), livePayload(round, hole)]);
+    await pushLive(round.liveCode, payload);
+  } catch {
+    /* the next edit will retry */
+  }
+}

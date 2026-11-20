@@ -11,10 +11,12 @@ import { Settings } from './screens/Settings';
 import { FriendDetail, Friends } from './screens/Friends';
 import { CompDetail, CompEditor, Leaderboards } from './screens/Leaderboards';
 import { Import } from './screens/Import';
+import { LiveView } from './live/LiveView';
 
 function readHash(): Route {
   try {
     if (location.hash.startsWith('#import=')) return { name: 'import', data: location.hash.slice(8) };
+    if (location.hash.startsWith('#live=')) return { name: 'live', code: location.hash.slice(6).toUpperCase() };
     const raw = decodeURIComponent(location.hash.slice(1));
     if (raw) return JSON.parse(raw) as Route;
   } catch {
@@ -64,5 +66,7 @@ export default function App() {
       return <CompEditor key={key} go={go} id={route.id} />;
     case 'import':
       return <Import key={key} go={go} data={route.data} />;
+    case 'live':
+      return <LiveView key={key} go={go} code={route.code} />;
   }
 }

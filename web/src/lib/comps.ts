@@ -104,7 +104,8 @@ export interface CompResult {
 }
 
 function isComplete(row: LeaderRow, round: Round) {
-  return row.thru === round.holes.length && round.holes.length > 0;
+  const n = round.scoreHoles ? round.scoreHoles.length : round.holes.length;
+  return row.thru === n && n > 0;
 }
 
 /** Score one round for the comp: rank members who played and award league points. */

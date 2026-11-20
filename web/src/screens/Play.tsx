@@ -7,6 +7,7 @@ import { computeResult, sidesFor } from '../lib/scoring';
 import { strokesByHole } from '../lib/handicap';
 import { useGeolocation, useWakeLock } from '../hooks';
 import { HoleMap } from '../components/HoleMap';
+import { LiveControl, pushFinal } from '../live/LiveControl';
 import { Scorecard } from '../components/Scorecard';
 import { Card, Header, Segmented, Stepper, scoreClass, type Go } from '../components/ui';
 
@@ -130,6 +131,7 @@ export function Play({ go, roundId }: { go: Go; roundId: string }) {
     const missing = round.holes.filter((h) => round.scores[me]?.[h.number] == null).map((h) => h.number);
     if (missing.length && !confirm(`No score yet for hole${missing.length > 1 ? 's' : ''} ${missing.join(', ')}. Finish anyway?`)) return;
     update((r) => ({ ...r, completed: true, finishedAt: Date.now() }));
+    pushFinal({ ...round, completed: true, finishedAt: Date.now() }, hole.number);
     go({ name: 'summary', roundId: round.id });
   };
 
@@ -168,6 +170,7 @@ export function Play({ go, roundId }: { go: Go; roundId: string }) {
         </div>
       ) : (
         <div className="content">
+          <LiveControl round={round} hole={hole.number} onCode={(code) => update((r) => ({ ...r, liveCode: code }))} />
           {/* Distances */}
           <Card className="yardage">
             {!hole.green ? (

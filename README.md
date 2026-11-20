@@ -34,6 +34,12 @@ It runs in the browser and installs to your home screen (Share → Add to Home S
 - All-time table across your whole crew, plus live comps on the home screen
 - **Sharing, no accounts needed:** "Share round" or "Invite / sync mates" makes a link for the group chat. Opening it on a mate's phone imports the rounds and comp, matching players by name (confirmable), skipping rounds they already scored themselves, and keeping their own stats private. "Share table" posts the standings as text
 
+**Live scoring**
+- The chosen scorer taps **Go live** on the hole screen and shares the link (or the 8-letter code). Everyone with it open sees scores, the leaderboard and the "if it finished now" comp table update within about a second of each score going in
+- No logins for anyone. If the scorer loses signal, scores queue on their phone and send when it's back
+- When the round's finished, watchers tap "Add this round to my app" to keep it
+- Needs a free Firebase project, a one-off setup: see [LIVE_SCORING_SETUP.md](LIVE_SCORING_SETUP.md)
+
 **Coaching**
 - Built-in coach (no internet or key needed): compares your putts, fairways, GIR, up-and-downs, penalties, bunker play, blow-up holes, par-5 scoring and back-nine fade against typical numbers for your handicap. It ranks the areas costing you the most shots, lists your costliest holes and why, gives a drill and an on-course tip for each, and builds a 60-minute practice plan
 - Optional AI coach: a deeper Claude write-up of the round, using your own Anthropic API key (Settings)
@@ -59,5 +65,5 @@ npm run build    # production build in web/dist
 - Handicap allowances default to 100% (85% for 4BBB) and can be changed for each round to match your club's conditions of play.
 - The "plays like" maths uses caddie rules of thumb and the coach's benchmarks are typical amateur averages. Treat both as a guide, not gospel.
 - Data is stored on the device. Use Settings → Export backup now and then.
-- Leaderboards sync by link, not live. Each time someone shares a round, the others tap the link. A live, always-in-sync leaderboard would need a small backend with logins.
+- Comp tables sync by link (or by watching a live round and saving it). Live scoring covers one group's round at a time.
 - Satellite imagery © Esri; course data © OpenStreetMap contributors; weather by Open-Meteo.

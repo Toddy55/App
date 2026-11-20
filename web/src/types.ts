@@ -134,6 +134,10 @@ export interface Round {
   compIds?: string[];
   /** Name of the mate who shared this round to this phone. */
   sharedBy?: string;
+  /** Code of the live scoring session, if the scorer has gone live. */
+  liveCode?: string;
+  /** Not saved: when set, only these holes are counted (used for mid-round "if it finished now" tables). */
+  scoreHoles?: number[];
   startedAt: number;
   finishedAt?: number;
 }

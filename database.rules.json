@@ -1,0 +1,14 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "live": {
+      "$code": {
+        ".read": "auth != null && $code.length >= 6",
+        ".write": "auth != null && (!data.exists() || data.child('owner').val() === auth.uid)",
+        ".validate": "newData.hasChildren(['owner', 'data', 'status', 'updatedAt']) && newData.child('owner').val() === auth.uid && newData.child('data').isString() && newData.child('data').val().length < 300000",
+        "status": { ".validate": "newData.val() === 'live' || newData.val() === 'final'" }
+      }
+    }
+  }
+}
