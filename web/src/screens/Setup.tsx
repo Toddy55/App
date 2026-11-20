@@ -3,6 +3,7 @@ import type { Format, Round, RoundPlayer, Team } from '../types';
 import { store, uid } from '../lib/storage';
 import { ambroseTeamHandicap, dailyHandicap, DEFAULT_ALLOWANCE, playingHandicap } from '../lib/handicap';
 import { FORMAT_BLURB, FORMAT_LABELS } from '../lib/scoring';
+import { suggestedComps } from '../lib/comps';
 import { Card, Header, Segmented, type Go } from '../components/ui';
 
 interface P {
@@ -28,6 +29,11 @@ export function Setup({ go, courseId }: { go: Go; courseId?: string }) {
   const [newName, setNewName] = useState('');
   const [newGa, setNewGa] = useState('');
   const friends = store.friends();
+  const comps = store.comps();
+  // null = follow the suggestion; otherwise the user's explicit picks
+  const [compPick, setCompPick] = useState<string[] | null>(null);
+  const compIds = compPick ?? suggestedComps(comps, players.map((p) => p.id));
+  const activeComps = comps.filter((c) => !c.end || c.end >= new Date().toISOString().slice(0, 10));
 
   const pickFormat = (f: Format) => {
     setFormat(f);
@@ -111,6 +117,7 @@ export function Setup({ go, courseId }: { go: Go; courseId?: string }) {
       pins: {},
       options: { allowance, skinsNet, skinsCarryOver: carry, ambroseSize: format === 'ambrose' ? ambroseSize : undefined },
       completed: false,
+      compIds,
       startedAt: Date.now(),
     };
     store.saveRound(round);
@@ -278,6 +285,23 @@ export function Setup({ go, courseId }: { go: Go; courseId?: string }) {
             </>
           )}
         </Card>
+
+        {activeComps.length > 0 && (
+          <Card title="Counts towards">
+            <div className="row gap wrap">
+              {activeComps.map((c) => {
+                const on = compIds.includes(c.id);
+                return (
+                  <button key={c.id} className={`chip ${on ? 'on' : ''}`} onClick={() => setCompPick(on ? compIds.filter((x) => x !== c.id) : [...compIds, c.id])}>
+                    {on ? '🏆 ' : ''}
+                    {c.name}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="muted small">Only comp members' scores count. You can change this after the round too.</p>
+          </Card>
+        )}
 
         {problems.map((p) => (
           <p key={p} className="error">

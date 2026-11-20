@@ -8,9 +8,13 @@ import { Play } from './screens/Play';
 import { Summary } from './screens/Summary';
 import { Stats } from './screens/Stats';
 import { Settings } from './screens/Settings';
+import { FriendDetail, Friends } from './screens/Friends';
+import { CompDetail, CompEditor, Leaderboards } from './screens/Leaderboards';
+import { Import } from './screens/Import';
 
 function readHash(): Route {
   try {
+    if (location.hash.startsWith('#import=')) return { name: 'import', data: location.hash.slice(8) };
     const raw = decodeURIComponent(location.hash.slice(1));
     if (raw) return JSON.parse(raw) as Route;
   } catch {
@@ -48,5 +52,17 @@ export default function App() {
       return <Stats key={key} go={go} />;
     case 'settings':
       return <Settings key={key} go={go} />;
+    case 'friends':
+      return <Friends key={key} go={go} />;
+    case 'friend':
+      return <FriendDetail key={key} go={go} id={route.id} />;
+    case 'leaderboards':
+      return <Leaderboards key={key} go={go} />;
+    case 'comp':
+      return <CompDetail key={key} go={go} id={route.id} />;
+    case 'compEdit':
+      return <CompEditor key={key} go={go} id={route.id} />;
+    case 'import':
+      return <Import key={key} go={go} data={route.data} />;
   }
 }

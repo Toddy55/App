@@ -6,11 +6,13 @@ import { computeResult, FORMAT_LABELS } from '../lib/scoring';
 import { Scorecard } from '../components/Scorecard';
 import { Markdown } from '../components/Markdown';
 import { Card, Header, type Go } from '../components/ui';
+import { encodeBundle, makeBundle, shareLink, shareUrl } from '../lib/share';
 
 export function Summary({ go, roundId }: { go: Go; roundId: string }) {
   const [round, setRound] = useState<Round | undefined>(() => store.round(roundId));
   const [aiBusy, setAiBusy] = useState(false);
   const [aiErr, setAiErr] = useState<string | null>(null);
+  const [shareMsg, setShareMsg] = useState<string | null>(null);
   const settings = store.settings();
 
   if (!round) {
@@ -29,6 +31,23 @@ export function Summary({ go, roundId }: { go: Go; roundId: string }) {
   const handicap = myPlayer?.dailyHandicap ?? (team ? team.handicap : settings.me.gaHandicap);
   const c = coach(round, handicap);
   const s = c.stats;
+
+  const comps = store.comps();
+  const toggleComp = (id: string) => {
+    const ids = round.compIds ?? [];
+    const next = { ...round, compIds: ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id] };
+    store.saveRound(next);
+    setRound(next);
+  };
+  const shareRound = async () => {
+    try {
+      const b = makeBundle({ me: settings.me, friends: store.friends(), rounds: [round], comps: comps.filter((c) => round.compIds?.includes(c.id)) });
+      const how = await shareLink(`${round.courseName} round`, `${result.headline} at ${round.courseName}. Tap to add the round to your Fairway Coach:`, shareUrl(await encodeBundle(b)));
+      setShareMsg(how === 'copied' ? 'Link copied. Paste it in the group chat.' : null);
+    } catch (e) {
+      setShareMsg(e instanceof Error ? e.message : String(e));
+    }
+  };
 
   const runAi = async () => {
     if (!settings.anthropicKey) {
@@ -72,6 +91,30 @@ export function Summary({ go, roundId }: { go: Go; roundId: string }) {
             <button className="btn" onClick={() => go({ name: 'play', roundId: round.id })}>
               Back to round
             </button>
+          )}
+        </Card>
+
+        <Card title="👥 Share & comps">
+          <button className="btn primary" onClick={shareRound}>
+            🔗 Share round with the group
+          </button>
+          {shareMsg && <p className="ok small">{shareMsg}</p>}
+          {round.sharedBy && <p className="muted small">Shared to you by {round.sharedBy}.</p>}
+          {comps.length > 0 && (
+            <>
+              <p className="muted small">Counts towards:</p>
+              <div className="row gap wrap">
+                {comps.map((c) => {
+                  const on = round.compIds?.includes(c.id);
+                  return (
+                    <button key={c.id} className={`chip ${on ? 'on' : ''}`} onClick={() => toggleComp(c.id)}>
+                      {on ? '🏆 ' : ''}
+                      {c.name}
+                    </button>
+                  );
+                })}
+              </div>
+            </>
           )}
         </Card>
 

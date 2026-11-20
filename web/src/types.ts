@@ -130,6 +130,10 @@ export interface Round {
   weather?: WeatherSnapshot;
   completed: boolean;
   aiReport?: string;
+  /** Competitions (leaderboards) this round counts towards. */
+  compIds?: string[];
+  /** Name of the mate who shared this round to this phone. */
+  sharedBy?: string;
   startedAt: number;
   finishedAt?: number;
 }
@@ -139,4 +143,34 @@ export interface Settings {
   units: 'm' | 'yd';
   anthropicKey?: string;
   clubs: string[];
+}
+
+export type CompScoring = 'league' | 'stableford_total' | 'stableford_avg' | 'net_avg';
+
+/** A season-long comp between mates, e.g. "Friday Arvo League". */
+export interface Competition {
+  id: string;
+  name: string;
+  memberIds: string[];
+  /** ISO date (yyyy-mm-dd), inclusive. */
+  start: string;
+  /** ISO date (yyyy-mm-dd), inclusive. Optional for open-ended comps. */
+  end?: string;
+  /** Season ends after this many rounds have been counted. */
+  roundLimit?: number;
+  /** Only each player's best N rounds count. */
+  countBest?: number;
+  scoring: CompScoring;
+  /** League: points for 1st, 2nd, 3rd… in each round. */
+  pointsTable: number[];
+  /** League: points just for playing. */
+  participationPoints: number;
+  /** League: bonus points per gross birdie or better. */
+  birdieBonus: number;
+  /** A round only counts when at least this many members played it. */
+  minPlayers: number;
+  /** Averages: rounds needed to qualify for the table. */
+  minRounds: number;
+  holes: 'any' | '18' | '9';
+  createdAt: number;
 }

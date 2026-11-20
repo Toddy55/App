@@ -25,6 +25,15 @@ It runs in the browser and installs to your home screen (Share → Add to Home S
 - Shot tracker: mark each shot with the club you used and it builds your average club distances
 - Keeps the screen awake during a round
 
+**Friends & leaderboards**
+- Friends list with GA handicaps, rounds together and a head-to-head record (Stableford) against each mate
+- Comps for your regular group, e.g. a Friday Arvo League. Set an agreed length (start/end dates and/or a number of rounds), "best N rounds count", and the minimum players for a round to count
+- Scoring options: league points by finishing position (custom points table, points for playing, birdie bonus), total Stableford, average Stableford (with a minimum rounds to qualify), or average net
+- Ambrose rounds count in league mode, with team-mates sharing the team's position. Ties share the points
+- Rounds are tagged to comps at setup (ticked automatically when enough members are playing) and can be changed after the round
+- All-time table across your whole crew, plus live comps on the home screen
+- **Sharing, no accounts needed:** "Share round" or "Invite / sync mates" makes a link for the group chat. Opening it on a mate's phone imports the rounds and comp, matching players by name (confirmable), skipping rounds they already scored themselves, and keeping their own stats private. "Share table" posts the standings as text
+
 **Coaching**
 - Built-in coach (no internet or key needed): compares your putts, fairways, GIR, up-and-downs, penalties, bunker play, blow-up holes, par-5 scoring and back-nine fade against typical numbers for your handicap. It ranks the areas costing you the most shots, lists your costliest holes and why, gives a drill and an on-course tip for each, and builds a 60-minute practice plan
 - Optional AI coach: a deeper Claude write-up of the round, using your own Anthropic API key (Settings)
@@ -50,4 +59,5 @@ npm run build    # production build in web/dist
 - Handicap allowances default to 100% (85% for 4BBB) and can be changed for each round to match your club's conditions of play.
 - The "plays like" maths uses caddie rules of thumb and the coach's benchmarks are typical amateur averages. Treat both as a guide, not gospel.
 - Data is stored on the device. Use Settings → Export backup now and then.
+- Leaderboards sync by link, not live. Each time someone shares a round, the others tap the link. A live, always-in-sync leaderboard would need a small backend with logins.
 - Satellite imagery © Esri; course data © OpenStreetMap contributors; weather by Open-Meteo.

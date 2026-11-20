@@ -8,7 +8,13 @@ export type Route =
   | { name: 'play'; roundId: string }
   | { name: 'summary'; roundId: string }
   | { name: 'stats' }
-  | { name: 'settings' };
+  | { name: 'settings' }
+  | { name: 'friends' }
+  | { name: 'friend'; id: string }
+  | { name: 'leaderboards' }
+  | { name: 'comp'; id: string }
+  | { name: 'compEdit'; id?: string }
+  | { name: 'import'; data: string };
 
 export type Go = (r: Route) => void;
 

@@ -1,6 +1,6 @@
-import type { Course, Round, Settings } from '../types';
+import type { Competition, Course, Player, Round, Settings } from '../types';
 
-const K = { courses: 'gtg.courses', rounds: 'gtg.rounds', settings: 'gtg.settings', friends: 'gtg.friends' };
+const K = { courses: 'gtg.courses', rounds: 'gtg.rounds', settings: 'gtg.settings', friends: 'gtg.friends', comps: 'gtg.comps' };
 
 function read<T>(key: string, fallback: T): T {
   try {
@@ -49,8 +49,31 @@ export const store = {
   saveSettings(s: Settings) {
     write(K.settings, s);
   },
-  friends: (): { id: string; name: string; gaHandicap: number }[] => read(K.friends, []),
-  saveFriends(f: { id: string; name: string; gaHandicap: number }[]) {
+  friends: (): Player[] => read(K.friends, []),
+  saveFriends(f: Player[]) {
     write(K.friends, f);
+  },
+  saveFriend(p: Player) {
+    const all = store.friends();
+    const i = all.findIndex((x) => x.id === p.id);
+    if (i >= 0) all[i] = p;
+    else all.push(p);
+    store.saveFriends(all);
+  },
+  deleteFriend(id: string) {
+    store.saveFriends(store.friends().filter((f) => f.id !== id));
+  },
+  comps: (): Competition[] => read(K.comps, []),
+  comp: (id: string) => store.comps().find((c) => c.id === id),
+  saveComp(c: Competition) {
+    write(K.comps, [c, ...store.comps().filter((x) => x.id !== c.id)]);
+  },
+  deleteComp(id: string) {
+    write(K.comps, store.comps().filter((x) => x.id !== id));
+  },
+  /** Display name for a player id on this phone. */
+  nameOf(id: string, fallback?: string) {
+    if (id === 'me') return store.settings().me.name;
+    return store.friends().find((f) => f.id === id)?.name ?? fallback ?? 'Unknown';
   },
 };
