@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { blankHoles, courseCompleteness, loadCourse, nearbyCourses, searchCourses, type CourseHit } from '../lib/courses';
 import { store, uid } from '../lib/storage';
 import { getPosition } from '../hooks';
@@ -12,15 +12,19 @@ export function Courses({ go, pick }: { go: Go; pick?: boolean }) {
   const [, refresh] = useState(0);
   const saved = store.courses();
 
-  const run = async (label: string, fn: () => Promise<CourseHit[]>) => {
+  // Each search gets a number; a newer search replaces an older one that's still waiting.
+  const req = useRef(0);
+  const run = async (label: string, fn: (progress: (l: string) => void) => Promise<CourseHit[]>) => {
+    const id = ++req.current;
     setBusy(label);
     setError(null);
     try {
-      setHits(await fn());
+      const res = await fn((l) => id === req.current && setBusy(l));
+      if (id === req.current) setHits(res);
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      if (id === req.current) setError(e instanceof Error ? e.message : String(e));
     } finally {
-      setBusy(null);
+      if (id === req.current) setBusy(null);
     }
   };
 
@@ -60,13 +64,22 @@ export function Courses({ go, pick }: { go: Go; pick?: boolean }) {
               if (q.trim().length >= 3) run('Searching…', () => searchCourses(q));
             }}
           >
-            <input className="grow" placeholder="Search Aussie courses, e.g. Royal Melbourne" value={q} onChange={(e) => setQ(e.target.value)} />
-            <button className="btn primary" disabled={q.trim().length < 3 || !!busy}>
+            <input className="grow" placeholder="Course or town, e.g. Nambour" value={q} onChange={(e) => setQ(e.target.value)} />
+            <button className="btn primary" disabled={q.trim().length < 3}>
               Search
             </button>
           </form>
           <div className="row gap">
-            <button className="btn" disabled={!!busy} onClick={() => run('Finding courses near you…', async () => nearbyCourses(await getPosition()))}>
+            <button
+              className="btn"
+              onClick={() =>
+                run('Getting your location…', async (progress) => {
+                  const at = await getPosition(false);
+                  progress('Finding courses near you…');
+                  return nearbyCourses(at);
+                })
+              }
+            >
               📍 Near me
             </button>
             <button className="btn ghost" onClick={createBlank}>

@@ -2,15 +2,19 @@ import type { Course, Green, Hole, LatLon } from '../types';
 import { centroid, distanceM, pathLength, pointInPolygon } from './geo';
 
 /**
- * Course data comes from OpenStreetMap via the Overpass API. OSM has most
- * Australian golf courses mapped, and many with hole-by-hole detail
- * (tee-to-green lines with par and stroke index, plus green outlines).
+ * Course data comes from OpenStreetMap. Name and town searches use Nominatim
+ * (OpenStreetMap's search engine, fast); nearby searches and hole-by-hole
+ * detail use the Overpass API (tee-to-green lines with par and stroke index,
+ * plus green outlines). The public servers are free and sometimes busy, so
+ * every request has a time limit and falls back to another server.
  * Anything missing can be filled in or corrected in the course editor.
  */
-const ENDPOINTS = [
+const OVERPASS = [
   'https://overpass-api.de/api/interpreter',
-  'https://overpass.kumi.systems/api/interpreter',
+  'https://overpass.private.coffee/api/interpreter',
+  'https://maps.mail.ru/osm/tools/overpass/api/interpreter',
 ];
+const NOMINATIM = 'https://nominatim.openstreetmap.org/search';
 
 interface OsmElement {
   type: 'node' | 'way' | 'relation';
@@ -23,15 +27,28 @@ interface OsmElement {
   tags?: Record<string, string>;
 }
 
-async function overpass(query: string): Promise<OsmElement[]> {
+export async function fetchWithTimeout(url: string, init: RequestInit = {}, ms = 15000): Promise<Response> {
+  const ctl = new AbortController();
+  const t = setTimeout(() => ctl.abort(), ms);
+  try {
+    return await fetch(url, { ...init, signal: ctl.signal });
+  } catch (e) {
+    if (ctl.signal.aborted) throw new Error('The course server took too long to answer');
+    throw e;
+  } finally {
+    clearTimeout(t);
+  }
+}
+
+async function overpass(query: string, ms = 15000): Promise<OsmElement[]> {
   let lastErr: unknown;
-  for (const url of ENDPOINTS) {
+  for (const url of OVERPASS) {
     try {
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: 'data=' + encodeURIComponent(query),
-      });
+      const res = await fetchWithTimeout(
+        url,
+        { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: 'data=' + encodeURIComponent(query) },
+        ms,
+      );
       if (!res.ok) throw new Error(`Course server returned ${res.status}`);
       const json = await res.json();
       return json.elements ?? [];
@@ -39,7 +56,9 @@ async function overpass(query: string): Promise<OsmElement[]> {
       lastErr = e;
     }
   }
-  throw lastErr instanceof Error ? lastErr : new Error('Could not reach the course database');
+  throw new Error(
+    `Couldn't reach the course database right now (${lastErr instanceof Error ? lastErr.message : 'no answer'}). Check your signal and try again in a minute.`,
+  );
 }
 
 export interface CourseHit {
@@ -49,10 +68,6 @@ export interface CourseHit {
   state?: string;
   suburb?: string;
   distanceKm?: number;
-}
-
-function escapeRegex(s: string) {
-  return s.replace(/[.*+?^${}()|[\]\\"]/g, '\\$&');
 }
 
 function toHit(e: OsmElement, from?: LatLon): CourseHit | null {
@@ -69,20 +84,81 @@ function toHit(e: OsmElement, from?: LatLon): CourseHit | null {
   };
 }
 
-/** Search golf courses in Australia by name. */
+interface NominatimResult {
+  osm_type: 'node' | 'way' | 'relation';
+  osm_id: number;
+  lat: string;
+  lon: string;
+  name?: string;
+  category?: string;
+  class?: string;
+  type?: string;
+  display_name: string;
+  address?: Record<string, string>;
+}
+
+async function nominatim(q: string): Promise<NominatimResult[]> {
+  const url = `${NOMINATIM}?format=jsonv2&countrycodes=au&addressdetails=1&limit=20&q=${encodeURIComponent(q)}`;
+  const res = await fetchWithTimeout(url, { headers: { Accept: 'application/json' } }, 12000);
+  if (!res.ok) throw new Error(`Search server returned ${res.status}`);
+  return res.json();
+}
+
+const isGolf = (r: NominatimResult) => (r.category ?? r.class) === 'leisure' && r.type === 'golf_course';
+
+export function nominatimToHit(r: NominatimResult): CourseHit {
+  const a = r.address ?? {};
+  return {
+    osmRef: `${r.osm_type}/${r.osm_id}`,
+    name: r.name || r.display_name.split(',')[0],
+    location: { lat: Number(r.lat), lon: Number(r.lon) },
+    state: a.state,
+    suburb: a.suburb ?? a.town ?? a.city ?? a.village,
+  };
+}
+
+/**
+ * Search by course name or by town. "Royal Melbourne" finds the course;
+ * "Nambour" finds the town and lists the golf courses around it.
+ */
 export async function searchCourses(text: string): Promise<CourseHit[]> {
-  const q = escapeRegex(text.trim());
-  const query = `[out:json][timeout:25];
+  const q = text.trim();
+  const out = new Map<string, CourseHit>();
+  let place: LatLon | undefined;
+  let searchErr: unknown;
+  try {
+    const [golf, plain] = await Promise.all([nominatim(/golf/i.test(q) ? q : `${q} golf`), nominatim(q)]);
+    for (const r of [...golf, ...plain]) if (isGolf(r)) out.set(`${r.osm_type}/${r.osm_id}`, nominatimToHit(r));
+    const town = plain.find((r) => !isGolf(r));
+    if (town) place = { lat: Number(town.lat), lon: Number(town.lon) };
+  } catch (e) {
+    searchErr = e;
+  }
+  if (place) {
+    try {
+      for (const h of await nearbyCourses(place, 20)) if (!out.has(h.osmRef)) out.set(h.osmRef, h);
+    } catch (e) {
+      if (out.size === 0) throw e;
+    }
+  }
+  if (out.size === 0 && searchErr) {
+    // Search engine down: fall back to a name match in the course database
+    const esc = q.replace(/[.*+?^${}()|[\]\\"]/g, '\\$&');
+    const els = await overpass(`[out:json][timeout:25];
 area["ISO3166-1"="AU"][admin_level=2]->.au;
-nwr["leisure"="golf_course"]["name"~"${q}",i](area.au);
-out center tags 50;`;
-  const els = await overpass(query);
-  return els.map((e) => toHit(e)).filter((h): h is CourseHit => !!h);
+nwr["leisure"="golf_course"]["name"~"${esc}",i](area.au);
+out center tags 50;`, 30000);
+    for (const e of els) {
+      const h = toHit(e);
+      if (h) out.set(h.osmRef, h);
+    }
+  }
+  return [...out.values()];
 }
 
 /** Golf courses within radiusKm of a point. */
 export async function nearbyCourses(at: LatLon, radiusKm = 25): Promise<CourseHit[]> {
-  const query = `[out:json][timeout:25];
+  const query = `[out:json][timeout:20];
 nwr["leisure"="golf_course"](around:${Math.round(radiusKm * 1000)},${at.lat},${at.lon});
 out center tags 50;`;
   const els = await overpass(query);
@@ -116,12 +192,12 @@ out geom tags;`;
     els = await overpass(`[out:json][timeout:60];
 ${sel};
 map_to_area->.c;
-${detail('(area.c)')}`);
+${detail('(area.c)')}`, 45000);
   }
   if (!els.some((e) => e.tags?.golf === 'hole') && hit.location) {
     // Course boundary missing or incomplete: look around the course centre.
     els = await overpass(`[out:json][timeout:60];
-${detail(`(around:1800,${hit.location.lat},${hit.location.lon})`)}`);
+${detail(`(around:1800,${hit.location.lat},${hit.location.lon})`)}`, 45000);
   }
   return buildCourse(hit, els);
 }

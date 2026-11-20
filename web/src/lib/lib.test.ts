@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { distanceM, greenDistances, fromLocal, bearingDeg } from './geo';
 import { ambroseTeamHandicap, dailyHandicap, strokesByHole, stablefordPoints } from './handicap';
 import { computeResult } from './scoring';
@@ -164,5 +164,56 @@ describe('weather', () => {
     const fromRight = windEffect(90, 20, 0); // hitting north, wind from east -> pushes ball left
     expect(fromRight.cross).toBeLessThan(0);
     expect(playsLike(150, fromRight).aimOffM).toBeGreaterThan(0); // aim right
+  });
+});
+
+describe('course search', () => {
+  it('finds courses by name and around a town, with no duplicates', async () => {
+    const { searchCourses } = await import('./courses');
+    const real = globalThis.fetch;
+    const calls: string[] = [];
+    globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      calls.push(url);
+      if (url.includes('nominatim') && url.includes('golf')) {
+        return new Response(JSON.stringify([
+          { osm_type: 'way', osm_id: 10, lat: '-26.63', lon: '152.95', name: 'Nambour Golf Club', category: 'leisure', type: 'golf_course', display_name: 'Nambour Golf Club, Nambour', address: { town: 'Nambour', state: 'Queensland' } },
+        ]));
+      }
+      if (url.includes('nominatim')) {
+        return new Response(JSON.stringify([{ osm_type: 'relation', osm_id: 5, lat: '-26.63', lon: '152.96', name: 'Nambour', category: 'place', type: 'town', display_name: 'Nambour, QLD' }]));
+      }
+      expect(decodeURIComponent(String(init?.body))).toContain('around:20000');
+      return new Response(JSON.stringify({ elements: [
+        { type: 'way', id: 10, center: { lat: -26.63, lon: 152.95 }, tags: { name: 'Nambour Golf Club' } },
+        { type: 'way', id: 11, center: { lat: -26.7, lon: 152.98 }, tags: { name: 'Palmwoods Golf Course' } },
+      ] }));
+    }) as typeof fetch;
+    try {
+      const hits = await searchCourses('Nambour');
+      expect(hits.map((h) => h.name)).toEqual(['Nambour Golf Club', 'Palmwoods Golf Course']);
+      expect(hits[0].state).toBe('Queensland');
+    } finally {
+      globalThis.fetch = real;
+    }
+  });
+  it('gives up on a server that never answers and tries the next', async () => {
+    const { nearbyCourses } = await import('./courses');
+    const real = globalThis.fetch;
+    let n = 0;
+    globalThis.fetch = ((_u: RequestInfo | URL, init?: RequestInit) => {
+      n++;
+      if (n === 1) return new Promise((_, rej) => init?.signal?.addEventListener('abort', () => rej(new DOMException('aborted', 'AbortError'))));
+      return Promise.resolve(new Response(JSON.stringify({ elements: [{ type: 'way', id: 1, center: { lat: 0, lon: 0 }, tags: { name: 'Backup GC' } }] })));
+    }) as typeof fetch;
+    vi.useFakeTimers();
+    try {
+      const p = nearbyCourses({ lat: 0, lon: 0 });
+      await vi.advanceTimersByTimeAsync(16000);
+      expect((await p).map((h) => h.name)).toEqual(['Backup GC']);
+    } finally {
+      vi.useRealTimers();
+      globalThis.fetch = real;
+    }
   });
 });
