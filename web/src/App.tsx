@@ -1,0 +1,72 @@
+import { useEffect, useState } from 'react';
+import type { Route } from './components/ui';
+import { Home } from './screens/Home';
+import { Courses } from './screens/Courses';
+import { CourseEditor } from './screens/CourseEditor';
+import { Setup } from './screens/Setup';
+import { Play } from './screens/Play';
+import { Summary } from './screens/Summary';
+import { Stats } from './screens/Stats';
+import { Settings } from './screens/Settings';
+import { FriendDetail, Friends } from './screens/Friends';
+import { CompDetail, CompEditor, Leaderboards } from './screens/Leaderboards';
+import { Import } from './screens/Import';
+import { LiveView } from './live/LiveView';
+
+function readHash(): Route {
+  try {
+    if (location.hash.startsWith('#import=')) return { name: 'import', data: location.hash.slice(8) };
+    if (location.hash.startsWith('#live=')) return { name: 'live', code: location.hash.slice(6).toUpperCase() };
+    const raw = decodeURIComponent(location.hash.slice(1));
+    if (raw) return JSON.parse(raw) as Route;
+  } catch {
+    /* ignore */
+  }
+  return { name: 'home' };
+}
+
+export default function App() {
+  const [route, setRoute] = useState<Route>(readHash);
+  useEffect(() => {
+    const on = () => setRoute(readHash());
+    window.addEventListener('hashchange', on);
+    return () => window.removeEventListener('hashchange', on);
+  }, []);
+  const go = (r: Route) => {
+    location.hash = encodeURIComponent(JSON.stringify(r));
+    window.scrollTo(0, 0);
+  };
+  const key = JSON.stringify(route);
+  switch (route.name) {
+    case 'home':
+      return <Home key={key} go={go} />;
+    case 'courses':
+      return <Courses key={key} go={go} pick={route.pick} />;
+    case 'course':
+      return <CourseEditor key={key} go={go} id={route.id} />;
+    case 'setup':
+      return <Setup key={key} go={go} courseId={route.courseId} join={route.liveCode ? { code: route.liveCode, format: route.format, holes: route.holes, compIds: route.compIds } : undefined} />;
+    case 'play':
+      return <Play key={key} go={go} roundId={route.roundId} />;
+    case 'summary':
+      return <Summary key={key} go={go} roundId={route.roundId} />;
+    case 'stats':
+      return <Stats key={key} go={go} />;
+    case 'settings':
+      return <Settings key={key} go={go} />;
+    case 'friends':
+      return <Friends key={key} go={go} />;
+    case 'friend':
+      return <FriendDetail key={key} go={go} id={route.id} />;
+    case 'leaderboards':
+      return <Leaderboards key={key} go={go} />;
+    case 'comp':
+      return <CompDetail key={key} go={go} id={route.id} />;
+    case 'compEdit':
+      return <CompEditor key={key} go={go} id={route.id} />;
+    case 'import':
+      return <Import key={key} go={go} data={route.data} />;
+    case 'live':
+      return <LiveView key={key} go={go} code={route.code} />;
+  }
+}

@@ -1,0 +1,146 @@
+import { useState } from 'react';
+import type { Player } from '../types';
+import { store, uid } from '../lib/storage';
+import { headToHead } from '../lib/comps';
+import { computeResult, FORMAT_LABELS } from '../lib/scoring';
+import { Card, Header, type Go } from '../components/ui';
+
+export function Friends({ go }: { go: Go }) {
+  const [friends, setFriends] = useState<Player[]>(store.friends());
+  const [name, setName] = useState('');
+  const [ga, setGa] = useState('');
+  const rounds = store.rounds();
+
+  const add = () => {
+    if (!name.trim()) return;
+    store.saveFriend({ id: uid(), name: name.trim(), gaHandicap: Number(ga) || 0 });
+    setFriends(store.friends());
+    setName('');
+    setGa('');
+  };
+
+  return (
+    <div className="screen">
+      <Header title="Friends" onBack={() => go({ name: 'home' })} />
+      <div className="content">
+        <Card title="Add a mate">
+          <form className="row gap" onSubmit={(e) => { e.preventDefault(); add(); }}>
+            <input className="grow" placeholder="Name (as they'll set it in their app)" value={name} onChange={(e) => setName(e.target.value)} />
+            <input className="narrow-input" inputMode="decimal" placeholder="GA" value={ga} onChange={(e) => setGa(e.target.value)} />
+            <button className="btn">Add</button>
+          </form>
+          <p className="muted small">Use the same name your mate uses in their own app, so shared rounds match up automatically.</p>
+        </Card>
+        <Card title={`Your crew (${friends.length})`}>
+          {friends.length === 0 && <p className="muted">No mates yet. Add them here or when you set up a round.</p>}
+          <ul className="list">
+            {[...friends].sort((a, b) => a.name.localeCompare(b.name)).map((f) => {
+              const h = headToHead(rounds, 'me', f.id);
+              return (
+                <li key={f.id}>
+                  <button className="list-btn" onClick={() => go({ name: 'friend', id: f.id })}>
+                    <div>
+                      <strong>{f.name}</strong>
+                      <div className="muted small">
+                        GA {f.gaHandicap}
+                        {h.rounds ? ` · you're ${h.wins}-${h.losses}-${h.halves} in ${h.rounds} round${h.rounds > 1 ? 's' : ''}` : ''}
+                      </div>
+                    </div>
+                    <span>›</span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+export function FriendDetail({ go, id }: { go: Go; id: string }) {
+  const [f, setF] = useState<Player | undefined>(store.friends().find((x) => x.id === id));
+  const rounds = store.rounds();
+  const me = store.settings().me;
+  if (!f) {
+    return (
+      <div className="screen">
+        <Header title="Friend" onBack={() => go({ name: 'friends' })} />
+        <p className="content">Not found.</p>
+      </div>
+    );
+  }
+  const save = (p: Player) => {
+    setF(p);
+    store.saveFriend(p);
+  };
+  const h = headToHead(rounds, 'me', f.id);
+  const together = rounds
+    .filter((r) => r.completed && r.players.some((p) => p.id === f.id))
+    .sort((a, b) => b.startedAt - a.startedAt);
+
+  return (
+    <div className="screen">
+      <Header title={f.name} onBack={() => go({ name: 'friends' })} />
+      <div className="content">
+        <Card>
+          <label className="field">
+            <span>Name</span>
+            <input value={f.name} onChange={(e) => save({ ...f, name: e.target.value })} />
+          </label>
+          <label className="field narrow">
+            <span>GA Handicap</span>
+            <input inputMode="decimal" value={String(f.gaHandicap)} onChange={(e) => save({ ...f, gaHandicap: Number(e.target.value) || 0 })} />
+          </label>
+        </Card>
+        <Card title={`Head to head: ${me.name} v ${f.name}`}>
+          {h.rounds === 0 ? (
+            <p className="muted">No completed individual rounds together yet.</p>
+          ) : (
+            <>
+              <div className="kpis">
+                <div className="kpi"><div className="kpi-label">Wins</div><div className="kpi-value">{h.wins}</div></div>
+                <div className="kpi"><div className="kpi-label">Losses</div><div className="kpi-value">{h.losses}</div></div>
+                <div className="kpi"><div className="kpi-label">Halved</div><div className="kpi-value">{h.halves}</div></div>
+              </div>
+              <p className="small">
+                Average Stableford: you {h.myAvg}, {f.name} {h.theirAvg}, over {h.rounds} round{h.rounds > 1 ? 's' : ''}.
+              </p>
+            </>
+          )}
+        </Card>
+        <Card title="Rounds together">
+          <ul className="list">
+            {together.length === 0 && <li className="muted">None yet.</li>}
+            {together.map((r) => {
+              const res = computeResult(r);
+              const row = res.rows.find((x) => x.id === f.id) ?? res.rows.find((x) => r.teams?.find((t) => t.id === x.id)?.playerIds.includes(f.id));
+              return (
+                <li key={r.id}>
+                  <button className="list-btn" onClick={() => go({ name: 'summary', roundId: r.id })}>
+                    <div>
+                      <strong>{r.courseName}</strong>
+                      <div className="muted small">{new Date(r.date).toLocaleDateString('en-AU')} · {FORMAT_LABELS[r.format]}</div>
+                    </div>
+                    {row && <span className="score-pill">{r.format === 'ambrose' ? `net ${row.net}` : `${row.points} pts`}</span>}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </Card>
+        <button
+          className="btn danger ghost"
+          onClick={() => {
+            if (confirm(`Remove ${f.name}? Their past rounds stay.`)) {
+              store.deleteFriend(f.id);
+              go({ name: 'friends' });
+            }
+          }}
+        >
+          Remove friend
+        </button>
+      </div>
+    </div>
+  );
+}
