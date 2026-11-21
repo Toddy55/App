@@ -271,3 +271,4 @@ table.standings tr.cutline td { border-top: 2px dashed var(--muted); }
 .live-head { transition: background .6s; }
 .live-head.flash { background: color-mix(in srgb, var(--gold) 25%, var(--card)); }
 .group-status { list-style: none; padding: 0 !important; margin: 0; display: flex; flex-direction: column; gap: 4px !important; font-size: .9rem; }
+.install-tip { border-color: var(--gold); } .install-tip ol { margin: 0; }

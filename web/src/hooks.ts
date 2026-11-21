@@ -39,14 +39,23 @@ export function useGeolocation(enabled = true): GeoState {
   return state;
 }
 
-/** One-off position fix. */
-export function getPosition(): Promise<LatLon> {
+/** One-off position fix. Rough is fine for finding nearby courses; precise for mapping a green. */
+export function getPosition(precise = true): Promise<LatLon> {
   return new Promise((resolve, reject) => {
-    if (!('geolocation' in navigator)) return reject(new Error('GPS not available'));
+    if (!('geolocation' in navigator)) return reject(new Error('GPS not available on this device'));
     navigator.geolocation.getCurrentPosition(
       (p) => resolve({ lat: p.coords.latitude, lon: p.coords.longitude }),
-      (e) => reject(new Error(e.message || 'Could not get your location')),
-      { enableHighAccuracy: true, timeout: 20000 },
+      (e) =>
+        reject(
+          new Error(
+            e.code === e.PERMISSION_DENIED
+              ? 'Location is turned off for this app. On iPhone: Settings → Privacy & Security → Location Services → Safari Websites → "While Using the App", then try again.'
+              : e.code === e.TIMEOUT
+                ? 'Couldn\'t get a GPS fix in time. Try again, or search by course or town name instead.'
+                : 'Couldn\'t get your location. Try searching by course or town name instead.',
+          ),
+        ),
+      precise ? { enableHighAccuracy: true, timeout: 20000 } : { enableHighAccuracy: false, timeout: 15000, maximumAge: 10 * 60 * 1000 },
     );
   });
 }
