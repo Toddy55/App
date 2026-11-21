@@ -38,6 +38,8 @@ jobs:
         run: node scripts/fetch-live-catalog.mjs "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/"
         continue-on-error: true
       - name: Build the course list
+        # Pull request checks just use the live list (the download can take a while when the map servers are busy)
+        if: github.event_name != 'pull_request'
         run: npx tsx scripts/build-course-catalog.ts
         continue-on-error: true
       - run: npx vitest run
