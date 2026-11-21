@@ -43,8 +43,10 @@ export function Tracer({ go }: { go: Go }) {
   const video = useRef<HTMLVideoElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
   const lastTime = useRef(-1);
-  const live = useRef({ start, end, apex, colour, thick, step, exporting });
-  live.current = { start, end, apex, colour, thick, step, exporting };
+  // Live-traced clips carry the whole fitted flight; editing the line switches to the tap-drawn curve
+  const [usePath, setUsePath] = useState(!!handoff?.path);
+  const live = useRef({ start, end, apex, colour, thick, step, exporting, usePath });
+  live.current = { start, end, apex, colour, thick, step, exporting, usePath };
 
   // Draw the video and tracer on one canvas, every frame
   useEffect(() => {
@@ -61,12 +63,16 @@ export function Tracer({ go }: { go: Go }) {
         ctx.drawImage(v, 0, 0, c.width, c.height);
         const s = live.current;
         const width = Math.max(3, (c.width / 160) * s.thick);
-        if (s.start && s.end && s.apex) {
+        if (s.usePath && handoff?.path && s.step === 'done') {
+          const pts = handoff.path.filter((q) => q.t <= v.currentTime);
+          if (pts.length > 1) drawTracer(ctx, pts, { color: s.colour, width }, v.currentTime < handoff.path[handoff.path.length - 1].t);
+        } else if (s.start && s.end && s.apex) {
           const p = s.step === 'done' ? flightProgress(v.currentTime, s.start.t, s.end.t) : 1;
           if (p > 0) {
             drawTracer(ctx, tracePoints(s.start, s.apex, s.end, p), { color: s.colour, width }, p < 1);
           }
         }
+        if (handoff?.info?.length && s.step === 'done' && s.start && v.currentTime >= s.start.t) drawInfo(ctx, handoff.info, c.width);
         if (!s.exporting && s.step !== 'done') {
           for (const m of [s.start, s.end, s.apex]) {
             if (!m) continue;
@@ -93,6 +99,7 @@ export function Tracer({ go }: { go: Go }) {
   }, [url]);
 
   const reset = () => {
+    setUsePath(false);
     setStart(null);
     setEnd(null);
     setApex(null);
@@ -227,7 +234,7 @@ export function Tracer({ go }: { go: Go }) {
               Best results: stand behind the golfer, hold the phone still (or lean it on the bag), and keep filming until the ball lands.
             </p>
             <button className="btn block" onClick={() => go({ name: 'livetracer' })}>
-              📡 Live tracer: traces as the ball flies
+              📡 Sim mode: auto-trace with carry, curve & landing
             </button>
           </Card>
         )}
@@ -314,7 +321,7 @@ export function Tracer({ go }: { go: Go }) {
                   <button className="btn" onClick={() => { seek(Math.max(0, (start?.t ?? 0) - 1)); video.current?.play().catch(() => {}); }}>
                     ▶ Watch again
                   </button>
-                  <button className="btn" onClick={() => { setApex(null); setStep('apex'); setClip(null); }}>
+                  <button className="btn" onClick={() => { setUsePath(false); setApex(null); setStep('apex'); setClip(null); }}>
                     Change height/shape
                   </button>
                   <button className="btn ghost" onClick={reset}>
@@ -341,4 +348,24 @@ export function Tracer({ go }: { go: Go }) {
       </div>
     </div>
   );
+}
+
+/** Shot data box in the top-left corner, like a sim readout. */
+function drawInfo(ctx: CanvasRenderingContext2D, lines: string[], width: number) {
+  const fs = Math.max(14, Math.round(width / 26));
+  const pad = fs * 0.6;
+  ctx.save();
+  ctx.font = `700 ${fs}px system-ui, -apple-system, sans-serif`;
+  const w = Math.max(...lines.map((l) => ctx.measureText(l).width)) + pad * 2;
+  const h = lines.length * fs * 1.3 + pad * 1.4;
+  ctx.fillStyle = 'rgba(0,0,0,0.6)';
+  ctx.beginPath();
+  ctx.roundRect?.(pad, pad, w, h, fs * 0.4);
+  if (!ctx.roundRect) ctx.rect(pad, pad, w, h);
+  ctx.fill();
+  lines.forEach((l, i) => {
+    ctx.fillStyle = i === 0 ? '#ffd166' : '#ffffff';
+    ctx.fillText(l, pad * 2, pad + pad * 0.7 + fs * (i + 1) * 1.3 - fs * 0.3);
+  });
+  ctx.restore();
 }

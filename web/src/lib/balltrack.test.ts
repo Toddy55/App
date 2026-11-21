@@ -99,3 +99,35 @@ describe('ball tracker', () => {
     expect(d.feed(0.8, 200 / 60)).toBe(true);
   });
 });
+
+describe('auto mode: no tap', () => {
+  it('finds the ball sitting at address', async () => {
+    const { findBallAtAddress } = await import('./balltrack');
+    const p = findBallAtAddress(frame(0.3), W, H)!;
+    expect(Math.hypot(p.x - LAUNCH.x, p.y - LAUNCH.y)).toBeLessThan(3);
+  });
+
+  for (const withHint of [false, true]) {
+    it(`finds the launch from the strike alone${withHint ? ' (with the address spot)' : ''}`, async () => {
+      const { findBallAtAddress } = await import('./balltrack');
+      const tr = new BallTracker(null, W, H, true);
+      if (withHint) tr.hint = findBallAtAddress(frame(0.3), W, H);
+      let prev = frame(0);
+      for (let i = 1; i < 5 * FPS; i++) {
+        const t = i / FPS;
+        if (Math.abs(t - 0.98) < 0.5 / FPS) tr.strike(t);
+        const cur = frame(t);
+        tr.feed(diffBlobs(prev, cur, W, H, 30, tr.maxArea * 4), t);
+        prev = cur;
+        if (tr.state === 'done') break;
+      }
+      const f = tr.flight()!;
+      expect(f).toBeTruthy();
+      expect(Math.abs(f.t0 - T0)).toBeLessThan(0.1);
+      expect(Math.hypot(tr.launch!.x - LAUNCH.x, tr.launch!.y - LAUNCH.y)).toBeLessThan(withHint ? 3 : 15);
+      const real = truth(1.5);
+      const est = f.at(T0 + 1.5);
+      expect(Math.hypot(est.x - real.x, est.y - real.y)).toBeLessThan(8);
+    });
+  }
+});
