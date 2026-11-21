@@ -6,6 +6,7 @@ import { computeComp, valueLabel } from '../lib/comps';
 import { computeResult, FORMAT_LABELS } from '../lib/scoring';
 import { store } from '../lib/storage';
 import { Scorecard } from '../components/Scorecard';
+import { ShotCam } from '../components/ShotCam';
 import { StandingsTable } from '../screens/Leaderboards';
 import { Card, Header, type Go } from '../components/ui';
 import type { GroupDoc } from './live';
@@ -124,6 +125,8 @@ export function LiveView({ go, code }: { go: Go; code: string }) {
               </ul>
               <p className="muted small">Updated {ago < 1 ? 'just now' : `${ago} min ago`}</p>
             </Card>
+
+            <ShotCam code={code} />
 
             <Card title={groups.length > 1 ? 'Whole field' : 'Scorecard'}>
               <Scorecard round={round} />

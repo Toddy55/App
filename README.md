@@ -52,6 +52,7 @@ It runs in the browser and installs to your home screen (Share → Add to Home S
   - Pick the club: ball speed is the hardest thing for a camera to see from behind, so the club's typical speed is the starting point
   - **Calibrate** once with a shot of known carry. It learns how much harder or softer than a typical club golfer you hit it, and that applies to every club
   - Accuracy on simulated test footage: landing side within about 6 m; carry within a few percent for typical club golfers, about 5–12% before calibration for stronger hitters; real-world accuracy depends on a still phone and a ball that stands out
+- **Shot cam for mates watching live:** during a live round, every sim shot is turned into a small traced clip (about 360p, a few seconds, under 500 KB) and sent to the live round. Everyone watching the live card or the comp's Live now card sees it play by itself the moment it lands, with the club, carry, apex and shape, and can flick back through the last few. In a comp round the banter gets a "📹 Toddy: 7i · Carry 128 m. Watch it" shout-out. Switch it off on the sim screen
 - **GPS tracer:** shots marked during a round are drawn as curved flight lines on the satellite map with club and distance, plus a hole-by-hole animated **shot replay** after the round
 
 **Hole view**
