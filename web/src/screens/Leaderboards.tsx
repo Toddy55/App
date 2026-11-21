@@ -251,6 +251,7 @@ export function CompDetail({ go, id }: { go: Go; id: string }) {
               intro={`${store.settings().me.name} has invited you to "${comp.name}" on Fairway Coach, our golf scoring and comp app ⛳🏆 Tap the link to join:`}
               url={inviteUrl}
               onClose={() => setInviteUrl(null)}
+              personal
             />
           ) : (
             <button className="btn primary block" onClick={invite}>

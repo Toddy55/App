@@ -5,25 +5,11 @@ import { computeComp } from '../lib/comps';
 import { JoinLive } from '../live/LiveView';
 import { InstallTip } from '../components/InstallTip';
 import { PasteInvite } from '../components/PasteInvite';
-import { useEffect, useState } from 'react';
 import { ChartColumn, ChevronRight, Flag, Map as MapIcon, Settings as SettingsIcon, Trophy, Users, Video } from 'lucide-react';
 
 const ordinal = (n: number) => (n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] ?? 'th');
 
 export function Home({ go }: { go: Go }) {
-  const [linked, setLinked] = useState<string | null>(null);
-  useEffect(() => {
-    let unsub: (() => void) | undefined;
-    let stop = false;
-    import('../live/crewChannel')
-      .then(({ watchMyCrew }) => watchMyCrew((names) => !stop && names.length > 0 && setLinked(`${names.join(' and ')} linked up with you 🤝`)))
-      .then((u) => (stop ? u() : (unsub = u)))
-      .catch(() => undefined);
-    return () => {
-      stop = true;
-      unsub?.();
-    };
-  }, []);
   const rounds = store.rounds().sort((a, b) => b.startedAt - a.startedAt);
   const live = rounds.find((r) => !r.completed);
   const done = rounds.filter((r) => r.completed);
@@ -80,11 +66,6 @@ export function Home({ go }: { go: Go }) {
           )}
         </section>
 
-        {linked && (
-          <button className="ok-banner" onClick={() => go({ name: 'friends' })}>
-            {linked} ›
-          </button>
-        )}
         {store.friends().length === 0 && store.comps().length === 0 && <PasteInvite />}
         <div className="grid2">
           {[

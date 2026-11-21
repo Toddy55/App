@@ -8,5 +8,6 @@ describe('pasting an invite', () => {
     expect(inviteHash('https://toddy55.github.io/App/#join=zQ9')).toBe('#join=zQ9');
     expect(inviteHash('https://toddy55.github.io/App/#live=ABCD2345')).toBe('#live=ABCD2345');
     expect(inviteHash('see you at the 19th')).toBeNull();
+    expect(inviteHash('https://toddy55.github.io/App/#friend=zAb&to=Jarrod%20B')).toBe('#friend=zAb&to=Jarrod%20B');
   });
 });

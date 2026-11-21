@@ -15,6 +15,7 @@ import { Import } from './screens/Import';
 import { JoinComp } from './screens/JoinComp';
 import { Chat } from './screens/Chat';
 import { FriendJoin } from './screens/FriendJoin';
+import { MateWatcher } from './components/MateWatcher';
 import { LiveView } from './live/LiveView';
 import { Tracer } from './screens/Tracer';
 import { LiveTracer } from './screens/LiveTracer';
@@ -23,8 +24,14 @@ function readHash(): Route {
   try {
     if (location.hash.startsWith('#import=')) return { name: 'import', data: location.hash.slice(8) };
     if (location.hash.startsWith('#live=')) return { name: 'live', code: location.hash.slice(6).toUpperCase() };
-    if (location.hash.startsWith('#join=')) return { name: 'joinComp', data: location.hash.slice(6) };
-    if (location.hash.startsWith('#friend=')) return { name: 'friendJoin', data: location.hash.slice(8) };
+    if (location.hash.startsWith('#join=')) {
+      const [data, to] = location.hash.slice(6).split('&to=');
+      return { name: 'joinComp', data, to: to ? decodeURIComponent(to) : undefined };
+    }
+    if (location.hash.startsWith('#friend=')) {
+      const [data, to] = location.hash.slice(8).split('&to=');
+      return { name: 'friendJoin', data, to: to ? decodeURIComponent(to) : undefined };
+    }
     const raw = decodeURIComponent(location.hash.slice(1));
     if (raw) return JSON.parse(raw) as Route;
   } catch {
@@ -54,6 +61,7 @@ export default function App() {
     <>
       {screen}
       {withNav && <TabBar route={route} go={go} />}
+      <MateWatcher go={go} />
     </>
   );
 }
@@ -81,11 +89,11 @@ function renderScreen(route: Route, key: string, go: (r: Route) => void): ReactN
     case 'friend':
       return <FriendDetail key={key} go={go} id={route.id} />;
     case 'friendJoin':
-      return <FriendJoin key={key} go={go} data={route.data} />;
+      return <FriendJoin key={key} go={go} data={route.data} to={route.to} />;
     case 'chat':
       return <Chat key={key} go={go} compId={route.compId} />;
     case 'joinComp':
-      return <JoinComp key={key} go={go} data={route.data} />;
+      return <JoinComp key={key} go={go} data={route.data} to={route.to} />;
     case 'leaderboards':
       return <Leaderboards key={key} go={go} />;
     case 'comp':

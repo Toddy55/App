@@ -8,16 +8,19 @@ import { InstallFirst } from '../components/InstallFirst';
 import { Card, Header, type Go } from '../components/ui';
 
 /** A mate's app invite: link up as friends on both phones. */
-export function FriendJoin({ go, data }: { go: Go; data: string }) {
+export function FriendJoin({ go, data, to }: { go: Go; data: string; to?: string }) {
   const settings = store.settings();
   const [bundle, setBundle] = useState<Bundle | null>(null);
   const [err, setErr] = useState<string | null>(null);
-  const [name, setName] = useState(settings.me.name === 'Me' ? '' : settings.me.name);
+  // The inviter can put your name in the link, so a brand-new phone needn't type anything
+  const invitedAs = to?.trim().slice(0, 40) || '';
+  const [newPhone] = useState(() => !settings.me.name || settings.me.name === 'Me');
+  const [name, setName] = useState(settings.me.name && settings.me.name !== 'Me' ? settings.me.name : invitedAs);
   const [hcp, setHcp] = useState(settings.me);
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState<string | null>(null);
   // If this phone already knows who you are, link up straight away: no form, no button
-  const knownName = settings.me.name && settings.me.name !== 'Me' ? settings.me.name : null;
+  const knownName = settings.me.name && settings.me.name !== 'Me' ? settings.me.name : invitedAs || null;
   const autoRan = useRef(false);
   const [inviteLink] = useState(() => location.href);
 
@@ -101,6 +104,7 @@ export function FriendJoin({ go, data }: { go: Go; data: string }) {
         {done && (
           <Card className="join-hero">
             <h2>Sorted 🤝</h2>
+            {invitedAs && newPhone && <p className="muted small">You're set up as {invitedAs}. Not right? Change it in Settings.</p>}
             <p>{done}</p>
             <InstallFirst after link={inviteLink} />
             <button className="btn primary block" onClick={() => go({ name: 'home' })}>

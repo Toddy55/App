@@ -653,3 +653,5 @@ a.btn.block { display: flex; }
 .est { font-size: .65rem; font-weight: 700; color: var(--warn); margin-left: 4px; }
 button.link { background: none; border: 0; padding: 0; color: var(--brand); text-decoration: underline; font: inherit; font-weight: 700; }
 .hv-est { font-size: .7rem; font-weight: 700; color: var(--gold); }
+.mate-toast { position: fixed; left: 12px; right: 12px; top: calc(env(safe-area-inset-top) + 10px); z-index: 9000; background: var(--gold); color: var(--gold-ink); border: 0; border-radius: 14px; padding: 12px 14px; font: inherit; font-weight: 800; text-align: left; box-shadow: var(--shadow-lift); animation: toast-in .25s ease-out; }
+@keyframes toast-in { from { transform: translateY(-20px); opacity: 0; } to { transform: none; opacity: 1; } }

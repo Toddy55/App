@@ -14,25 +14,11 @@ export function Friends({ go }: { go: Go }) {
   const [name, setName] = useState('');
   const [ga, setGa] = useState('');
   const [inviting, setInviting] = useState<string | null>(null);
-  const [linked, setLinked] = useState<string | null>(null);
-  // Mates who tap your link and link up are added here by themselves
+  // Mates who link up are added app-wide (MateWatcher); refresh the list when they are
   useEffect(() => {
-    let unsub: (() => void) | undefined;
-    let stop = false;
-    import('../live/crewChannel')
-      .then(({ watchMyCrew }) =>
-        watchMyCrew((names) => {
-          if (stop) return;
-          setFriends(store.friends());
-          if (names.length) setLinked(`${names.join(' and ')} linked up with you 🤝`);
-        }),
-      )
-      .then((u) => (stop ? u() : (unsub = u)))
-      .catch(() => undefined);
-    return () => {
-      stop = true;
-      unsub?.();
-    };
+    const on = () => setFriends(store.friends());
+    window.addEventListener('gtg:friends', on);
+    return () => window.removeEventListener('gtg:friends', on);
   }, []);
   const startInvite = async () => {
     const { myCrewCode } = await import('../live/crewChannel');
@@ -67,13 +53,13 @@ export function Friends({ go }: { go: Go }) {
           </form>
           <p className="muted small">Use the same name your mate uses in their own app, so shared rounds match up automatically. Tap a mate to add their GA number (or mark them as having no GA handicap).</p>
         </Card>
-        {linked && <p className="ok">{linked}</p>}
         {inviting ? (
           <InviteSheet
             title="Get on Fairway Coach"
             intro={`${store.settings().me.name} wants you on Fairway Coach, the app for our scores, comps, live leaderboards and banter ⛳🍻 Tap the link to link up:`}
             url={inviting}
             onClose={() => setInviting(null)}
+            personal
           />
         ) : (
           <button className="btn primary block" onClick={startInvite}>
