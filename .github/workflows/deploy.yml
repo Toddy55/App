@@ -6,7 +6,7 @@ on:
   pull_request:
   workflow_dispatch:
   schedule:
-    - cron: '17 3 1 * *' # monthly: refresh the built-in course list
+    - cron: '23 17 * * *' # daily (3:23am in Brisbane): keep trying for fresh course data
 
 permissions:
   contents: read
@@ -31,15 +31,14 @@ jobs:
           cache: npm
           cache-dependency-path: web/package-lock.json
       - run: npm ci
-      # Download every South East Queensland golf course from OpenStreetMap into the app.
-      # If the map servers are down, keep the list from the version that's already live.
-      - name: Build the course list
-        id: catalog
-        run: npx tsx scripts/build-course-catalog.ts
-        continue-on-error: true
-      - name: Keep the live course list (map servers were down)
-        if: steps.catalog.outcome == 'failure'
+      # Start from the course list that's already live, then download every South East
+      # Queensland course from OpenStreetMap on top. Anything the map servers don't
+      # return this time is kept from the live list.
+      - name: Start from the live course list
         run: node scripts/fetch-live-catalog.mjs "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/"
+        continue-on-error: true
+      - name: Build the course list
+        run: npx tsx scripts/build-course-catalog.ts
         continue-on-error: true
       - run: npx vitest run
       - run: npm run build
