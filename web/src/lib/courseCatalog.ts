@@ -13,6 +13,14 @@ export interface CatalogHole {
   tee?: [number, number];
   g?: [number, number];
   poly?: [number, number][];
+  /** Dogleg points between tee and green. */
+  path?: [number, number][];
+}
+
+export interface CatalogHazard {
+  /** b = bunker, w = water, f = fairway */
+  k: 'b' | 'w' | 'f';
+  p: [number, number][];
 }
 
 export interface CatalogCourse {
@@ -21,6 +29,7 @@ export interface CatalogCourse {
   suburb?: string;
   at: [number, number];
   holes?: CatalogHole[];
+  hz?: CatalogHazard[];
 }
 
 export interface Catalog {
@@ -76,6 +85,7 @@ export function catalogToCourse(c: CatalogCourse): Course {
         lengthM: h.len,
         tee: h.tee ? P(h.tee) : undefined,
         green: h.g ? { centre: P(h.g), polygon: h.poly?.map(P) } : undefined,
+        path: h.path?.map(P),
       }))
     : blankHoles(18);
   return {
@@ -85,6 +95,7 @@ export function catalogToCourse(c: CatalogCourse): Course {
     state: 'QLD',
     location: P(c.at),
     holes,
+    hazards: c.hz?.map((z) => ({ kind: z.k === 'b' ? 'bunker' : z.k === 'w' ? 'water' : 'fairway', poly: z.p.map(P) })),
     source: 'osm',
     osmRef: c.ref,
     updatedAt: Date.now(),

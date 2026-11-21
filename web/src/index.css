@@ -449,3 +449,22 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--brand-soft)
 :root[data-palette='lavender'] { --brand: #6b4fd8; --brand-deep: #4330a8; --brand-grad: linear-gradient(135deg, #4330a8 0%, #5a40c9 55%, #7b5ff0 100%); --brand-soft: rgba(107,79,216,.12); --brand-light: #a996ff; --brand-shadow: rgba(107,79,216,.3); --gold: #14d1b8; --gold-ink: #002b25; --accent-soft: rgba(20,209,184,.18); }
 :root[data-palette='carbon'] .tile-icon, :root[data-palette='carbon'] .score-pill { color: #ff7a1a; }
 .palette-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; }
+.mk-aim { width: 26px; height: 26px; border-radius: 50%; border: 3px solid #c6f432; box-shadow: 0 0 0 2px rgba(0,0,0,.5), inset 0 0 0 2px rgba(0,0,0,.35); position: relative; }
+.mk-aim::after { content: ''; position: absolute; left: 50%; top: 50%; width: 6px; height: 6px; margin: -3px 0 0 -3px; border-radius: 50%; background: #c6f432; }
+
+/* Caddy */
+.card.caddy { border: 1.5px solid var(--gold); }
+.caddy-badge { display: inline-flex; align-items: center; gap: 6px; background: var(--brand-grad); color: #fff; font-weight: 700; font-size: .8rem; padding: 5px 10px; border-radius: 999px; }
+.caddy-badge svg { width: 14px; height: 14px; color: var(--gold); }
+.caddy-call { display: flex; flex-direction: column; gap: 2px; }
+.caddy-club { font-size: 2rem; font-weight: 800; letter-spacing: -0.02em; line-height: 1.05; }
+.caddy-aim { font-size: 1.05rem; font-weight: 600; color: var(--brand); }
+.caddy-meta { display: flex; gap: 6px; flex-wrap: wrap; }
+.chip-stat { display: inline-flex; align-items: center; gap: 4px; background: var(--chip); border-radius: 999px; padding: 4px 10px; font-size: .8rem; font-weight: 700; border: none; color: var(--ink); }
+.chip-stat svg { width: 14px; height: 14px; }
+.chip-stat.water { background: rgba(59,130,246,.15); color: #2563eb; }
+.chip-stat.bunker { background: rgba(214,170,80,.2); color: #8a6512; }
+.chip-stat.as-btn { cursor: pointer; }
+.chip-stat.as-btn.on { background: var(--gold); color: var(--gold-ink); }
+.caddy-why { margin: 0; padding-left: 18px !important; font-size: .9rem; color: var(--muted); gap: 4px !important; }
+.caddy-answer { background: var(--brand-soft); border-radius: 12px; padding: 10px 12px; font-size: .95rem; }

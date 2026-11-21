@@ -1,4 +1,4 @@
-import type { Course, Green, Hole, LatLon } from '../types';
+import type { Course, Green, Hazard, HazardKind, Hole, LatLon } from '../types';
 import { centroid, distanceM, pathLength, pointInPolygon } from './geo';
 
 /**
@@ -185,6 +185,8 @@ export async function loadCourse(hit: CourseHit): Promise<Course> {
   way["golf"="hole"]${scope};
   way["golf"="green"]${scope};
   relation["golf"="green"]${scope};
+  way["golf"~"^(bunker|fairway|water_hazard|lateral_water_hazard)$"]${scope};
+  way["natural"="water"]${scope};
 );
 out geom tags;`;
   let els: OsmElement[] = [];
@@ -200,6 +202,32 @@ ${detail('(area.c)')}`, 45000);
 ${detail(`(around:1800,${hit.location.lat},${hit.location.lon})`)}`, 45000);
   }
   return buildCourse(hit, els);
+}
+
+/** Keep at most n points of a polygon (plenty for course-management maths, and keeps the data small). */
+export function thin(poly: LatLon[], n = 16): LatLon[] {
+  if (poly.length <= n) return poly;
+  const step = poly.length / n;
+  return Array.from({ length: n }, (_, i) => poly[Math.floor(i * step)]);
+}
+
+function hazardKind(e: OsmElement): HazardKind | null {
+  const g = e.tags?.golf;
+  if (g === 'bunker') return 'bunker';
+  if (g === 'fairway') return 'fairway';
+  if (g === 'water_hazard' || g === 'lateral_water_hazard' || e.tags?.natural === 'water') return 'water';
+  return null;
+}
+
+export function buildHazards(els: OsmElement[]): Hazard[] {
+  const out: Hazard[] = [];
+  for (const e of els) {
+    const kind = hazardKind(e);
+    if (!kind) continue;
+    const poly = geom(e);
+    if (poly.length >= 3) out.push({ kind, poly: thin(poly, kind === 'water' ? 24 : 16) });
+  }
+  return out;
 }
 
 export function buildCourse(hit: CourseHit, els: OsmElement[]): Course {
@@ -232,6 +260,7 @@ export function buildCourse(hit: CourseHit, els: OsmElement[]): Course {
       lengthM: Math.round(pathLength(line)),
       tee: line[0],
       green,
+      path: line.length > 2 ? thin(line, 6) : undefined,
     });
   }
   let holes = [...byNumber.values()].sort((a, b) => a.number - b.number).filter((h) => h.number <= 18);
@@ -249,6 +278,7 @@ export function buildCourse(hit: CourseHit, els: OsmElement[]): Course {
     suburb: hit.suburb,
     location: hit.location,
     holes,
+    hazards: buildHazards(els),
     source: 'osm',
     osmRef: hit.osmRef,
     updatedAt: Date.now(),
