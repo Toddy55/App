@@ -10,7 +10,7 @@ import { liveAvailable } from './config';
  * same event so your own scorecard can show their teams too. Your own group
  * always comes from this phone (it's newer than what's on the server).
  */
-export function useLiveField(round: Round | undefined): { field: Round | null; bundle: Bundle | null; groups: number } {
+export function useLiveField(round: Round | undefined): { field: Round | null; bundle: Bundle | null; groups: number; others: { id: string; bundle: Bundle }[] } {
   const code = round?.liveCode;
   const others = useEventGroups(code);
 
@@ -27,8 +27,15 @@ export function useLiveField(round: Round | undefined): { field: Round | null; b
     }
   }, [round, code, others]);
   const field = bundle?.rounds[0] ?? null;
+  // Cards, not phones: two phones cross-marking one group count once
+  const cards = useMemo(() => {
+    if (!round) return 1;
+    const tops = others.filter((g) => g.id !== round.liveGroup && g.bundle.rounds[0]).map((g) => g.bundle.rounds[0]);
+    const mine = round.liveSameAs ? 0 : 1;
+    return mine + tops.filter((r) => !r.liveSameAs).length;
+  }, [others, round]);
 
-  return { field, bundle, groups: field ? others.filter((g) => g.id !== round?.liveGroup).length + 1 : 1 };
+  return { field, bundle, groups: cards, others };
 }
 
 /** Every group's latest card in a live event (empty until it connects). */
