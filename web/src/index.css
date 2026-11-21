@@ -628,3 +628,6 @@ a.btn.block { display: flex; }
 .shot-cam-wait { color: #fff; opacity: .7; font-size: .85rem; padding: 40px 0; }
 .shot-cam-cap { font-size: .85rem; margin-bottom: 6px; }
 .live-send .check { display: flex; gap: 8px; align-items: flex-start; }
+.install-first { border: 2px solid var(--gold); }
+.install-first ol { margin: 6px 0 10px; padding-left: 20px; }
+.ok-banner { width: 100%; text-align: left; background: var(--accent-soft); color: var(--ink); border: 1px solid var(--gold); border-radius: var(--radius); padding: 12px 14px; font: inherit; font-weight: 700; }

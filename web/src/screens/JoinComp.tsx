@@ -6,6 +6,7 @@ import { computeComp, SCORING_LABELS } from '../lib/comps';
 import { liveAvailable } from '../live/config';
 import { StandingsTable } from './Leaderboards';
 import { HandicapEditor } from '../components/HandicapEditor';
+import { InstallFirst } from '../components/InstallFirst';
 import { Card, Header, type Go } from '../components/ui';
 
 /** Someone opened a comp invite: show them the comp and let them join in one tap. */
@@ -82,6 +83,7 @@ export function JoinComp({ go, data }: { go: Go; data: string }) {
         {!bundle && !err && <p className="muted">Opening the invite…</p>}
         {comp && bundle && !done && (
           <>
+            <InstallFirst />
             <Card className="join-hero">
               <div className="eyebrow">
                 <Trophy /> {bundle.from} invited you

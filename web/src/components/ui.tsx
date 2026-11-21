@@ -19,6 +19,7 @@ export type Route =
   | { name: 'import'; data: string }
   | { name: 'joinComp'; data: string }
   | { name: 'chat'; compId: string }
+  | { name: 'friendJoin'; data: string }
   | { name: 'live'; code: string }
   | { name: 'tracer' }
   | { name: 'livetracer' };
