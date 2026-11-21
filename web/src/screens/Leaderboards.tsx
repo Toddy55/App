@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { Competition } from '../types';
 import { store, uid } from '../lib/storage';
 import { COMP_PRESETS, computeComp, newComp, SCORING_BLURB, SCORING_LABELS, standingsText, valueLabel } from '../lib/comps';
-import { encodeBundle, makeBundle, shareLink, shareText, shareUrl } from '../lib/share';
+import { encodeBundle, joinUrl, makeBundle, shareLink, shareText, shareUrl } from '../lib/share';
 import { Card, Header, Segmented, type Go } from '../components/ui';
+import { liveAvailable } from '../live/config';
 
 const nameOf = (id: string) => store.nameOf(id);
 
@@ -109,8 +110,32 @@ export function StandingsTable({ comp, standings }: { comp: Competition; standin
 }
 
 export function CompDetail({ go, id }: { go: Go; id: string }) {
+  const [rev, setRev] = useState(0);
   const comp = store.comp(id);
   const [msg, setMsg] = useState<string | null>(null);
+  // Mates who joined from an invite link show up here by themselves
+  useEffect(() => {
+    const c = store.comp(id);
+    if (!c || !liveAvailable()) return;
+    let unsub: (() => void) | undefined;
+    let stop = false;
+    import('../live/compChannel').then(async ({ watchJoiners, addJoiners }) => {
+      const u = await watchJoiners(c, (joiners) => {
+        const { added } = addJoiners(store.comp(id) ?? c, joiners);
+        if (added.length) {
+          setMsg(`${added.join(' and ')} joined the comp.`);
+          setRev((n) => n + 1);
+        }
+      });
+      if (stop) u();
+      else unsub = u;
+    }).catch(() => undefined);
+    return () => {
+      stop = true;
+      unsub?.();
+    };
+  }, [id]);
+  void rev;
   if (!comp) {
     return (
       <div className="screen">
@@ -122,13 +147,22 @@ export function CompDetail({ go, id }: { go: Go; id: string }) {
   const rounds = store.rounds();
   const res = computeComp(comp, rounds, nameOf);
 
-  const shareComp = async () => {
+  const compBundle = () => {
     const settings = store.settings();
     const counted = res.rounds.map((r) => r.round);
-    const b = makeBundle({ me: settings.me, friends: store.friends(), rounds: counted, comps: [comp] });
-    const how = await shareLink(comp.name, `Join "${comp.name}" in Fairway Coach (${counted.length} round${counted.length === 1 ? '' : 's'} so far):`, shareUrl(await encodeBundle(b)));
+    return { counted, b: makeBundle({ me: settings.me, friends: store.friends(), rounds: counted, comps: [comp] }) };
+  };
+  const invite = async () => {
+    const { b } = compBundle();
+    const how = await shareLink(comp.name, `You're invited to "${comp.name}" in Fairway Coach. Tap to join:`, joinUrl(await encodeBundle(b)));
+    setMsg(how === 'copied' ? 'Invite link copied. Paste it in the group chat.' : null);
+  };
+  const shareComp = async () => {
+    const { counted, b } = compBundle();
+    const how = await shareLink(comp.name, `"${comp.name}" in Fairway Coach (${counted.length} round${counted.length === 1 ? '' : 's'} so far). Tap to update your table:`, shareUrl(await encodeBundle(b)));
     setMsg(how === 'copied' ? 'Link copied. Paste it in the group chat.' : null);
   };
+  const members = comp.memberIds.map((m) => nameOf(m));
   const shareTable = async () => {
     const how = await shareText(comp.name, standingsText(comp, res));
     setMsg(how === 'copied' ? 'Table copied. Paste it in the group chat.' : null);
@@ -154,16 +188,24 @@ export function CompDetail({ go, id }: { go: Go; id: string }) {
           ) : (
             <StandingsTable comp={comp} standings={res.standings} />
           )}
+          <p className="small">
+            <strong>In the comp:</strong> {members.join(', ')}
+          </p>
+          <button className="btn primary block" onClick={invite}>
+            ➕ Invite a mate to join
+          </button>
           <div className="row gap wrap">
             <button className="btn" onClick={shareTable} disabled={!res.rounds.length}>
               💬 Share table
             </button>
             <button className="btn" onClick={shareComp}>
-              🔗 Invite / sync mates
+              🔄 Sync rounds
             </button>
           </div>
           {msg && <p className="ok small">{msg}</p>}
-          <p className="muted small">"Invite / sync" sends a link with the comp and all its rounds. When your mates open it, their phones show the same table.</p>
+          <p className="muted small">
+            "Invite" sends a link your mate taps to join; {liveAvailable() ? 'they appear here by themselves.' : 'they send an "I\'m in" link back.'} "Sync rounds" sends everyone the latest rounds so all your phones show the same table.
+          </p>
         </Card>
 
         <Card title="Round by round">

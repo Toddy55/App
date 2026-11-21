@@ -12,6 +12,7 @@ import { Settings } from './screens/Settings';
 import { FriendDetail, Friends } from './screens/Friends';
 import { CompDetail, CompEditor, Leaderboards } from './screens/Leaderboards';
 import { Import } from './screens/Import';
+import { JoinComp } from './screens/JoinComp';
 import { LiveView } from './live/LiveView';
 import { Tracer } from './screens/Tracer';
 import { LiveTracer } from './screens/LiveTracer';
@@ -20,6 +21,7 @@ function readHash(): Route {
   try {
     if (location.hash.startsWith('#import=')) return { name: 'import', data: location.hash.slice(8) };
     if (location.hash.startsWith('#live=')) return { name: 'live', code: location.hash.slice(6).toUpperCase() };
+    if (location.hash.startsWith('#join=')) return { name: 'joinComp', data: location.hash.slice(6) };
     const raw = decodeURIComponent(location.hash.slice(1));
     if (raw) return JSON.parse(raw) as Route;
   } catch {
@@ -75,6 +77,8 @@ function renderScreen(route: Route, key: string, go: (r: Route) => void): ReactN
       return <Friends key={key} go={go} />;
     case 'friend':
       return <FriendDetail key={key} go={go} id={route.id} />;
+    case 'joinComp':
+      return <JoinComp key={key} go={go} data={route.data} />;
     case 'leaderboards':
       return <Leaderboards key={key} go={go} />;
     case 'comp':

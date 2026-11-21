@@ -32,12 +32,13 @@ It runs in the browser and installs to your home screen (Share → Add to Home S
 - Ambrose rounds count in league mode, with team-mates sharing the team's position. Ties share the points
 - Rounds are tagged to comps at setup (ticked automatically when enough members are playing) and can be changed after the round
 - All-time table across your whole crew, plus live comps on the home screen
-- **Sharing, no accounts needed:** "Share round" or "Invite / sync mates" makes a link for the group chat. Opening it on a mate's phone imports the rounds and comp, matching players by name (confirmable), skipping rounds they already scored themselves, and keeping their own stats private. "Share table" posts the standings as text
+- **Invite a mate to a comp:** "Invite a mate to join" sends a link. Your mate taps it, sees the comp and the table so far, puts in their name and handicap and taps Join. They appear in the comp on everyone's phone by themselves (or, without live sync set up, they send an "I'm in" link back)
+- **Sharing, no accounts needed:** "Share round" or "Sync rounds" makes a link for the group chat. Opening it on a mate's phone imports the rounds and comp, matching players by name (confirmable), skipping rounds they already scored themselves, and keeping their own stats private. "Share table" posts the standings as text
 
 **Live scoring**
 - The chosen scorer taps **Go live** on the hole screen and shares the link (or the 8-letter code). Everyone with it open sees scores, the leaderboard and the "if it finished now" comp table update within about a second of each score going in
 - No logins for anyone. If the scorer loses signal, scores queue on their phone and send when it's back
-- **More than one group?** Each group has its own scorer. The second group's scorer opens the same link and taps "I'm scoring another group" (course, format and holes are copied across). Everyone sees one combined leaderboard for the whole field, which hole each group is on, and the comp table ranked across all groups
+- **More than one group, or playing another team?** Each group has its own scorer. The other group's scorer opens the same link and taps "Join with my group or team" (course, format and holes are copied across). Both scorers' **Scorecard** tab then shows every team hole by hole (Everyone / Our group), updating as each side enters scores: ideal for an Ambrose or a 4BBB against another group. Everyone sees one combined leaderboard for the whole field, which hole each group is on, and the comp table ranked across all groups
 - When everyone's finished, tap "Add the full-field round to my app". For scorers it replaces their own group's card, keeping their personal stats
 - Needs a free Firebase project, a one-off setup: see [LIVE_SCORING_SETUP.md](LIVE_SCORING_SETUP.md)
 

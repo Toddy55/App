@@ -53,7 +53,7 @@ export function LiveControl({ round, hole, onLive, go }: { round: Round; hole: n
     try {
       const how = await shareLink(
         'Live scores',
-        `Follow us live at ${round.courseName} (code ${code}). Scoring another group? Open this and tap "I'm scoring another group":`,
+        `Follow us live at ${round.courseName} (code ${code}). Playing in another group or team? Open this and tap "Join with my group or team":`,
         liveUrl(code),
       );
       setMsg(how === 'copied' ? 'Link copied. Paste it in the group chat.' : null);
@@ -68,7 +68,7 @@ export function LiveControl({ round, hole, onLive, go }: { round: Round; hole: n
         <div className="row between">
           <div>
             <strong>📡 Live scoring</strong>
-            <div className="muted small">Your mates watch the scores update as you enter them. Other groups' scorers can join the same leaderboard.</div>
+            <div className="muted small">Your mates watch the scores update as you enter them. Playing another group or team? Send them the link and both cards join up.</div>
           </div>
           <button
             className="btn primary small"

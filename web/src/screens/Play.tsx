@@ -9,6 +9,7 @@ import { useGeolocation, useWakeLock } from '../hooks';
 import { HoleMap } from '../components/HoleMap';
 import { HoleView } from '../components/HoleView';
 import { LiveControl, pushFinal } from '../live/LiveControl';
+import { useLiveField } from '../live/useLiveField';
 import { Scorecard } from '../components/Scorecard';
 import { Card, Header, Segmented, Stepper, scoreClass, type Go } from '../components/ui';
 import { CaddyCard } from '../components/CaddyCard';
@@ -115,6 +116,9 @@ export function Play({ go, roundId }: { go: Go; roundId: string }) {
   }, [geo.pos, target, hole?.number]);
 
   const strokeMap = useMemoStrokes(round);
+  // Other groups in the same live event (e.g. the other Ambrose team), for the scorecard
+  const live = useLiveField(round);
+  const [cardView, setCardView] = useState<'field' | 'group'>('field');
 
   if (!round || !hole) {
     return (
@@ -242,12 +246,31 @@ export function Play({ go, roundId }: { go: Go; roundId: string }) {
         </button>
       </div>
       )}
-      <div className="headline">{result.headline}</div>
+      <div className="headline">{live.field ? computeResult(live.field).headline : result.headline}</div>
       <Segmented value={tab} onChange={setTab} options={[{ value: 'hole', label: 'Hole' }, { value: 'card', label: 'Scorecard' }]} />
 
       {tab === 'card' ? (
         <div className="content">
-          <Scorecard round={round} onHole={(n) => { setIdx(round.holes.findIndex((h) => h.number === n)); setTab('hole'); }} />
+          {live.field && (
+            <Segmented
+              value={cardView}
+              onChange={setCardView}
+              options={[
+                { value: 'field', label: `Everyone (${live.groups} groups)` },
+                { value: 'group', label: 'Our group' },
+              ]}
+            />
+          )}
+          <Scorecard
+            round={live.field && cardView === 'field' ? live.field : round}
+            onHole={(n) => { setIdx(round.holes.findIndex((h) => h.number === n)); setTab('hole'); }}
+          />
+          {live.field && cardView === 'field' && <p className="muted small">The other groups' scores come straight from their scorers' phones as they enter them.</p>}
+          {!round.liveCode && (
+            <p className="muted small">
+              Playing against another group or team? Tap <strong>Go live</strong> on the Hole page and send their scorer the link. Their scores then show here too.
+            </p>
+          )}
         </div>
       ) : (
         <div className="content">
