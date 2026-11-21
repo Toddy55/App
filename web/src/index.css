@@ -468,3 +468,127 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--brand-soft)
 .chip-stat.as-btn.on { background: var(--gold); color: var(--gold-ink); }
 .caddy-why { margin: 0; padding-left: 18px !important; font-size: .9rem; color: var(--muted); gap: 4px !important; }
 .caddy-answer { background: var(--brand-soft); border-radius: 12px; padding: 10px 12px; font-size: .95rem; }
+
+/* ---------- Hole view: turned satellite picture with the numbers on it ---------- */
+.hole-view {
+  position: relative;
+  height: min(70vh, 640px);
+  min-height: 420px;
+  margin: -12px -16px 0;
+  background: #0b1a10;
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+  color: #fff;
+}
+.hole-view svg { display: block; touch-action: pan-y; }
+.hole-view .hv-shade { fill: rgba(0, 0, 0, .08); pointer-events: none; }
+.hv-haz { fill: none; stroke-width: 1.2; pointer-events: none; }
+.hv-haz.water { stroke: rgba(96, 165, 250, .75); fill: rgba(59, 130, 246, .12); }
+.hv-haz.bunker { stroke: rgba(243, 227, 181, .7); }
+.hv-green { fill: rgba(124, 252, 154, .12); stroke: rgba(124, 252, 154, .85); stroke-width: 1.6; pointer-events: none; }
+.hv-ring polyline { fill: none; stroke: rgba(255, 255, 255, .55); stroke-width: 1; stroke-dasharray: 3 4; }
+.hv-ring text { fill: #fff; font-size: 11px; font-weight: 700; paint-order: stroke; stroke: rgba(0, 0, 0, .7); stroke-width: 3px; }
+.hv-zone { fill: rgba(198, 244, 50, .16); stroke: var(--gold); stroke-width: 1.6; stroke-dasharray: 5 4; pointer-events: none; }
+.hv-aimline { stroke: var(--gold); stroke-width: 2; stroke-dasharray: 6 5; opacity: .9; }
+.hv-aim circle { fill: none; stroke: var(--gold); stroke-width: 2.5; }
+.hv-aim path { stroke: var(--gold); stroke-width: 2.5; }
+.hv-shots { fill: none; stroke: #ffd166; stroke-width: 2.5; opacity: .9; }
+.hv-shot { fill: #ffd166; stroke: #000; stroke-width: 1; }
+.hv-shot-n { fill: #000; font-size: 10px; font-weight: 800; text-anchor: middle; }
+.hv-leg line { stroke: #fff; stroke-width: 2; opacity: .8; }
+.hv-leg.strong line { stroke-width: 3; opacity: 1; }
+.hv-leg rect { fill: rgba(8, 22, 46, .88); stroke: rgba(255, 255, 255, .5); }
+.hv-leg.strong rect { fill: var(--gold); stroke: none; }
+.hv-leg text { fill: #fff; font-size: 13px; font-weight: 800; text-anchor: middle; }
+.hv-leg.strong text { fill: var(--gold-ink); }
+.hv-tag rect { fill: rgba(8, 22, 46, .82); }
+.hv-tag.water rect { stroke: #60a5fa; }
+.hv-tag.bunker rect { stroke: #e8d5a0; }
+.hv-tag text { fill: #fff; font-size: 11px; font-weight: 700; text-anchor: middle; }
+.hv-tag .sep { fill: rgba(255, 255, 255, .5); }
+.hv-tee { fill: #fff; stroke: #000; stroke-width: 1.5; }
+.hv-pin path:first-child { stroke: #fff; stroke-width: 2; }
+.hv-pin path:nth-child(2) { fill: #ef4444; }
+.hv-pin circle { fill: #fff; }
+.hv-target circle { fill: none; stroke: #fff; stroke-width: 2.5; }
+.hv-target circle.hit { stroke: none; fill: transparent; }
+.hv-target .dot { fill: #fff; stroke: none; }
+.hv-me { fill: #3b82f6; stroke: #fff; stroke-width: 3; }
+
+.hv-top { position: absolute; top: 10px; left: 12px; right: 12px; display: flex; justify-content: space-between; align-items: flex-start; pointer-events: none; }
+.hv-hole { display: flex; align-items: center; gap: 8px; background: rgba(8, 22, 46, .85); border-radius: 12px; padding: 4px 6px; pointer-events: auto; }
+.hv-nav { background: none; border: 0; color: #fff; padding: 4px 2px; display: grid; place-items: center; }
+.hv-nav svg { width: 22px; height: 22px; }
+.hv-nav:disabled { opacity: .3; }
+.hv-no { background: var(--gold); color: var(--gold-ink); font-weight: 900; font-size: 1.25rem; min-width: 34px; height: 34px; border-radius: 9px; display: grid; place-items: center; }
+.hv-par { display: flex; flex-direction: column; font-weight: 800; line-height: 1.1; }
+.hv-par small { font-weight: 600; opacity: .75; font-size: .72rem; }
+.hv-wind { display: flex; align-items: center; gap: 4px; background: rgba(8, 22, 46, .85); border-radius: 12px; padding: 6px 10px; font-weight: 800; }
+.hv-wind small { opacity: .7; font-weight: 600; font-size: .7rem; }
+.hv-wind .arrow { display: inline-block; color: var(--gold); font-size: 1.2rem; line-height: 1; }
+
+.hv-yards { position: absolute; right: 10px; top: 62px; display: flex; flex-direction: column; gap: 6px; pointer-events: none; }
+.hv-yards > div { background: rgba(8, 22, 46, .86); border-radius: 12px; min-width: 66px; padding: 4px 8px 6px; text-align: center; font-size: 1.35rem; font-weight: 900; line-height: 1.05; }
+.hv-yards small { display: block; font-size: .62rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; opacity: .7; }
+.hv-yards .main { background: var(--gold); color: var(--gold-ink); font-size: 1.9rem; }
+.hv-yards .main small { opacity: .8; }
+.hv-yards .plays { font-size: 1.1rem; border: 1px solid var(--gold); }
+.hv-yards .from { font-size: .7rem !important; font-weight: 700 !important; padding: 3px 6px !important; opacity: .85; }
+
+.hv-tools { position: absolute; left: 12px; top: 62px; display: flex; flex-direction: column; gap: 8px; }
+.hv-btn { display: flex; flex-direction: column; align-items: center; gap: 1px; background: rgba(8, 22, 46, .85); color: #fff; border: 1px solid rgba(255, 255, 255, .18); border-radius: 12px; padding: 6px 7px; font-size: .62rem; font-weight: 700; min-width: 46px; }
+.hv-btn svg { width: 18px; height: 18px; }
+.hv-btn.on { background: var(--gold); color: var(--gold-ink); border-color: var(--gold); }
+
+.hv-caddy { position: absolute; left: 12px; right: 12px; bottom: 26px; display: flex; align-items: center; gap: 8px; background: rgba(8, 22, 46, .9); color: #fff; border: 1px solid var(--gold); border-radius: 14px; padding: 8px 12px; text-align: left; font-size: .85rem; }
+.hv-caddy svg { color: var(--gold); width: 18px; height: 18px; flex: none; }
+.hv-caddy .club { font-weight: 900; color: var(--gold); white-space: nowrap; }
+.hv-caddy .aim { opacity: .9; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; line-height: 1.25; }
+.hv-caddy.off { border-color: rgba(255, 255, 255, .2); }
+.hv-caddy.off .club { color: #fff; }
+.hv-hint { position: absolute; left: 50%; transform: translateX(-50%); bottom: 128px; background: rgba(0, 0, 0, .55); border-radius: 999px; padding: 4px 10px; font-size: .72rem; display: flex; gap: 5px; align-items: center; pointer-events: none; white-space: nowrap; }
+.hv-hint svg { width: 14px; height: 14px; }
+.hv-hint.on { background: var(--gold); color: var(--gold-ink); font-weight: 800; }
+.hv-gps { position: absolute; left: 12px; bottom: 128px; background: rgba(180, 83, 9, .9); border-radius: 8px; padding: 3px 8px; font-size: .7rem; pointer-events: none; }
+.hv-credit { position: absolute; left: 8px; bottom: 4px; font-size: .55rem; opacity: .6; pointer-events: none; }
+.hole-view.pin-mode svg { cursor: crosshair; }
+
+/* ---------- Comp: live now + banter ---------- */
+.comp-live { border: 2px solid var(--gold); }
+.comp-live-head { margin: 4px 0 8px; font-size: 1.05rem; }
+.live-board { width: 100%; border-collapse: collapse; font-size: .92rem; }
+.live-board th { text-align: left; font-size: .7rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); padding: 4px 6px; }
+.live-board td { padding: 7px 6px; border-top: 1px solid var(--line); }
+.live-board td.pos { width: 22px; color: var(--muted); font-weight: 700; }
+.live-board td.val { font-weight: 800; text-align: right; }
+.live-board th:last-child { text-align: right; }
+.banter-btn { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; background: var(--card); color: var(--ink); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 14px; box-shadow: var(--shadow); font: inherit; }
+.banter-btn .grow { min-width: 0; display: flex; flex-direction: column; }
+.banter-icon { font-size: 1.6rem; }
+.banter-last { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.banter-btn .badge { background: var(--birdie); color: #fff; border-radius: 999px; min-width: 22px; height: 22px; padding: 0 6px; display: grid; place-items: center; font-size: .75rem; font-weight: 800; }
+
+.chat-screen { display: flex; flex-direction: column; height: 100dvh; }
+.chat-list { flex: 1; overflow-y: auto; padding: 12px 12px 6px; display: flex; flex-direction: column; gap: 2px; }
+.chat-empty { text-align: center; color: var(--muted); margin-top: 40px; }
+.chat-empty .big-emoji { font-size: 3rem; }
+.chat-day { text-align: center; font-size: .7rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin: 14px 0 6px; }
+.chat-msg { display: flex; flex-direction: column; align-items: flex-start; margin-top: 2px; }
+.chat-msg.mine { align-items: flex-end; }
+.chat-name { font-size: .72rem; font-weight: 700; color: var(--brand); margin: 6px 10px 2px; }
+:root[data-theme="dark"] .chat-name { color: var(--brand-light); }
+.chat-bubble { max-width: 80%; background: var(--card); border: 1px solid var(--line); border-radius: 18px 18px 18px 6px; padding: 8px 12px; line-height: 1.35; word-wrap: break-word; white-space: pre-wrap; }
+.chat-msg.mine .chat-bubble { background: var(--gold); color: var(--gold-ink); border-color: var(--gold); border-radius: 18px 18px 6px 18px; }
+.chat-msg.emoji-only .chat-bubble { background: none; border: 0; font-size: 2.2rem; padding: 0 4px; }
+.chat-time { font-size: .62rem; opacity: .55; margin-left: 8px; white-space: nowrap; }
+.chat-auto { align-self: center; text-align: center; background: var(--brand-soft); color: var(--ink); border-radius: 12px; padding: 6px 12px; margin: 8px 16px; font-size: .85rem; font-weight: 600; }
+.chat-compose { border-top: 1px solid var(--line); background: var(--card); padding: 8px 10px calc(8px + env(safe-area-inset-bottom)); }
+.chat-bar { display: flex; gap: 6px; align-items: center; }
+.chat-bar input { border-radius: 999px; }
+.chat-bar .icon-btn.on { background: var(--gold); color: var(--gold-ink); }
+.chat-bar .send { background: var(--brand); color: #fff; }
+.chat-emojis { display: grid; grid-template-columns: repeat(8, 1fr); gap: 2px; max-height: 180px; overflow-y: auto; padding-bottom: 8px; }
+.chat-emojis button { font-size: 1.5rem; background: none; border: 0; padding: 4px 0; border-radius: 8px; }
+.chat-emojis button:active { background: var(--chip); }
+.chat-sledges { display: flex; flex-wrap: wrap; gap: 6px; max-height: 190px; overflow-y: auto; padding-bottom: 8px; }

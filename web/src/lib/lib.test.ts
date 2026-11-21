@@ -114,6 +114,27 @@ describe('scoring', () => {
     expect(r.rows[0].gross).toBe(72);
     expect(r.rows[0].net).toBe(67.5);
   });
+  it('ambrose mid-round takes off only the handicap for the holes played', () => {
+    const nine: Record<number, number> = {};
+    for (let h = 1; h <= 9; h++) nine[h] = 4; // level par for the front nine
+    const r = computeResult(
+      round({
+        format: 'ambrose',
+        teams: [
+          { id: 't1', name: 'Toddy & Dazza', playerIds: ['a', 'b'], handicap: 9 },
+          { id: 't2', name: 'Shazza & Kev', playerIds: ['c', 'd'], handicap: 4 },
+        ],
+        meId: 't1',
+        scores: { t1: nine, t2: { 1: 3 } },
+      }),
+    );
+    const t1 = r.rows.find((x) => x.id === 't1')!;
+    expect(t1.net).toBe(31.5); // 36 gross minus half of 9
+    expect(t1.netToPar).toBe(-4.5);
+    const t2 = r.rows.find((x) => x.id === 't2')!;
+    expect(t2.netToPar).toBeCloseTo(-1.2, 1); // birdie, minus 4/18 of a shot
+    expect(r.headline).toBe('Toddy & Dazza lead at 4.5 under net thru 9');
+  });
   it('skins carry over', () => {
     const a = all(0);
     const b = all(0);

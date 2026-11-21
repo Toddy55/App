@@ -115,8 +115,9 @@ export function sideRows(round: Round, sides: Side[]): LeaderRow[] {
       parScore += pr;
     }
     if (isAmbrose) {
-      // Pro-rata the team handicap when only part of the round is counted
-      const share = only ? only.size / round.holes.length : 1;
+      // The team handicap is for the whole round, so mid-round only the
+      // share for the holes played comes off (e.g. half of it after 9)
+      const share = round.holes.length ? thru / round.holes.length : 1;
       net = Math.round((gross - side.handicap * share) * 10) / 10;
     }
     return {
@@ -146,12 +147,9 @@ export function computeResult(round: Round): Result {
   const rows = sideRows(round, sides);
   switch (round.format) {
     case 'stroke': {
-      rows.sort((a, b) => a.net - b.net || a.gross - b.gross);
-      const l = rows[0];
-      return {
-        rows,
-        headline: l ? `${l.name} leads on net ${l.net} (${toParLabel(l.netToPar)})` : '',
-      };
+      // Rank on net to par so groups that have played different numbers of holes compare fairly
+      rows.sort((a, b) => a.netToPar - b.netToPar || a.grossToPar - b.grossToPar);
+      return { rows, headline: netHeadline(round, rows) };
     }
     case 'stableford': {
       rows.sort((a, b) => b.points - a.points);
@@ -164,12 +162,8 @@ export function computeResult(round: Round): Result {
       return { rows, headline: l ? `${l.name} ${parLabel(l.parScore)}` : '' };
     }
     case 'ambrose': {
-      rows.sort((a, b) => a.net - b.net);
-      const l = rows[0];
-      return {
-        rows,
-        headline: l ? `${l.name} leads on net ${l.net} (${toParLabel(l.netToPar)})` : '',
-      };
+      rows.sort((a, b) => a.netToPar - b.netToPar || a.grossToPar - b.grossToPar);
+      return { rows, headline: netHeadline(round, rows) };
     }
     case 'skins':
       return skins(round, rows);
@@ -178,6 +172,24 @@ export function computeResult(round: Round): Result {
     case 'matchplay':
       return matchplay(round, rows);
   }
+}
+
+/** "Team A leads at 2 under net thru 9", or the final net score once everyone's done. */
+function netHeadline(round: Round, rows: LeaderRow[]): string {
+  const played = rows.filter((r) => r.thru > 0);
+  const l = played[0];
+  if (!l) return rows[0] ? `${rows[0].name} to tee off` : '';
+  const holes = round.scoreHoles?.length ?? round.holes.length;
+  const done = played.length === rows.length && rows.every((r) => r.thru >= holes);
+  const toPar = netToParWords(l.netToPar);
+  if (done) return `${l.name} ${round.completed ? 'wins' : 'leads'} on net ${l.net} (${toParLabel(l.netToPar)})`;
+  return `${l.name} lead${/ & /.test(l.name) ? '' : 's'} at ${toPar} net thru ${l.thru}`;
+}
+
+function netToParWords(n: number): string {
+  const v = Math.abs(Math.round(n * 10) / 10);
+  if (v === 0) return 'level';
+  return `${v} ${n < 0 ? 'under' : 'over'}`;
 }
 
 export function parLabel(n: number): string {

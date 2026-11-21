@@ -1,6 +1,6 @@
 import { initializeApp, type FirebaseApp } from 'firebase/app';
 import { connectAuthEmulator, getAuth, signInAnonymously } from 'firebase/auth';
-import { connectDatabaseEmulator, getDatabase, onValue, ref, set, type Database } from 'firebase/database';
+import { connectDatabaseEmulator, getDatabase, limitToLast, onValue, orderByKey, query, ref, set, type Database } from 'firebase/database';
 import { emulator, firebaseConfig } from './config';
 
 /**
@@ -56,4 +56,24 @@ export async function watchEvent(
     (snap) => onGroups(snap.exists() ? (snap.val() as Record<string, GroupDoc>) : null),
     (e) => onError(e),
   );
+}
+
+/** Like watchEvent, but only the newest `n` entries (keys sort by time). Used for chat. */
+export async function watchLatest(
+  code: string,
+  n: number,
+  onGroups: (groups: Record<string, GroupDoc> | null) => void,
+  onError: (e: Error) => void,
+): Promise<() => void> {
+  const { db } = await init();
+  return onValue(
+    query(ref(db, `events/${code}/groups`), orderByKey(), limitToLast(n)),
+    (snap) => onGroups(snap.exists() ? (snap.val() as Record<string, GroupDoc>) : null),
+    (e) => onError(e),
+  );
+}
+
+/** This phone's anonymous sign-in id (to tell your own chat messages apart). */
+export async function myUid(): Promise<string> {
+  return (await init()).uid;
 }

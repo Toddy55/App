@@ -158,7 +158,7 @@ export function LiveView({ go, code }: { go: Go; code: string }) {
                 </button>
               ) : (
                 <button className="btn block" onClick={joinAsScorer}>
-                  ✍️ I'm scoring another group
+                  ✍️ Join with my group or team
                 </button>
               ))}
             <p className="muted small center">The page updates by itself. Keep it open and watch the scores come in.</p>

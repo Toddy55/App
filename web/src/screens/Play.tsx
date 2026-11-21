@@ -2,16 +2,18 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { FairwayResult, HoleStats, LatLon, Round } from '../types';
 import { store } from '../lib/storage';
 import { distanceM, fmtDist, greenDistances } from '../lib/geo';
-import { compass, fetchElevations, fetchWeather, playsLike, windEffect } from '../lib/weather';
+import { fetchElevations, fetchWeather, playsLike, windEffect } from '../lib/weather';
 import { computeResult, sidesFor } from '../lib/scoring';
 import { strokesByHole } from '../lib/handicap';
 import { useGeolocation, useWakeLock } from '../hooks';
 import { HoleMap } from '../components/HoleMap';
+import { HoleView } from '../components/HoleView';
 import { LiveControl, pushFinal } from '../live/LiveControl';
+import { useLiveField } from '../live/useLiveField';
 import { Scorecard } from '../components/Scorecard';
 import { Card, Header, Segmented, Stepper, scoreClass, type Go } from '../components/ui';
 import { CaddyCard } from '../components/CaddyCard';
-import { advise, buildBag, landingEllipse, roundMood, tendencies, type Advice } from '../lib/caddy';
+import { advise, buildBag, roundMood, tendencies, type Advice } from '../lib/caddy';
 
 // The caddy plays each option a few hundred times; only re-think when something changes
 let caddyCache: { key: string; value: Advice | null } = { key: '', value: null };
@@ -114,6 +116,9 @@ export function Play({ go, roundId }: { go: Go; roundId: string }) {
   }, [geo.pos, target, hole?.number]);
 
   const strokeMap = useMemoStrokes(round);
+  // Other groups in the same live event (e.g. the other Ambrose team), for the scorecard
+  const live = useLiveField(round);
+  const [cardView, setCardView] = useState<'field' | 'group'>('field');
 
   if (!round || !hole) {
     return (
@@ -129,13 +134,16 @@ export function Play({ go, roundId }: { go: Go; roundId: string }) {
   const stats: HoleStats = round.stats[hole.number] ?? {};
   const setStats = (patch: Partial<HoleStats>) =>
     update((r) => ({ ...r, stats: { ...r.stats, [hole.number]: { ...(r.stats[hole.number] ?? {}), ...patch } } }));
-  const setScore = (sideId: string, v: number | undefined) =>
+  const setScore = (sideId: string, v: number | undefined) => {
     update((r) => {
       const s = { ...(r.scores[sideId] ?? {}) };
       if (v == null) delete s[hole.number];
       else s[hole.number] = v;
       return { ...r, scores: { ...r.scores, [sideId]: s } };
     });
+    // Birdies and blow-ups go to the comp banter
+    if (v != null && round.compIds?.length) import('../live/shoutouts').then((m) => m.queueShoutout(round.id, sideId, hole.number));
+  };
 
   const dist = geo.pos && hole.green ? greenDistances(geo.pos, hole.green, pin) : undefined;
   const far = dist && dist.centre > 1200;
@@ -224,6 +232,7 @@ export function Play({ go, roundId }: { go: Go; roundId: string }) {
           </button>
         }
       />
+      {!(tab === 'hole' && hole.green) && (
       <div className="hole-bar">
         <button className="icon-btn" disabled={idx === 0} onClick={() => { setIdx(idx - 1); setMeasure(undefined); }} aria-label="Previous hole">
           ‹
@@ -239,17 +248,73 @@ export function Play({ go, roundId }: { go: Go; roundId: string }) {
           ›
         </button>
       </div>
-      <div className="headline">{result.headline}</div>
+      )}
+      <div className="headline">{live.field ? computeResult(live.field).headline : result.headline}</div>
       <Segmented value={tab} onChange={setTab} options={[{ value: 'hole', label: 'Hole' }, { value: 'card', label: 'Scorecard' }]} />
 
       {tab === 'card' ? (
         <div className="content">
-          <Scorecard round={round} onHole={(n) => { setIdx(round.holes.findIndex((h) => h.number === n)); setTab('hole'); }} />
+          {live.field && (
+            <Segmented
+              value={cardView}
+              onChange={setCardView}
+              options={[
+                { value: 'field', label: `Everyone (${live.groups} groups)` },
+                { value: 'group', label: 'Our group' },
+              ]}
+            />
+          )}
+          <Scorecard
+            round={live.field && cardView === 'field' ? live.field : round}
+            onHole={(n) => { setIdx(round.holes.findIndex((h) => h.number === n)); setTab('hole'); }}
+          />
+          {live.field && cardView === 'field' && <p className="muted small">The other groups' scores come straight from their scorers' phones as they enter them.</p>}
+          {!round.liveCode && (
+            <p className="muted small">
+              Playing against another group or team? Tap <strong>Go live</strong> on the Hole page and send their scorer the link. Their scores then show here too.
+            </p>
+          )}
         </div>
       ) : (
         <div className="content">
+          {hole.green && (
+            <HoleView
+              hole={{ ...hole, path: hole.path ?? course?.holes.find((h) => h.number === hole.number)?.path }}
+              hazards={holeHazards}
+              player={geo.pos ?? undefined}
+              onHole={onHole}
+              pin={pin}
+              target={measure}
+              onTarget={setMeasure}
+              onPin={(p) => update((r) => ({ ...r, pins: { ...r.pins, [hole.number]: p } }))}
+              pinMode={mapMode === 'pin'}
+              onPinMode={(on) => setMapMode(on ? 'pin' : 'measure')}
+              onClearPin={() => update((r) => { const ps = { ...r.pins }; delete ps[hole.number]; return { ...r, pins: ps }; })}
+              shots={shots}
+              advice={advice}
+              showCaddy={caddyOnMap}
+              onPrev={idx > 0 ? () => { setIdx(idx - 1); setMeasure(undefined); } : undefined}
+              onNext={!isLast ? () => { setIdx(idx + 1); setMeasure(undefined); } : undefined}
+              onCaddyTap={() => document.getElementById('caddy-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+              units={units}
+              playsLike={pl?.distance}
+              wind={wx ? { kmh: wx.windKmh, fromDeg: wx.windFromDeg } : undefined}
+              gpsWarning={geo.accuracy != null && geo.accuracy > 15 ? `GPS ±${Math.round(geo.accuracy)} m` : undefined}
+            />
+          )}
           <LiveControl round={round} hole={hole.number} go={go} onLive={(code, group) => update((r) => ({ ...r, liveCode: code, liveGroup: group }))} />
+          {round.compIds?.length ? (
+            <button className="banter-btn" onClick={() => go({ name: 'chat', compId: round.compIds![0] })}>
+              <span className="banter-icon">💬</span>
+              <span className="grow">
+                <strong>Comp banter</strong>
+                <span className="muted small banter-last">Birdies and blow-ups get posted by themselves 🐦💀</span>
+              </span>
+              <span>›</span>
+            </button>
+          ) : null}
           {advice && (
+            <div id="caddy-card">
             <CaddyCard
               advice={advice}
               planning={!onHole}
@@ -269,113 +334,36 @@ export function Play({ go, roundId }: { go: Go; roundId: string }) {
                 golfer: { handicap: caddyHcp, scoreSoFar: round.scores[round.meId] },
               })}
             />
+            </div>
           )}
-          {/* Distances */}
-          <Card className="yardage">
-            {!hole.green ? (
+          {/* Map: no green mapped yet */}
+          {!hole.green && (
+            <Card className="map-card">
               <p className="muted">
                 This green isn't mapped yet. Tap <strong>Map green</strong> below and tap the green on the satellite map (or stand on it), and it's saved for next time.
               </p>
-            ) : !geo.pos ? (
-              <p className="muted">{geo.error ?? 'Getting your GPS position…'}</p>
-            ) : far ? (
-              <p className="muted">You're {(dist!.centre / 1000).toFixed(1)} km from this green. Distances will show when you're on the hole.</p>
-            ) : (
-              <>
-                <div className="yd-row">
-                  <div className="yd">
-                    <span className="yd-label">Front</span>
-                    <span className="yd-num">{fmtDist(dist!.front, units)}</span>
-                  </div>
-                  <div className="yd main">
-                    <span className="yd-label">{dist!.pinIsSet ? 'Pin' : 'Centre'}</span>
-                    <span className="yd-num">{fmtDist(dist!.pin, units)}</span>
-                  </div>
-                  <div className="yd">
-                    <span className="yd-label">Back</span>
-                    <span className="yd-num">{fmtDist(dist!.back, units)}</span>
-                  </div>
-                </div>
-                {dist!.pinIsSet && <div className="muted small center">Centre {fmtDist(dist!.centre, units)}{units}</div>}
-                {pl && (
-                  <div className="plays-like">
-                    Plays like <strong>{fmtDist(pl.distance, units)}{units}</strong>
-                    <span className="muted small">
-                      {' '}
-                      (wind {signed(pl.windAdj, units)}, slope {signed(pl.elevAdj, units)}, temp {signed(pl.tempAdj, units)})
-                    </span>
-                    {Math.abs(pl.aimOffM) >= 2 && (
-                      <div className="small">
-                        Aim {fmtDist(Math.abs(pl.aimOffM), units)}{units} {pl.aimOffM > 0 ? 'right' : 'left'} of target
-                      </div>
-                    )}
-                  </div>
-                )}
-                {geo.accuracy != null && geo.accuracy > 15 && <div className="warn small">GPS accuracy ±{Math.round(geo.accuracy)} m</div>}
-              </>
-            )}
-          </Card>
-
-          {/* Wind */}
-          <Card className="wind">
-            {wx ? (
-              <div className="row between">
-                <div className="wind-arrow" style={{ transform: `rotate(${(effect ? effect.relativeDeg : wx.windFromDeg) + 180}deg)` }} aria-hidden>
-                  ↑
-                </div>
-                <div className="grow">
-                  <strong>
-                    {Math.round(wx.windKmh)} km/h from the {compass(wx.windFromDeg)}
-                  </strong>
-                  <div className="muted small">
-                    Gusts {Math.round(wx.gustKmh)} km/h · {Math.round(wx.tempC)}°C
-                    {effect ? ` · ${effect.label}` : ''}
-                  </div>
-                  <div className="muted small">{effect ? 'Arrow shows the wind relative to your shot (up = toward the target).' : 'Arrow shows the wind with north up.'}</div>
-                </div>
-              </div>
-            ) : (
-              <p className="muted small">{wxErr ? `Wind unavailable: ${wxErr}` : 'Loading wind…'}</p>
-            )}
-          </Card>
-
-          {/* Map */}
-          <Card className="map-card">
-            <div className="row between">
-              <Segmented
-                value={mapMode}
-                onChange={setMapMode}
-                options={[
-                  { value: 'measure', label: 'Tap to measure' },
-                  { value: 'pin', label: pin ? 'Move pin' : 'Set pin' },
-                ]}
+              <HoleMap
+                hole={hole}
+                player={geo.pos ?? undefined}
+                pin={pin}
+                shots={shots}
+                units={units}
+                onTap={onMapTap}
+                measure={measure}
+                centre={course?.location}
+                height={300}
+                hazards={holeHazards}
               />
-              {pin && (
-                <button className="btn ghost small" onClick={() => update((r) => { const p = { ...r.pins }; delete p[hole.number]; return { ...r, pins: p }; })}>
-                  Clear pin
+              {course && (
+                <button className="btn small" onClick={() => go({ name: 'course', id: course.id })}>
+                  Map green in course editor
                 </button>
               )}
-            </div>
-            <HoleMap
-              hole={hole}
-              player={onHole ? geo.pos : (geo.pos ?? undefined)}
-              pin={pin}
-              shots={shots}
-              units={units}
-              onTap={onMapTap}
-              measure={measure}
-              centre={hole.green?.centre ?? course?.location}
-              height={300}
-              hazards={holeHazards}
-              aim={advice && caddyOnMap ? advice.best.aim : undefined}
-              landingZone={advice && caddyOnMap ? landingEllipse(advice.best.landing, advice.from) : undefined}
-            />
-            {!hole.green && course && (
-              <button className="btn small" onClick={() => go({ name: 'course', id: course.id })}>
-                Map green in course editor
-              </button>
-            )}
-          </Card>
+            </Card>
+          )}
+          {hole.green && far && <p className="muted small center">You're {(dist!.centre / 1000).toFixed(1)} km from this green, so the numbers are from the tee until you get there.</p>}
+          {hole.green && !geo.pos && <p className="muted small center">{geo.error ?? 'Getting your GPS position…'}</p>}
+          {!wx && wxErr && <p className="muted small center">Wind unavailable: {wxErr}</p>}
 
           {/* Shot tracking */}
           <Card title="Shot tracker">
@@ -518,11 +506,6 @@ export function Play({ go, roundId }: { go: Go; roundId: string }) {
       )}
     </div>
   );
-}
-
-function signed(m: number, units: 'm' | 'yd') {
-  const v = Math.round(units === 'yd' ? m * 1.0936 : m);
-  return v === 0 ? '0' : v > 0 ? `+${v}` : `${v}`;
 }
 
 function drivesUsed(round: Round, playerId: string) {

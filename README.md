@@ -32,12 +32,15 @@ It runs in the browser and installs to your home screen (Share → Add to Home S
 - Ambrose rounds count in league mode, with team-mates sharing the team's position. Ties share the points
 - Rounds are tagged to comps at setup (ticked automatically when enough members are playing) and can be changed after the round
 - All-time table across your whole crew, plus live comps on the home screen
-- **Sharing, no accounts needed:** "Share round" or "Invite / sync mates" makes a link for the group chat. Opening it on a mate's phone imports the rounds and comp, matching players by name (confirmable), skipping rounds they already scored themselves, and keeping their own stats private. "Share table" posts the standings as text
+- **Invite a mate to a comp:** "Invite a mate to join" sends a link. Your mate taps it, sees the comp and the table so far, puts in their name and handicap and taps Join. They appear in the comp on everyone's phone by themselves (or, without live sync set up, they send an "I'm in" link back)
+- **Live in the comp:** when a round that counts towards a comp goes live, the comp page on everyone's phone shows a **Live now** card with the leaderboard (thru, points or net to par) and the comp table "if it finished now", updating as the scorer enters scores
+- **Banter:** every comp has its own group chat. Golf and stirring emojis (🐦🦆🐔🐐🌊🏖️🤡💀🍻 and more), one-tap sledges ("Sandbagger alert 🚨", "Wet one! 🌊", "Is that your score or your handicap? 🤣"…) and automatic shout-outs when someone birdies or blows up a hole during a live comp round. The comp page shows the latest message and how many are new
+- **Sharing, no accounts needed:** "Share round" or "Sync rounds" makes a link for the group chat. Opening it on a mate's phone imports the rounds and comp, matching players by name (confirmable), skipping rounds they already scored themselves, and keeping their own stats private. "Share table" posts the standings as text
 
 **Live scoring**
 - The chosen scorer taps **Go live** on the hole screen and shares the link (or the 8-letter code). Everyone with it open sees scores, the leaderboard and the "if it finished now" comp table update within about a second of each score going in
 - No logins for anyone. If the scorer loses signal, scores queue on their phone and send when it's back
-- **More than one group?** Each group has its own scorer. The second group's scorer opens the same link and taps "I'm scoring another group" (course, format and holes are copied across). Everyone sees one combined leaderboard for the whole field, which hole each group is on, and the comp table ranked across all groups
+- **More than one group, or playing another team?** Each group has its own scorer. The other group's scorer opens the same link and taps "Join with my group or team" (course, format and holes are copied across). Both scorers' **Scorecard** tab then shows every team hole by hole (Everyone / Our group), updating as each side enters scores: ideal for an Ambrose or a 4BBB against another group. Everyone sees one combined leaderboard for the whole field, which hole each group is on, and the comp table ranked across all groups
 - When everyone's finished, tap "Add the full-field round to my app". For scorers it replaces their own group's card, keeping their personal stats
 - Needs a free Firebase project, a one-off setup: see [LIVE_SCORING_SETUP.md](LIVE_SCORING_SETUP.md)
 
@@ -49,6 +52,14 @@ It runs in the browser and installs to your home screen (Share → Add to Home S
   - Accuracy on simulated test footage: landing side within about 6 m; carry within a few percent for typical club golfers, about 5–12% before calibration for stronger hitters; real-world accuracy depends on a still phone and a ball that stands out
 - **GPS tracer:** shots marked during a round are drawn as curved flight lines on the satellite map with club and distance, plus a hole-by-hole animated **shot replay** after the round
 
+**Hole view**
+- Each hole is a full-size satellite picture turned so you're looking down it: tee at the bottom, green at the top, doglegs and all
+- Front, centre (or pin) and back distances down the side, plus the plays-like number; the hole number, par, length and stroke index; and the wind arrow turned to match the hole
+- Tap anywhere to drop a target: you get the distance to it and from it to the pin. Drag the target ring to move it
+- Every bunker and water hazard in play shows two numbers: how far to reach it and how far to carry it. Rings across the fairway mark every 50 m (or yards)
+- The caddy's club, aim line and landing zone sit on the picture, with its call along the bottom
+- **Green** zooms in on the green; **Pin** lets you tap where today's flag is; swipe between holes with the arrows by the hole number
+
 **AI caddy**
 - On every hole: the club and the exact aim point (e.g. "7-iron, aim 6 m left of the pin, pin-high"), the plays-like distance, and the odds of finding water or sand
 - How it decides: it plays each sensible club and aim line a few hundred times with your distance, spread and usual miss (from your shot tracker, sim calibration and stats), plus wind, slope and temperature. Every landing spot is scored with the expected strokes to hole out (green, fairway, rough, bunker or water) and the option that saves the most shots wins. It lays up when going for it doesn't pay, and plays safer after a blow-up or when you're protecting a good card
@@ -57,6 +68,7 @@ It runs in the browser and installs to your home screen (Share → Add to Home S
 - Green slopes aren't in public map data, so it doesn't read the break
 
 **Coaching**
+- Mid-round, net scores are fair: an Ambrose team's handicap comes off pro rata for the holes played (half after 9), and the leader shows as e.g. "2.5 under net thru 9"
 - Built-in coach (no internet or key needed): compares your putts, fairways, GIR, up-and-downs, penalties, bunker play, blow-up holes, par-5 scoring and back-nine fade against typical numbers for your handicap. It ranks the areas costing you the most shots, lists your costliest holes and why, gives a drill and an on-course tip for each, and builds a 60-minute practice plan
 - Optional AI coach: a deeper Claude write-up of the round, using your own Anthropic API key (Settings)
 - Stats page: trends over your last 10 rounds, your recurring #1 weakness, and club distances

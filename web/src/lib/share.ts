@@ -137,6 +137,11 @@ export async function decodeBundle(s: string): Promise<Bundle> {
   return b;
 }
 
+/** A comp invite: opens the "Join a comp" screen. */
+export function joinUrl(encoded: string): string {
+  return `${location.origin}${location.pathname}#join=${encoded}`;
+}
+
 export function shareUrl(encoded: string): string {
   return `${location.origin}${location.pathname}#import=${encoded}`;
 }
