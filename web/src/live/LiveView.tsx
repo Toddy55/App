@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import type { Round } from '../types';
-import { decodeBundle, encodeBundle, type Bundle } from '../lib/share';
+import { applyBundle, autoMap, decodeBundle, encodeBundle, type Bundle } from '../lib/share';
+import { uid } from '../lib/storage';
+import { newGroupId } from './payload';
 import { mergeEventBundles } from '../lib/merge';
 import { computeComp, valueLabel } from '../lib/comps';
 import { computeResult, FORMAT_LABELS } from '../lib/scoring';
@@ -83,6 +85,41 @@ export function LiveView({ go, code }: { go: Go; code: string }) {
     go({ name: 'setup', courseId: round.courseId, liveCode: code, format: round.format, holes: round.holes.map((h) => h.number), compIds: round.compIds });
   };
 
+  // Second phone in the same group: copy that group's card and mark the other side(s)
+  const joinAsMarker = (g: Group) => {
+    const host = g.bundle.rounds[0];
+    if (!host) return;
+    const s = store.settings();
+    const sub = { ...g.bundle, rounds: [host] };
+    const plan = applyBundle(sub, autoMap(sub, s.me, store.friends()), uid);
+    plan.newFriends.forEach((f) => store.saveFriend(f));
+    for (const c of plan.comps) {
+      const mine = store.comp(c.id);
+      store.saveComp(mine ? { ...c, memberIds: [...new Set([...mine.memberIds, ...c.memberIds])] } : c);
+    }
+    const r = plan.rounds[0];
+    if (!store.courses().some((c) => c.id === r.courseId)) {
+      store.saveCourse({ id: r.courseId, name: r.courseName, holes: r.holes, source: 'osm', updatedAt: Date.now() });
+    }
+    const myTeam = r.teams?.find((t) => t.playerIds.includes('me'));
+    const local: Round = {
+      ...r,
+      id: uid(),
+      meId: myTeam ? myTeam.id : r.players.some((p) => p.id === 'me') ? 'me' : r.meId,
+      stats: {},
+      shots: {},
+      pins: {},
+      completed: false,
+      sharedBy: undefined,
+      liveCode: code,
+      liveGroup: newGroupId(),
+      liveSameAs: g.id,
+      startedAt: Date.now(),
+    };
+    store.saveRound(local);
+    go({ name: 'play', roundId: local.id });
+  };
+
   const save = async () => {
     if (!bundle) return;
     go({ name: 'import', data: await encodeBundle(bundle) });
@@ -116,9 +153,9 @@ export function LiveView({ go, code }: { go: Go; code: string }) {
               </div>
               <h2 className="result">{computeResult(round).headline}</h2>
               <ul className="group-status">
-                {groups.map((g, i) => (
+                {groups.map((g) => (
                   <li key={g.id}>
-                    <strong>Group {i + 1}</strong> ({g.doc.scorer} scoring): {g.doc.status === 'final' ? 'finished' : `on hole ${g.doc.hole}`}
+                    <strong>{g.bundle.rounds[0]?.liveSameAs ? '↳ Marker' : `Group ${groups.filter((x) => !x.bundle.rounds[0]?.liveSameAs).indexOf(g) + 1}`}</strong> ({g.doc.scorer} {g.bundle.rounds[0]?.liveSameAs ? 'marking' : 'scoring'}): {g.doc.status === 'final' ? 'finished' : `on hole ${g.doc.hole}`}
                     <span className="muted small"> · {g.bundle.rounds[0]?.players.map((p) => p.name).join(', ')}</span>
                   </li>
                 ))}
@@ -160,9 +197,21 @@ export function LiveView({ go, code }: { go: Go; code: string }) {
                   Back to scoring my group
                 </button>
               ) : (
-                <button className="btn block" onClick={joinAsScorer}>
-                  ✍️ Join with my group or team
-                </button>
+                <>
+                  {groups
+                    .filter((g) => !g.bundle.rounds[0]?.liveSameAs)
+                    .map((g) => (
+                      <button key={g.id} className="btn block" onClick={() => joinAsMarker(g)}>
+                        ✍️ I'm in {g.doc.scorer}'s group: I'll mark the other side
+                      </button>
+                    ))}
+                  <button className="btn block" onClick={joinAsScorer}>
+                    ✍️ We're a different group or team
+                  </button>
+                  <p className="muted small center">
+                    Same group, two phones? Each phone marks the other side, never its own, so nobody scores themselves.
+                  </p>
+                </>
               ))}
             <p className="muted small center">The page updates by itself. Keep it open and watch the scores come in.</p>
           </>

@@ -45,6 +45,7 @@ It runs in the browser and installs to your home screen (Share → Add to Home S
 - The chosen scorer taps **Go live** on the hole screen and shares the link (or the 8-letter code). Everyone with it open sees scores, the leaderboard and the "if it finished now" comp table update within about a second of each score going in
 - No logins for anyone. If the scorer loses signal, scores queue on their phone and send when it's back
 - **More than one group, or playing another team?** Each group has its own scorer. The other group's scorer opens the same link and taps "Join with my group or team" (course, format and holes are copied across). Both scorers' **Scorecard** tab then shows every team hole by hole (Everyone / Our group), updating as each side enters scores: ideal for an Ambrose or a 4BBB against another group. Everyone sees one combined leaderboard for the whole field, which hole each group is on, and the comp table ranked across all groups
+- **Cross-marking (no scoring yourself):** in any game or comp, if a second phone in the same group opens the live link and taps "I'm in Toddy's group: I'll mark the other side", every phone marks the other side and never its own. Your own row locks ("🔒 marked by Shazza") and fills in from their phone as they enter it. Players without a phone are shared out between the phones. With one phone scoring, it works as before
 - When everyone's finished, tap "Add the full-field round to my app". For scorers it replaces their own group's card, keeping their personal stats
 - Needs a free Firebase project, a one-off setup: see [LIVE_SCORING_SETUP.md](LIVE_SCORING_SETUP.md)
 
@@ -60,6 +61,7 @@ It runs in the browser and installs to your home screen (Share → Add to Home S
 **Hole view**
 - Each hole is a full-size satellite picture turned so you're looking down it: tee at the bottom, green at the top, doglegs and all
 - Front, centre (or pin) and back distances down the side, plus the plays-like number; the hole number, par, length and stroke index; and the wind arrow turned to match the hole
+- Pinch to zoom (up to 10x) and drag to look around, or use the + / − / Fit buttons
 - Tap anywhere to drop a target: you get the distance to it and from it to the pin. Drag the target ring to move it
 - Every bunker and water hazard in play shows two numbers: how far to reach it and how far to carry it. Rings across the fairway mark every 50 m (or yards)
 - The caddy's club, aim line and landing zone sit on the picture, with its call along the bottom

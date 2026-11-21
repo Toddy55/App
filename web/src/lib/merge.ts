@@ -1,5 +1,6 @@
 import type { Competition, Round } from '../types';
-import type { Bundle, Person } from './share';
+import { personKey, type Bundle, type Person } from './share';
+import { assignMarkers, sideKeys, type MarkerPhone } from './markers';
 
 /**
  * Merge the separate group cards of one live event (e.g. two four-balls on a
@@ -41,8 +42,35 @@ export function mergeGroupRounds(rounds: Round[], eventId: string): Round {
   };
 }
 
+/**
+ * Phones cross-marking the same card send one bundle each. Fold them into one
+ * card per group, taking each side's scores from the phone that marks it.
+ */
+export function foldMarkers(bundles: Bundle[]): Bundle[] {
+  const hosts = bundles.filter((b) => !b.rounds[0]?.liveSameAs || !bundles.some((h) => h.rounds[0]?.liveGroup === b.rounds[0]?.liveSameAs));
+  return hosts.map((h) => {
+    const host = h.rounds[0];
+    if (!host?.liveGroup) return h;
+    const markers = bundles.filter((b) => b !== h && b.rounds[0]?.liveSameAs === host.liveGroup);
+    if (!markers.length) return h;
+    const all = [h, ...markers.sort((a, b) => ((a.rounds[0].liveGroup ?? '') < (b.rounds[0].liveGroup ?? '') ? -1 : 1))];
+    const phones: MarkerPhone[] = all.map((b) => ({ group: b.rounds[0].liveGroup!, owner: personKey(b.from), name: b.from }));
+    const assign = assignMarkers(sideKeys(host), phones);
+    if (!assign) return h;
+    const scores = { ...host.scores };
+    for (const [side, group] of Object.entries(assign)) {
+      const from = all.find((b) => b.rounds[0].liveGroup === group)!.rounds[0];
+      if (from.scores[side]) scores[side] = from.scores[side];
+    }
+    const people = new Map(h.people.map((p) => [p.key, p]));
+    markers.forEach((m) => m.people.forEach((p) => people.set(p.key, people.get(p.key) ?? p)));
+    return { ...h, from: all.map((b) => b.from).join(' & '), people: [...people.values()], rounds: [{ ...host, scores }, ...h.rounds.slice(1)] };
+  });
+}
+
 /** Combine each group's bundle into one bundle holding the merged field round plus any comp history. */
-export function mergeEventBundles(bundles: Bundle[], eventId: string): Bundle {
+export function mergeEventBundles(rawBundles: Bundle[], eventId: string): Bundle {
+  const bundles = foldMarkers(rawBundles);
   const people = new Map<string, Person>();
   const comps = new Map<string, Competition>();
   const history = new Map<string, Round>();
