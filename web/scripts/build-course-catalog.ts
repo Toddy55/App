@@ -4,9 +4,12 @@
  * hole-by-hole detail (par, stroke index, tee, green outline) where it's mapped.
  *
  * Run: npx tsx scripts/build-course-catalog.ts
- * (GitHub Actions runs this monthly; see .github/workflows/update-courses.yml)
+ * (GitHub Actions runs this on every deploy and daily; see .github/workflows/deploy.yml)
+ *
+ * If the map servers fall over part-way, whatever did download is kept and the
+ * rest comes from the previous list in src/data/seq-courses.json.
  */
-import { writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { buildCourse, type OsmElement } from '../src/lib/courses';
 import { distanceM, pointInPolygon } from '../src/lib/geo';
 import type { LatLon } from '../src/types';
@@ -18,8 +21,12 @@ const B = `${BBOX.south},${BBOX.west},${BBOX.north},${BBOX.east}`;
 const ENDPOINTS = ['https://overpass-api.de/api/interpreter', 'https://overpass.private.coffee/api/interpreter', 'https://maps.mail.ru/osm/tools/overpass/api/interpreter'];
 
 async function overpass(query: string): Promise<OsmElement[]> {
-  for (const url of ENDPOINTS) {
-    for (let attempt = 0; attempt < 2; attempt++) {
+  for (let round = 0; round < 2; round++) {
+    if (round) {
+      console.warn('  all servers busy, waiting a minute and going round again…');
+      await new Promise((r) => setTimeout(r, 60000));
+    }
+    for (const url of ENDPOINTS) {
       try {
         const res = await fetch(url, { method: 'POST', body: 'data=' + encodeURIComponent(query), headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': 'fairway-coach-catalog/1.0' } });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -52,21 +59,47 @@ function centreOf(e: OsmElement): LatLon | undefined {
 const r5 = (n: number) => Math.round(n * 1e5) / 1e5;
 const pt = (p: LatLon): [number, number] => [r5(p.lat), r5(p.lon)];
 
+/** A later download that can fail without losing the rest: returns undefined instead. */
+async function optional(what: string, query: string): Promise<OsmElement[] | undefined> {
+  console.log(`Fetching ${what}…`);
+  try {
+    return await overpass(query);
+  } catch {
+    console.warn(`  couldn't get ${what}; keeping them from the previous list`);
+    return undefined;
+  }
+}
+
+const OUT = new URL('../src/data/seq-courses.json', import.meta.url);
+
+function previous(): Map<string, CatalogCourse> {
+  try {
+    if (!existsSync(OUT)) return new Map();
+    const c = JSON.parse(readFileSync(OUT, 'utf8')) as Catalog;
+    return new Map((c.courses ?? []).map((x) => [x.ref, x]));
+  } catch {
+    return new Map();
+  }
+}
+
 async function main() {
+  const prev = previous();
+  console.log(`Previous list: ${prev.size} courses`);
   console.log('Fetching golf courses…');
   const courses = (await overpass(`[out:json][timeout:180];nwr["leisure"="golf_course"](${B});out geom tags;`)).filter((e) => e.tags?.name);
   console.log(`  ${courses.length} named courses`);
-  console.log('Fetching holes and greens…');
-  const features = await overpass(`[out:json][timeout:300];(way["golf"="hole"](${B});way["golf"="green"](${B});relation["golf"="green"](${B}););out geom tags;`);
-  console.log(`  ${features.length} holes/greens`);
-  console.log('Fetching bunkers, water and fairways…');
+  const featuresOrNot = await optional('holes and greens', `[out:json][timeout:300];(way["golf"="hole"](${B});way["golf"="green"](${B});relation["golf"="green"](${B}););out geom tags;`);
+  if (featuresOrNot) console.log(`  ${featuresOrNot.length} holes/greens`);
   // Only hazards that sit on a golf course (otherwise every dam and creek in SEQ comes back)
-  const hazards = await overpass(
+  const hazardsOrNot = await optional(
+    'bunkers, water and fairways',
     `[out:json][timeout:300];nwr["leisure"="golf_course"](${B})->.c;.c map_to_area->.a;(way["golf"~"^(bunker|fairway|water_hazard|lateral_water_hazard)$"](area.a);way["natural"="water"](area.a););out geom tags;`,
   );
-  console.log(`  ${hazards.length} hazards/fairways`);
-  console.log('Fetching town names…');
-  const places = (await overpass(`[out:json][timeout:120];node["place"~"^(suburb|town|city|village)$"](${B});out tags;`)).filter((p) => p.tags?.name && p.lat != null);
+  if (hazardsOrNot) console.log(`  ${hazardsOrNot.length} hazards/fairways`);
+  const placesOrNot = await optional('town names', `[out:json][timeout:120];node["place"~"^(suburb|town|city|village)$"](${B});out tags;`);
+  const features = featuresOrNot ?? [];
+  const hazards = hazardsOrNot ?? [];
+  const places = (placesOrNot ?? []).filter((p) => p.tags?.name && p.lat != null);
 
   // Which course does each hole/green belong to? Inside its boundary, else the nearest course centre within 1.5 km
   const bounds = courses.map((c) => ({ c, polys: outlines(c).filter((p) => p.length >= 3), centre: centreOf(c) }));
@@ -91,29 +124,32 @@ async function main() {
     const place = places
       .map((p) => ({ p, d: distanceM(centre, { lat: p.lat!, lon: p.lon! }) }))
       .sort((a, b) => a.d - b.d)[0];
-    const suburb = c.tags?.['addr:suburb'] ?? c.tags?.['addr:city'] ?? (place && place.d < 8000 ? place.p.tags!.name : undefined);
+    const old = prev.get(ref);
+    const suburb = c.tags?.['addr:suburb'] ?? c.tags?.['addr:city'] ?? (place && place.d < 8000 ? place.p.tags!.name : undefined) ?? old?.suburb;
     const built = buildCourse({ osmRef: ref, name: c.tags!.name, location: centre, suburb, state: 'QLD' }, owned.get(c)!);
     const mapped = built.holes.filter((h) => h.tee || h.green?.polygon).length;
+    const holes = mapped
+      ? built.holes.map((h) => ({
+          n: h.number,
+          par: h.par,
+          si: h.si,
+          ...(h.lengthM ? { len: h.lengthM } : {}),
+          ...(h.tee ? { tee: pt(h.tee) } : {}),
+          ...(h.green ? { g: pt(h.green.centre) } : {}),
+          ...(h.green?.polygon ? { poly: h.green.polygon.filter((_, i, a) => a.length <= 24 || i % Math.ceil(a.length / 24) === 0).map(pt) } : {}),
+          ...(h.path ? { path: h.path.map(pt) } : {}),
+        }))
+      : undefined;
+    const hz = built.hazards?.length
+      ? built.hazards.map((z) => ({ k: z.kind === 'bunker' ? ('b' as const) : z.kind === 'water' ? ('w' as const) : ('f' as const), p: z.poly.map(pt) }))
+      : undefined;
     out.push({
       ref,
       name: c.tags!.name,
       suburb,
       at: pt(centre),
-      holes: mapped
-        ? built.holes.map((h) => ({
-            n: h.number,
-            par: h.par,
-            si: h.si,
-            ...(h.lengthM ? { len: h.lengthM } : {}),
-            ...(h.tee ? { tee: pt(h.tee) } : {}),
-            ...(h.green ? { g: pt(h.green.centre) } : {}),
-            ...(h.green?.polygon ? { poly: h.green.polygon.filter((_, i, a) => a.length <= 24 || i % Math.ceil(a.length / 24) === 0).map(pt) } : {}),
-            ...(h.path ? { path: h.path.map(pt) } : {}),
-          }))
-        : undefined,
-      hz: built.hazards?.length
-        ? built.hazards.map((z) => ({ k: z.kind === 'bunker' ? ('b' as const) : z.kind === 'water' ? ('w' as const) : ('f' as const), p: z.poly.map(pt) }))
-        : undefined,
+      holes: featuresOrNot ? holes : old?.holes,
+      hz: hazardsOrNot ? hz : old?.hz,
     });
   }
   // Same course mapped twice (e.g. a boundary and a point): keep the one with more detail
@@ -127,7 +163,8 @@ async function main() {
   }
   const final = [...byName.values()].sort((a, b) => a.name.localeCompare(b.name));
   const catalog: Catalog = { v: 1, region: 'South East Queensland', generated: new Date().toISOString().slice(0, 10), courses: final };
-  writeFileSync(new URL('../src/data/seq-courses.json', import.meta.url), JSON.stringify(catalog));
+  if (final.length < prev.size * 0.8) throw new Error(`Only ${final.length} courses came back (had ${prev.size}); keeping the previous list`);
+  writeFileSync(OUT, JSON.stringify(catalog));
   const detailed = final.filter((c) => c.holes).length;
   console.log(`Wrote ${final.length} courses (${detailed} with hole detail).`);
   console.log(`Hazards: ${final.reduce((n, c) => n + (c.hz?.length ?? 0), 0)} across ${final.filter((c) => c.hz).length} courses; size ${(JSON.stringify(catalog).length / 1024).toFixed(0)} KB`);
