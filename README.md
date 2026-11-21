@@ -43,7 +43,10 @@ It runs in the browser and installs to your home screen (Share → Add to Home S
 
 **Shot tracer**
 - **Video tracer:** film a shot (or pick a video), tap where the ball starts, lands and peaks, and a TV-style tracer follows the ball in time with the video. Choose the colour and thickness, then save the clip or share it to the group chat
-- **Live tracer:** lean the phone on the bag behind the golfer, tap the ball, and hit. The app hears the strike, spots the ball leaving, follows it frame by frame and draws the tracer as it flies, finishing the arc once the ball is too small to see. The clip is saved for sharing, or for touching up in the video tracer
+- **Sim mode (fully automatic):** stand the phone on the bag 2 to 4 m behind the ball, pointing down the target line, and hit. No tapping: it hears the strike, finds the ball (it spots it sitting at address), follows it frame by frame and draws the tracer live. It then fits a real ball-flight model (speed, launch, spin, start line, curve) to what the camera saw, finishes the tracer to the landing spot, and shows **carry, apex, hang time, start line, shape (draw/fade/hook/slice) and where it landed**. A dispersion chart plots the session, and it re-arms itself for the next shot
+  - Pick the club: ball speed is the hardest thing for a camera to see from behind, so the club's typical speed is the starting point
+  - **Calibrate** once with a shot of known carry. It learns how much harder or softer than a typical club golfer you hit it, and that applies to every club
+  - Accuracy on simulated test footage: landing side within about 6 m; carry within a few percent for typical club golfers, about 5–12% before calibration for stronger hitters; real-world accuracy depends on a still phone and a ball that stands out
 - **GPS tracer:** shots marked during a round are drawn as curved flight lines on the satellite map with club and distance, plus a hole-by-hole animated **shot replay** after the round
 
 **Coaching**

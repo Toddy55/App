@@ -112,13 +112,16 @@ export class BallTracker {
   private strikeAt: number | null = null;
   readonly s: number;
   readonly maxArea: number;
-  readonly launch: Pt;
+  /** Where the ball sat. Null in auto mode: found from the flight after the strike. */
+  launch: Pt | null;
+  /** Hint from spotting the ball at address (auto mode). */
+  hint: Pt | null = null;
   readonly w: number;
   readonly h: number;
   /** When true the tracker waits for strike() (microphone) before looking for the ball. */
   readonly needsStrike: boolean;
 
-  constructor(launch: Pt, w: number, h: number, needsStrike = false) {
+  constructor(launch: Pt | null, w: number, h: number, needsStrike = false) {
     this.launch = launch;
     this.w = w;
     this.h = h;
@@ -152,6 +155,7 @@ export class BallTracker {
         return;
       }
     }
+    if (!this.launch) return this.lookForLaunchAuto(blobs, t);
     const L = this.launch;
     const cands = blobs.filter(
       (b) => this.isBallish(b) && b.y < L.y - 2 * this.s && Math.abs(b.x - L.x) < this.w * 0.3 && L.y - b.y < this.h * 0.35,
@@ -189,12 +193,80 @@ export class BallTracker {
     this.misses = 0;
   }
 
+  private autoHist: TrackPoint[][] = [];
+
+  /**
+   * No tap: after the strike, look for three frames in a row where something
+   * small moves up and away at a steady speed. (Each moving ball shows up
+   * twice in a frame difference, where it is and where it was, so a single
+   * pair of sightings isn't enough to be sure.)
+   */
+  private lookForLaunchAuto(blobs: Blob[], t: number) {
+    if (this.strikeAt == null) return;
+    const small = blobs
+      .filter((b) => this.isBallish(b) && b.y > this.h * 0.15)
+      .slice(0, 40)
+      .map((b) => ({ t, x: b.x, y: b.y }));
+    const [f1, f2] = this.autoHist;
+    let best: { c: TrackPoint[]; score: number } | null = null;
+    if (f1 && f2) {
+      const s = this.s;
+      for (const p1 of f1) {
+        if (this.hint && Math.hypot(p1.x - this.hint.x, p1.y - this.hint.y) < 2.5 * s) continue; // the empty spot the ball just left
+        for (const p2 of f2) {
+          const v1x = p2.x - p1.x,
+            v1y = p2.y - p1.y;
+          const sp1 = Math.hypot(v1x, v1y);
+          if (v1y > -1.2 * s || sp1 < 2 * s || sp1 > this.h * 0.2 || Math.abs(v1x) > -v1y * 1.2) continue;
+          for (const p3 of small) {
+            const v2x = p3.x - p2.x,
+              v2y = p3.y - p2.y;
+            if (v2y > -0.5 * s) continue;
+            const jerk = Math.hypot(v2x - v1x, v2y - v1y);
+            if (jerk > 0.45 * sp1 + 2 * s) continue;
+            const fromHint = this.hint ? Math.hypot(p1.x - this.hint.x, p1.y - this.hint.y) / s : 0;
+            const score = jerk / s + fromHint * 0.3;
+            if (!best || score < best.score) best = { c: [p1, p2, p3], score };
+          }
+        }
+      }
+    }
+    if (best) {
+      const [p1, p2, p3] = best.c;
+      const dt = p2.t - p1.t || 1 / 30;
+      const vx = (p2.x - p1.x) / dt,
+        vy = (p2.y - p1.y) / dt;
+      let origin: Pt;
+      let t0: number;
+      // The ball sat at the address spot if the flight starts above it; impact is when we heard it
+      if (this.hint && p1.y < this.hint.y && Math.hypot(p1.x - this.hint.x, p1.y - this.hint.y) < this.h * 0.3) {
+        origin = this.hint;
+        t0 = Math.min(this.strikeAt, p1.t - 1 / 60);
+      } else {
+        t0 = this.strikeAt;
+        origin = { x: p1.x - vx * (p1.t - t0), y: p1.y - vy * (p1.t - t0) };
+      }
+      this.launch = origin;
+      this.pts = [{ t: t0, x: origin.x, y: origin.y }, p1, p2, p3];
+      this.state = 'tracking';
+      this.misses = 0;
+      return;
+    }
+    if (t - this.strikeAt > 0.6) {
+      this.strikeAt = null;
+      this.autoHist = [];
+      return;
+    }
+    this.autoHist = [f2 ?? [], small].filter(Boolean) as TrackPoint[][];
+    if (!f2) this.autoHist = [[], small];
+  }
+
   private follow(blobs: Blob[], t: number) {
-    const pred = this.predict(t);
+    const pred = this.predictNext(t);
     const last = this.pts[this.pts.length - 1];
     const prev = this.pts[this.pts.length - 2];
-    const v = Math.hypot(last.x - prev.x, last.y - prev.y) / (last.t - prev.t || 1 / 30);
-    const gate = Math.max(10 * this.s, v * (t - last.t) * 0.7);
+    const step = Math.hypot(last.x - prev.x, last.y - prev.y) * ((t - last.t) / (last.t - prev.t || 1 / 30));
+    const gate = Math.max(8 * this.s, step * 0.9);
     const best = blobs
       .filter((b) => this.isBallish(b))
       .map((b) => ({ b, d: Math.hypot(b.x - pred.x, b.y - pred.y) }))
@@ -210,9 +282,29 @@ export class BallTracker {
     if (this.misses > 8 || offFrame || t - this.pts[0].t > 8) this.state = 'done';
   }
 
-  private predict(t: number): Pt {
-    const f = this.flight();
-    return f ? f.at(t) : this.pts[this.pts.length - 1];
+  /**
+   * Where the ball should be at time t. Seen from behind, a ball flying away
+   * slows down on screen frame by frame (it's getting further away), so we
+   * carry on the last step, shrunk by how much the steps have been shrinking.
+   */
+  private predictNext(t: number): Pt {
+    const n = this.pts.length;
+    const a = this.pts[n - 1];
+    const b = this.pts[n - 2];
+    const c = this.pts[n - 3];
+    const dt = a.t - b.t || 1 / 30;
+    let vx = (a.x - b.x) / dt,
+      vy = (a.y - b.y) / dt;
+    if (c && c !== this.pts[0]) {
+      const dt0 = b.t - c.t || 1 / 30;
+      const s0 = Math.hypot(b.x - c.x, b.y - c.y) / dt0;
+      const s1 = Math.hypot(vx, vy);
+      const decay = Math.max(0.5, Math.min(1.1, s1 / (s0 || 1)));
+      const k = Math.pow(decay, (t - a.t) / dt);
+      vx *= k;
+      vy *= k;
+    }
+    return { x: a.x + vx * (t - a.t), y: a.y + vy * (t - a.t) };
   }
 
   /** The best estimate of the whole flight so far (null until a launch is seen). */
@@ -234,7 +326,8 @@ export class BallTracker {
     const xAt = (u: number) => fx[0] + fx[1] * u + fx[2] * u * u;
     const apexY = yAt(tApexRel);
     // Seen from behind, the ball comes down well above where it started (it's far away).
-    const landY = this.launch.y - 0.35 * (this.launch.y - apexY);
+    const startY = this.launch?.y ?? this.pts[0].y;
+    const landY = startY - 0.35 * (startY - apexY);
     const disc = fy[1] * fy[1] - 4 * fy[2] * (fy[0] - landY);
     let tEndRel = disc > 0 ? (-fy[1] + Math.sqrt(disc)) / (2 * fy[2]) : tApexRel * 1.8;
     const lastRel = ts[ts.length - 1];
@@ -263,4 +356,35 @@ export class StrikeDetector {
     if (hit) this.lastHit = t;
     return hit;
   }
+}
+
+/**
+ * Spot a golf ball sitting at address: a small, bright, roundish blob in the
+ * lower half of the picture, nearest the bottom middle.
+ */
+export function findBallAtAddress(gray: Uint8Array, w: number, h: number): Pt | null {
+  const s = w / 320;
+  const mask = new Uint8Array(w * h);
+  // local contrast: much brighter than the ground a few pixels away
+  const off = Math.max(3, Math.round(4 * s));
+  for (let y = Math.floor(h * 0.45); y < h - off; y++) {
+    for (let x = off; x < w - off; x++) {
+      const i = y * w + x;
+      const v = gray[i];
+      if (v < 170) continue;
+      const around = (gray[i - off] + gray[i + off] + gray[i - off * w] + gray[i + off * w]) / 4;
+      if (v - around > 45) mask[i] = 1;
+    }
+  }
+  // A ball 1.5 to 5 m in front of a phone camera is a few pixels across: radius ≈ 0.003–0.011 × the long side
+  const M = Math.max(w, h);
+  const minArea = Math.max(2, Math.PI * (0.003 * M) ** 2 * 0.4);
+  const maxArea = Math.PI * (0.011 * M) ** 2 * 1.3;
+  const zero = new Uint8Array(w * h);
+  const blobs = diffBlobs(zero, mask.map((m) => m * 255), w, h, 100, maxArea).filter(
+    (b) => b.area >= minArea && b.y > h * 0.55 && Math.max(b.w, b.h) / Math.min(b.w, b.h) < 2.2,
+  );
+  const target = { x: w / 2, y: h * 0.85 };
+  const best = blobs.map((b) => ({ b, d: Math.hypot(b.x - target.x, b.y - target.y) })).sort((a, b) => a.d - b.d)[0];
+  return best ? { x: best.b.x, y: best.b.y } : null;
 }

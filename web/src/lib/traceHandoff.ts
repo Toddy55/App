@@ -6,6 +6,10 @@ export interface TraceHandoff {
   start: Pt & { t: number };
   end: Pt & { t: number };
   apex: Pt;
+  /** Full fitted flight in video pixels and clip seconds (live tracer). */
+  path?: { t: number; x: number; y: number }[];
+  /** Lines of shot data burned into the clip, e.g. "Carry 152 m". */
+  info?: string[];
 }
 
 let pending: TraceHandoff | null = null;

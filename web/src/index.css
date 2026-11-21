@@ -292,3 +292,17 @@ table.standings tr.cutline td { border-top: 2px dashed var(--muted); }
 .live-badge.armed { color: #4cd964; }
 .live-badge.flying { color: #ff6b6b; }
 .tracer-stage.collapsed { height: 0; min-height: 0; overflow: hidden; }
+
+/* Sim readout */
+.sim-hud { position: absolute; right: 10px; bottom: 10px; z-index: 2; background: rgba(0,0,0,.66); color: #fff; border-radius: 12px; padding: 8px 12px; text-align: right; }
+.sim-big { font-size: 2rem; font-weight: 800; color: #ffd166; line-height: 1; }
+.sim-big small { font-size: .75rem; color: #fff; margin-left: 4px; font-weight: 600; }
+.sim-row { display: flex; gap: 10px; font-size: .78rem; font-weight: 600; margin-top: 4px; justify-content: flex-end; }
+.dispersion { width: 100%; max-width: 360px; display: block; margin: 0 auto; }
+.disp-bg { fill: #2e6b3a; }
+.disp-ring { stroke: rgba(255,255,255,.25); stroke-width: 1; }
+.disp-label { fill: rgba(255,255,255,.75); font-size: 9px; font-weight: 600; }
+.disp-target { stroke: rgba(255,255,255,.55); stroke-dasharray: 4 4; stroke-width: 1; }
+.disp-flight { fill: none; stroke: #ff3b30; stroke-width: 2; }
+.disp-dot { fill: #ffd166; stroke: #000; stroke-width: 1; }
+.disp-dot.latest { fill: #ff3b30; stroke: #fff; stroke-width: 1.5; }
