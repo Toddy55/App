@@ -7,6 +7,7 @@ import { liveAvailable } from '../live/config';
 import { StandingsTable } from './Leaderboards';
 import { HandicapEditor } from '../components/HandicapEditor';
 import { InstallFirst } from '../components/InstallFirst';
+import { learnCrews } from '../live/liveFriends';
 import { Card, Header, type Go } from '../components/ui';
 
 /** Someone opened a comp invite: show them the comp and let them join in one tap. */
@@ -54,6 +55,7 @@ export function JoinComp({ go, data, to }: { go: Go; data: string; to?: string }
       store.saveSettings({ ...settings, me });
       const plan = applyBundle(bundle, autoMap(bundle, me, store.friends()), uid);
       plan.newFriends.forEach((f) => store.saveFriend(f));
+      learnCrews(bundle);
       for (const r of plan.rounds) if (!store.round(r.id)) store.saveRound(r);
       for (const c of plan.comps) {
         const mine = store.comp(c.id);

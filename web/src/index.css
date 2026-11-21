@@ -655,3 +655,10 @@ button.link { background: none; border: 0; padding: 0; color: var(--brand); text
 .hv-est { font-size: .7rem; font-weight: 700; color: var(--gold); }
 .mate-toast { position: fixed; left: 12px; right: 12px; top: calc(env(safe-area-inset-top) + 10px); z-index: 9000; background: var(--gold); color: var(--gold-ink); border: 0; border-radius: 14px; padding: 12px 14px; font: inherit; font-weight: 800; text-align: left; box-shadow: var(--shadow-lift); animation: toast-in .25s ease-out; }
 @keyframes toast-in { from { transform: translateY(-20px); opacity: 0; } to { transform: none; opacity: 1; } }
+
+/* ---------- Friends live now ---------- */
+.live-friends { display: flex; flex-direction: column; gap: 8px; }
+.live-friend { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; background: var(--card); color: var(--ink); border: 2px solid var(--birdie); border-radius: var(--radius); padding: 12px 14px; font: inherit; box-shadow: var(--shadow); }
+.live-friend .grow { display: flex; flex-direction: column; min-width: 0; }
+.live-friend .watch { display: flex; align-items: center; gap: 4px; background: var(--birdie); color: #fff; border-radius: 999px; padding: 6px 10px; font-weight: 800; font-size: .8rem; white-space: nowrap; }
+.live-friend .watch svg { width: 14px; height: 14px; }

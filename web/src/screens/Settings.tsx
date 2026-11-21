@@ -35,6 +35,15 @@ export function Settings({ go }: { go: Go }) {
           </label>
           <HandicapEditor player={s.me} onChange={(me) => save({ ...s, me })} />
         </Card>
+        <Card title="Live rounds">
+          <label className="check">
+            <input type="checkbox" checked={s.shareLive !== false} onChange={(e) => save({ ...s, shareLive: e.target.checked })} />
+            <span>
+              <strong>Share my rounds live with my friends</strong>
+              <span className="muted small"> Your mates see you're playing on their Home screen and can watch your scores and shot cam. No link needed.</span>
+            </span>
+          </label>
+        </Card>
         <Card title="Look">
           <div className="field">
             <span>Colours</span>

@@ -7,6 +7,7 @@ import { Card, Header, type Go } from '../components/ui';
 import { InviteSheet } from '../components/InviteSheet';
 import { encodeBundle, friendUrl, makeBundle, personKey } from '../lib/share';
 import { PasteInvite } from '../components/PasteInvite';
+import { LiveFriendsCard } from '../components/LiveFriendsCard';
 import { HandicapEditor, handicapLabel, STALE_MS } from '../components/HandicapEditor';
 
 export function Friends({ go }: { go: Go }) {
@@ -53,6 +54,7 @@ export function Friends({ go }: { go: Go }) {
           </form>
           <p className="muted small">Use the same name your mate uses in their own app, so shared rounds match up automatically. Tap a mate to add their GA number (or mark them as having no GA handicap).</p>
         </Card>
+        <LiveFriendsCard go={go} />
         {inviting ? (
           <InviteSheet
             title="Get on Fairway Coach"

@@ -13,6 +13,7 @@ import { StandingsTable } from '../screens/Leaderboards';
 import { Card, Header, type Go } from '../components/ui';
 import type { GroupDoc } from './live';
 import { liveAvailable } from './config';
+import { learnCrews } from './liveFriends';
 
 interface Group {
   id: string;
@@ -45,6 +46,7 @@ export function LiveView({ go, code }: { go: Go; code: string }) {
                 Object.entries(docs).map(async ([id, doc]) => ({ id, doc, bundle: await decodeBundle(doc.data) })),
               );
               decoded.sort((a, b) => (a.bundle.rounds[0]?.startedAt ?? 0) - (b.bundle.rounds[0]?.startedAt ?? 0));
+              decoded.forEach((g) => learnCrews(g.bundle));
               setGroups(decoded);
               setFlash(true);
               setTimeout(() => setFlash(false), 900);

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Users } from 'lucide-react';
 import { store, uid } from '../lib/storage';
-import { applyBundle, autoMap, decodeBundle, type Bundle } from '../lib/share';
+import { applyBundle, autoMap, decodeBundle, personKey, type Bundle } from '../lib/share';
 import { liveAvailable } from '../live/config';
 import { HandicapEditor } from '../components/HandicapEditor';
 import { InstallFirst } from '../components/InstallFirst';
@@ -45,7 +45,10 @@ export function FriendJoin({ go, data, to }: { go: Go; data: string; to?: string
       const me = { ...hcp, id: settings.me.id, name: name.trim() };
       store.saveSettings({ ...store.settings(), me });
       const plan = applyBundle({ ...bundle, rounds: [], comps: [] }, autoMap(bundle, me, store.friends()), uid);
-      plan.newFriends.forEach((f) => store.saveFriend(f));
+      plan.newFriends.forEach((f) => store.saveFriend(bundle.crew && personKey(f.name) === personKey(bundle.from) ? { ...f, crew: bundle.crew } : f));
+      // Already friends? Just pick up their crew code
+      const known = store.friends().find((f) => personKey(f.name) === personKey(bundle.from));
+      if (known && bundle.crew && known.crew !== bundle.crew) store.saveFriend({ ...known, crew: bundle.crew });
       let told = false;
       if (bundle.crew && liveAvailable()) {
         try {

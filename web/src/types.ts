@@ -63,6 +63,8 @@ export interface Player {
   hcpSource?: 'ga' | 'manual';
   /** When the GA Handicap was last checked against Golf Australia. */
   hcpCheckedAt?: number;
+  /** Their phone's crew code: lets this phone see when they're playing live. */
+  crew?: string;
 }
 
 export type Format =
@@ -172,6 +174,8 @@ export interface Round {
 export interface Settings {
   me: Player;
   units: 'm' | 'yd';
+  /** Every round goes live by itself so friends can watch (default on). */
+  shareLive?: boolean;
   anthropicKey?: string;
   clubs: string[];
 }

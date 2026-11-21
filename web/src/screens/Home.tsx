@@ -5,6 +5,7 @@ import { computeComp } from '../lib/comps';
 import { JoinLive } from '../live/LiveView';
 import { InstallTip } from '../components/InstallTip';
 import { PasteInvite } from '../components/PasteInvite';
+import { LiveFriendsCard } from '../components/LiveFriendsCard';
 import { ChartColumn, ChevronRight, Flag, Map as MapIcon, Settings as SettingsIcon, Trophy, Users, Video } from 'lucide-react';
 
 const ordinal = (n: number) => (n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] ?? 'th');
@@ -36,6 +37,7 @@ export function Home({ go }: { go: Go }) {
         }
       />
       <div className="content">
+        <LiveFriendsCard go={go} />
         <section className="hero">
           <div className="hero-hi">G'day</div>
           <div className="hero-name">{settings.me.name === 'Me' ? 'legend' : settings.me.name}</div>
