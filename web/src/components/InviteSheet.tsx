@@ -1,6 +1,16 @@
 import { useState } from 'react';
-import { Copy, Mail, MessageSquare, Share2, X } from 'lucide-react';
+import { BookUser, Copy, Mail, MessageSquare, Share2, X } from 'lucide-react';
 import { Card } from './ui';
+
+/** The Contact Picker API (Chrome on Android); not in TypeScript's DOM types yet. */
+interface PickedContact {
+  name?: string[];
+  tel?: string[];
+  email?: string[];
+}
+interface ContactsManager {
+  select(props: ('name' | 'tel' | 'email')[], opts?: { multiple?: boolean }): Promise<PickedContact[]>;
+}
 
 /** How to put the app on a phone's home screen, added to every invite. */
 const INSTALL_STEPS = [
@@ -21,18 +31,39 @@ export function InviteSheet({ title, intro, url, onClose }: { title: string; int
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [msg, setMsg] = useState<string | null>(null);
+  const [picked, setPicked] = useState<{ name: string; tel?: string; email?: string }[]>([]);
   const text = inviteMessage(intro, url);
   const canShare = typeof navigator !== 'undefined' && 'share' in navigator;
+  // Android (Chrome) can open the phone's contacts and let you tick several; iPhone can't (yet)
+  const contacts = (navigator as Navigator & { contacts?: ContactsManager }).contacts;
+  const canPick = !!contacts && 'ContactsManager' in window;
+  const isIphone = /iPhone|iPad|iPod/.test(navigator.userAgent);
+
+  const pick = async () => {
+    try {
+      const got = await contacts!.select(['name', 'tel', 'email'], { multiple: true });
+      const add = got
+        .map((c) => ({ name: c.name?.[0] ?? c.tel?.[0] ?? c.email?.[0] ?? 'Mate', tel: c.tel?.[0], email: c.email?.[0] }))
+        .filter((c) => c.tel || c.email);
+      setPicked((prev) => [...prev, ...add.filter((a) => !prev.some((p) => p.tel === a.tel && p.email === a.email))]);
+    } catch {
+      /* cancelled */
+    }
+  };
+
+  const typedNums = phone.split(/[,;]+/).map((n) => n.replace(/[^\d+]/g, '')).filter(Boolean);
+  const nums = [...picked.map((p) => p.tel?.replace(/[^\d+]/g, '')).filter((n): n is string => !!n), ...typedNums];
+  const typedEmails = email.split(/[,;\s]+/).filter((e) => e.includes('@'));
+  const emails = [...picked.map((p) => p.email).filter((e): e is string => !!e && !picked.find((x) => x.email === e)?.tel), ...typedEmails];
 
   const sms = () => {
-    const nums = phone.split(/[,;]+/).map((n) => n.replace(/[^\d+]/g, '')).filter(Boolean);
-    if (!nums.length) return;
-    // iPhone and Android both accept sms:NUMBER?&body=… (several numbers comma-separated)
+    // iPhone and Android both accept sms:NUMBER,NUMBER?&body=… With no number, Messages
+    // opens with the message ready and you add people from your contacts there.
     location.href = `sms:${nums.join(',')}?&body=${encodeURIComponent(text)}`;
-    setMsg(`Opening Messages for ${nums.join(', ')}…`);
+    setMsg(nums.length ? `Opening Messages for ${nums.length} ${nums.length === 1 ? 'mate' : 'mates'}…` : 'Opening Messages: add your mates from your contacts.');
   };
   const mail = () => {
-    const to = email.split(/[,;\s]+/).filter((e) => e.includes('@'));
+    const to = emails;
     if (!to.length) return;
     location.href = `mailto:${to.join(',')}?subject=${encodeURIComponent(title)}&body=${encodeURIComponent(text)}`;
     setMsg('Opening your email…');
@@ -63,20 +94,42 @@ export function InviteSheet({ title, intro, url, onClose }: { title: string; int
           </button>
         )}
       </div>
+      {canPick && (
+        <button className="btn block" onClick={pick}>
+          <BookUser /> Choose from my contacts
+        </button>
+      )}
+      {picked.length > 0 && (
+        <div className="row gap wrap">
+          {picked.map((p, i) => (
+            <span key={i} className="chip on picked">
+              {p.name}
+              <button aria-label={`Remove ${p.name}`} onClick={() => setPicked(picked.filter((_, j) => j !== i))}>
+                <X />
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
       <label className="field">
-        <span>Text it to a mobile (add a few with commas)</span>
+        <span>{canPick ? 'Or type mobile numbers (commas between)' : 'Text it: type mobile numbers (commas between)'}</span>
         <div className="row gap">
           <input className="grow" type="tel" inputMode="tel" autoComplete="tel" placeholder="04xx xxx xxx" value={phone} onChange={(e) => setPhone(e.target.value)} />
-          <button className="btn" disabled={!phone.replace(/[^\d]/g, '')} onClick={sms}>
-            <MessageSquare /> Text
+          <button className="btn" onClick={sms}>
+            <MessageSquare /> Text{nums.length > 1 ? ` ${nums.length}` : ''}
           </button>
         </div>
       </label>
+      {!canPick && (
+        <p className="muted small">
+          {isIphone ? 'Easiest on iPhone: ' : 'Or '}leave the number empty and tap <strong>Text</strong>. Messages opens with the invite ready, and you tap <strong>+</strong> to add as many mates from your contacts as you like.
+        </p>
+      )}
       <label className="field">
         <span>Or email it</span>
         <div className="row gap">
           <input className="grow" type="email" inputMode="email" autoComplete="email" placeholder="mate@email.com" value={email} onChange={(e) => setEmail(e.target.value)} />
-          <button className="btn" disabled={!email.includes('@')} onClick={mail}>
+          <button className="btn" disabled={!emails.length} onClick={mail}>
             <Mail /> Email
           </button>
         </div>
