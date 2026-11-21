@@ -32,15 +32,22 @@ jobs:
           cache-dependency-path: web/package-lock.json
       - run: npm ci
       # Download every South East Queensland golf course from OpenStreetMap into the app.
-      # If the map server is down, the build carries on with the list it already has.
+      # If the map servers are down, keep the list from the version that's already live.
       - name: Build the course list
+        id: catalog
         run: npx tsx scripts/build-course-catalog.ts
+        continue-on-error: true
+      - name: Keep the live course list (map servers were down)
+        if: steps.catalog.outcome == 'failure'
+        run: node scripts/fetch-live-catalog.mjs "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/"
         continue-on-error: true
       - run: npx vitest run
       - run: npm run build
         env:
           # Firebase web config for live scoring (Settings → Secrets and variables → Actions → Variables)
           VITE_FIREBASE_CONFIG: ${{ vars.VITE_FIREBASE_CONFIG }}
+      # A plain copy of the course list, so the next build can fall back to it.
+      - run: cp src/data/seq-courses.json dist/seq-courses.json
       - uses: actions/upload-pages-artifact@v3
         if: github.event_name != 'pull_request'
         with:
