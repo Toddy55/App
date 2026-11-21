@@ -51,6 +51,12 @@ export interface Player {
   name: string;
   /** GA Handicap (index). Negative for plus markers. */
   gaHandicap: number;
+  /** Golf Australia (GOLF Link) number, 10 digits, for checking the official handicap. */
+  gaNumber?: string;
+  /** 'ga' = official GA Handicap; 'manual' = no GA handicap, a number the group agreed on. */
+  hcpSource?: 'ga' | 'manual';
+  /** When the GA Handicap was last checked against Golf Australia. */
+  hcpCheckedAt?: number;
 }
 
 export type Format =

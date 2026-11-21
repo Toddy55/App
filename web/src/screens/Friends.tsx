@@ -5,6 +5,7 @@ import { headToHead } from '../lib/comps';
 import { computeResult, FORMAT_LABELS } from '../lib/scoring';
 import { Card, Header, type Go } from '../components/ui';
 import { InviteSheet } from '../components/InviteSheet';
+import { HandicapEditor, handicapLabel, STALE_MS } from '../components/HandicapEditor';
 
 export function Friends({ go }: { go: Go }) {
   const [friends, setFriends] = useState<Player[]>(store.friends());
@@ -28,10 +29,10 @@ export function Friends({ go }: { go: Go }) {
         <Card title="Add a mate">
           <form className="row gap" onSubmit={(e) => { e.preventDefault(); add(); }}>
             <input className="grow" placeholder="Name (as they'll set it in their app)" value={name} onChange={(e) => setName(e.target.value)} />
-            <input className="narrow-input" inputMode="decimal" placeholder="GA" value={ga} onChange={(e) => setGa(e.target.value)} />
+            <input className="narrow-input" inputMode="decimal" placeholder="Hcp" value={ga} onChange={(e) => setGa(e.target.value)} />
             <button className="btn">Add</button>
           </form>
-          <p className="muted small">Use the same name your mate uses in their own app, so shared rounds match up automatically.</p>
+          <p className="muted small">Use the same name your mate uses in their own app, so shared rounds match up automatically. Tap a mate to add their GA number (or mark them as having no GA handicap).</p>
         </Card>
         {inviting ? (
           <InviteSheet
@@ -56,7 +57,8 @@ export function Friends({ go }: { go: Go }) {
                     <div>
                       <strong>{f.name}</strong>
                       <div className="muted small">
-                        GA {f.gaHandicap}
+                        {handicapLabel(f)}
+                        {f.hcpSource !== 'manual' && f.gaNumber && (!f.hcpCheckedAt || Date.now() - f.hcpCheckedAt > STALE_MS) ? ' · ⏰ check' : ''}
                         {h.rounds ? ` · you're ${h.wins}-${h.losses}-${h.halves} in ${h.rounds} round${h.rounds > 1 ? 's' : ''}` : ''}
                       </div>
                     </div>
@@ -102,10 +104,7 @@ export function FriendDetail({ go, id }: { go: Go; id: string }) {
             <span>Name</span>
             <input value={f.name} onChange={(e) => save({ ...f, name: e.target.value })} />
           </label>
-          <label className="field narrow">
-            <span>GA Handicap</span>
-            <input inputMode="decimal" value={String(f.gaHandicap)} onChange={(e) => save({ ...f, gaHandicap: Number(e.target.value) || 0 })} />
-          </label>
+          <HandicapEditor player={f} onChange={save} />
         </Card>
         <Card title={`Head to head: ${me.name} v ${f.name}`}>
           {h.rounds === 0 ? (

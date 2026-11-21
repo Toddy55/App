@@ -614,3 +614,7 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--brand-soft)
 .gs-legend { display: flex; align-items: center; gap: 8px; }
 .gs-legend i { flex: 1; height: 6px; border-radius: 3px; background: linear-gradient(90deg, #22c55e, #eadc32 33%, #f98c1e 50%, #dc2626 75%, #96143c); }
 .gs-legend small { font-size: .62rem; opacity: .8; white-space: nowrap; }
+.hcp-editor { display: flex; flex-direction: column; gap: 10px; }
+.hcp-editor .btn svg { width: 16px; height: 16px; vertical-align: -3px; }
+a.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; text-decoration: none; color: var(--ink); font-size: .9rem; }
+a.btn.block { display: flex; }

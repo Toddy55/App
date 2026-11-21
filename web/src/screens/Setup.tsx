@@ -260,6 +260,18 @@ export function Setup({ go, courseId, join }: { go: Go; courseId?: string; join?
               );
             })}
           </ul>
+          {(() => {
+            // GA Handicaps change after every round: flag anyone not checked this week
+            const all = [settings.me, ...store.friends()];
+            const stale = players
+              .map((p) => all.find((f) => f.id === p.id))
+              .filter((f): f is NonNullable<typeof f> => !!f && f.hcpSource !== 'manual' && !!f.gaNumber && (!f.hcpCheckedAt || Date.now() - f.hcpCheckedAt > 7 * 24 * 3600 * 1000));
+            return stale.length ? (
+              <p className="warn small">
+                ⏰ {stale.map((f) => f.name).join(', ')}: GA Handicap not checked this week. Tap {stale.length > 1 ? 'each name' : 'the name'} under Friends (or yours in Settings) and use "Check it on Golf Australia".
+              </p>
+            ) : null;
+          })()}
           {format === 'ambrose' && players.length >= ambroseSize && (
             <p className="muted small">
               Team handicaps:{' '}
@@ -291,7 +303,7 @@ export function Setup({ go, courseId, join }: { go: Go; courseId?: string; join?
                     .filter((f) => !players.some((p) => p.id === f.id))
                     .map((f) => (
                       <button key={f.id} className="chip" onClick={() => addPlayer({ id: f.id, name: f.name, ga: f.gaHandicap })}>
-                        + {f.name} ({f.gaHandicap})
+                        + {f.name} ({f.hcpSource === 'manual' ? `${f.gaHandicap} manual` : f.gaHandicap})
                       </button>
                     ))}
                 </div>

@@ -9,6 +9,10 @@ export interface Person {
   key: string;
   name: string;
   ga: number;
+  /** GA (GOLF Link) number, if known. */
+  gaNo?: string;
+  /** 'manual' for players without a GA handicap. */
+  src?: 'ga' | 'manual';
 }
 
 export interface Bundle {
@@ -44,7 +48,7 @@ export function makeBundle(opts: { me: Player; friends: Player[]; rounds: Round[
     const key = personKey(name);
     if (!people.has(key)) {
       const f = id === 'me' ? opts.me : opts.friends.find((x) => x.id === id);
-      people.set(key, { key, name, ga: f?.gaHandicap ?? ga });
+      people.set(key, { key, name, ga: f?.gaHandicap ?? ga, ...(f?.gaNumber ? { gaNo: f.gaNumber } : {}), ...(f?.hcpSource ? { src: f.hcpSource } : {}) });
     }
     return key;
   };
@@ -88,7 +92,7 @@ export function applyBundle(bundle: Bundle, mapping: Mapping, makeId: () => stri
     if (m === 'new') {
       const id = makeId();
       ids[p.key] = id;
-      newFriends.push({ id, name: p.name, gaHandicap: p.ga });
+      newFriends.push({ id, name: p.name, gaHandicap: p.ga, ...(p.gaNo ? { gaNumber: p.gaNo } : {}), ...(p.src ? { hcpSource: p.src } : {}) });
     } else ids[p.key] = m;
   }
   const map = (k: string) => ids[k] ?? k;

@@ -5,6 +5,7 @@ import { applyBundle, autoMap, decodeBundle, encodeBundle, makeBundle, personKey
 import { computeComp, SCORING_LABELS } from '../lib/comps';
 import { liveAvailable } from '../live/config';
 import { StandingsTable } from './Leaderboards';
+import { HandicapEditor } from '../components/HandicapEditor';
 import { Card, Header, type Go } from '../components/ui';
 
 /** Someone opened a comp invite: show them the comp and let them join in one tap. */
@@ -13,7 +14,7 @@ export function JoinComp({ go, data }: { go: Go; data: string }) {
   const [bundle, setBundle] = useState<Bundle | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [name, setName] = useState(settings.me.name === 'Me' ? '' : settings.me.name);
-  const [ga, setGa] = useState(String(settings.me.gaHandicap));
+  const [hcp, setHcp] = useState(settings.me);
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState<{ compId: string; synced: boolean } | null>(null);
 
@@ -34,7 +35,7 @@ export function JoinComp({ go, data }: { go: Go; data: string }) {
     setErr(null);
     try {
       // Who am I? Save it so shared rounds match up from now on
-      const me = { ...settings.me, name: name.trim(), gaHandicap: Number(ga) || 0 };
+      const me = { ...hcp, id: settings.me.id, name: name.trim() };
       store.saveSettings({ ...settings, me });
       const plan = applyBundle(bundle, autoMap(bundle, me, store.friends()), uid);
       plan.newFriends.forEach((f) => store.saveFriend(f));
@@ -104,10 +105,7 @@ export function JoinComp({ go, data }: { go: Go; data: string }) {
                 <span>Your name (the one your mates know you by)</span>
                 <input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Sam" autoComplete="name" />
               </label>
-              <label className="field narrow">
-                <span>GA handicap</span>
-                <input inputMode="decimal" value={ga} onChange={(e) => setGa(e.target.value)} />
-              </label>
+              <HandicapEditor player={hcp} onChange={setHcp} />
               {name.trim() && memberNames.some((n) => personKey(n) === personKey(name)) && !already && (
                 <p className="muted small">You're already on their list as {name.trim()}, so this links you up.</p>
               )}

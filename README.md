@@ -76,6 +76,12 @@ It runs in the browser and installs to your home screen (Share → Add to Home S
 - "Ask the caddy" chats about the shot with Claude (needs your Anthropic key)
 - Green slopes aren't in public map data, so it doesn't read the break
 
+**Handicaps**
+- Each player (you in Settings, mates under Friends, or when joining a comp) is either **GA Handicap** or **No GA handicap**
+- GA Handicap: add their 10-digit GA number and tap **Check it on Golf Australia** to open their official record, then enter the GA Handicap shown. It's flagged ⏰ if it hasn't been checked in a week (GA Handicaps change after every round), and Setup warns before you tee off
+- No GA handicap: a manual handicap agreed with the group, shown as "manual". Plus handicaps: type +2.1
+- Daily Handicaps use the course's slope and scratch ratings when they're set
+
 **Coaching**
 - Mid-round, net scores are fair: an Ambrose team's handicap comes off pro rata for the holes played (half after 9), and the leader shows as e.g. "2.5 under net thru 9"
 - Built-in coach (no internet or key needed): compares your putts, fairways, GIR, up-and-downs, penalties, bunker play, blow-up holes, par-5 scoring and back-nine fade against typical numbers for your handicap. It ranks the areas costing you the most shots, lists your costliest holes and why, gives a drill and an on-course tip for each, and builds a 60-minute practice plan
