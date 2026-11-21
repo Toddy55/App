@@ -4,11 +4,13 @@ import { store, uid } from '../lib/storage';
 import { headToHead } from '../lib/comps';
 import { computeResult, FORMAT_LABELS } from '../lib/scoring';
 import { Card, Header, type Go } from '../components/ui';
+import { InviteSheet } from '../components/InviteSheet';
 
 export function Friends({ go }: { go: Go }) {
   const [friends, setFriends] = useState<Player[]>(store.friends());
   const [name, setName] = useState('');
   const [ga, setGa] = useState('');
+  const [inviting, setInviting] = useState(false);
   const rounds = store.rounds();
 
   const add = () => {
@@ -31,6 +33,18 @@ export function Friends({ go }: { go: Go }) {
           </form>
           <p className="muted small">Use the same name your mate uses in their own app, so shared rounds match up automatically.</p>
         </Card>
+        {inviting ? (
+          <InviteSheet
+            title="Get on Fairway Coach"
+            intro={`${store.settings().me.name} wants you on Fairway Coach, the app for our scores, comps, live leaderboards and banter ⛳🍻 Tap the link to open it:`}
+            url={`${location.origin}${location.pathname}`}
+            onClose={() => setInviting(false)}
+          />
+        ) : (
+          <button className="btn primary block" onClick={() => setInviting(true)}>
+            📲 Invite mates to the app
+          </button>
+        )}
         <Card title={`Your crew (${friends.length})`}>
           {friends.length === 0 && <p className="muted">No mates yet. Add them here or when you set up a round.</p>}
           <ul className="list">

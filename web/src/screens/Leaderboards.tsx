@@ -6,6 +6,7 @@ import { encodeBundle, joinUrl, makeBundle, shareLink, shareText, shareUrl } fro
 import { Card, Header, Segmented, type Go } from '../components/ui';
 import { liveAvailable } from '../live/config';
 import { CompLive } from '../components/CompLive';
+import { InviteSheet } from '../components/InviteSheet';
 import type { LiveRoundNote } from '../live/compChannel';
 import { lastSeen, type ChatMsg } from '../live/chat';
 
@@ -117,6 +118,7 @@ export function CompDetail({ go, id }: { go: Go; id: string }) {
   const comp = store.comp(id);
   const [msg, setMsg] = useState<string | null>(null);
   const [liveNotes, setLiveNotes] = useState<LiveRoundNote[]>([]);
+  const [inviteUrl, setInviteUrl] = useState<string | null>(null);
   const [chat, setChat] = useState<ChatMsg[]>([]);
   // Latest banter, for the preview and the "new" count
   useEffect(() => {
@@ -174,8 +176,10 @@ export function CompDetail({ go, id }: { go: Go; id: string }) {
   };
   const invite = async () => {
     const { b } = compBundle();
-    const how = await shareLink(comp.name, `You're invited to "${comp.name}" in Fairway Coach. Tap to join:`, joinUrl(await encodeBundle(b)));
-    setMsg(how === 'copied' ? 'Invite link copied. Paste it in the group chat.' : null);
+    let url = joinUrl(await encodeBundle(b));
+    // A long season makes a long link; for texts keep it to the comp and who's in (rounds sync live)
+    if (url.length > 1800) url = joinUrl(await encodeBundle({ ...b, rounds: [] }));
+    setInviteUrl(url);
   };
   const shareComp = async () => {
     const { counted, b } = compBundle();
@@ -234,9 +238,18 @@ export function CompDetail({ go, id }: { go: Go; id: string }) {
           <p className="small">
             <strong>In the comp:</strong> {members.join(', ')}
           </p>
-          <button className="btn primary block" onClick={invite}>
-            ➕ Invite a mate to join
-          </button>
+          {inviteUrl ? (
+            <InviteSheet
+              title={`Join ${comp.name}`}
+              intro={`${store.settings().me.name} has invited you to "${comp.name}" on Fairway Coach, our golf scoring and comp app ⛳🏆 Tap the link to join:`}
+              url={inviteUrl}
+              onClose={() => setInviteUrl(null)}
+            />
+          ) : (
+            <button className="btn primary block" onClick={invite}>
+              ➕ Invite a mate to join
+            </button>
+          )}
           <div className="row gap wrap">
             <button className="btn" onClick={shareTable} disabled={!res.rounds.length}>
               💬 Share table
