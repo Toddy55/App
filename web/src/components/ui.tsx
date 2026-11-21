@@ -1,5 +1,6 @@
 import type { Format } from '../types';
 import type { ReactNode } from 'react';
+import { ChevronLeft, Flag } from 'lucide-react';
 
 export type Route =
   | { name: 'home' }
@@ -84,10 +85,12 @@ export function Header({ title, onBack, right }: { title: string; onBack?: () =>
     <header className="topbar">
       {onBack ? (
         <button className="icon-btn" onClick={onBack} aria-label="Back">
-          ‹
+          <ChevronLeft />
         </button>
       ) : (
-        <span className="logo">⛳</span>
+        <span className="logo-mark" aria-hidden>
+          <Flag />
+        </span>
       )}
       <h1>{title}</h1>
       <div className="topbar-right">{right}</div>

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { Settings as S } from '../types';
 import { DEFAULT_CLUBS, store } from '../lib/storage';
 import { Card, Header, Segmented, type Go } from '../components/ui';
+import { PALETTES, readAppearance, saveAppearance, type Mode, type Palette } from '../lib/appearance';
 
 export function Settings({ go }: { go: Go }) {
   const [s, setS] = useState<S>(store.settings());
@@ -10,6 +11,17 @@ export function Settings({ go }: { go: Go }) {
     store.saveSettings(n);
   };
   const [clubsText, setClubsText] = useState(s.clubs.join(', '));
+  const [look, setLook] = useState(readAppearance());
+  const setPalette = (palette: Palette) => {
+    const n = { ...look, palette };
+    setLook(n);
+    saveAppearance(n);
+  };
+  const setMode = (mode: Mode) => {
+    const n = { ...look, mode };
+    setLook(n);
+    saveAppearance(n);
+  };
 
   return (
     <div className="screen">
@@ -29,6 +41,23 @@ export function Settings({ go }: { go: Go }) {
             />
           </label>
           <p className="muted small">Use your current GA Handicap from the Golf Australia app. Enter plus handicaps as a negative number (e.g. −1.2).</p>
+        </Card>
+        <Card title="Look">
+          <div className="field">
+            <span>Colours</span>
+            <div className="palette-grid">
+              {PALETTES.map((p) => (
+                <button key={p.id} className={`accent-pick ${look.palette === p.id ? 'on' : ''}`} onClick={() => setPalette(p.id)} aria-label={p.label}>
+                  <span className="accent-swatch" style={{ background: `linear-gradient(135deg, ${p.brand} 50%, ${p.accent} 50%)` }} />
+                  {p.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="field">
+            <span>Mode</span>
+            <Segmented value={look.mode} onChange={setMode} options={[{ value: 'auto', label: 'Auto' }, { value: 'light', label: 'Light' }, { value: 'dark', label: 'Dark' }]} />
+          </div>
         </Card>
         <Card title="Distances">
           <Segmented value={s.units} onChange={(u) => save({ ...s, units: u })} options={[{ value: 'm', label: 'Metres' }, { value: 'yd', label: 'Yards' }]} />
