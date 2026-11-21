@@ -18,6 +18,8 @@ export interface Person {
 export interface Bundle {
   v: 1;
   from: string;
+  /** Friend links: the inviter's crew code, so they're told when you link up. */
+  crew?: string;
   people: Person[];
   rounds: Round[];
   comps: Competition[];
@@ -139,6 +141,11 @@ export async function decodeBundle(s: string): Promise<Bundle> {
   const b = JSON.parse(new TextDecoder().decode(raw)) as Bundle;
   if (b.v !== 1 || !Array.isArray(b.people)) throw new Error('This link is from a different version of the app.');
   return b;
+}
+
+/** A friend link: opens the "Link up" screen. */
+export function friendUrl(encoded: string): string {
+  return `${location.origin}${location.pathname}#friend=${encoded}`;
 }
 
 /** A comp invite: opens the "Join a comp" screen. */

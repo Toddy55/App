@@ -11,7 +11,8 @@ import { HoleView } from '../components/HoleView';
 import { LiveControl, pushFinal } from '../live/LiveControl';
 import { useLiveField } from '../live/useLiveField';
 import { aidsFor, AIDS_LABELS } from '../lib/comps';
-import { fetchGreenDem, type Dem } from '../lib/greenDem';
+import { fetchGreenDem, inQueensland, type Dem } from '../lib/greenDem';
+import { ESRI, QLD_AERIAL } from '../lib/holeFrame';
 import { approachNote, smooth } from '../lib/greenRead';
 import { Scorecard } from '../components/Scorecard';
 import { Card, Header, Segmented, Stepper, scoreClass, type Go } from '../components/ui';
@@ -165,6 +166,24 @@ export function Play({ go, roundId }: { go: Go; roundId: string }) {
   }, [greenKey]);
   const dem = demState?.key === greenKey ? demState.dem : null;
   const demSmooth = useMemo(() => (dem ? smooth(dem) : null), [dem]);
+  // Photos: the Queensland Government's sharper aerial imagery on Queensland courses, else Esri.
+  // One tap swaps them (the two were taken at different times, so one may be more up to date).
+  const [imageryPref, setImageryPref] = useState<'qld' | 'esri'>(() => {
+    try {
+      return localStorage.getItem('gtg.imagery') === 'esri' ? 'esri' : 'qld';
+    } catch {
+      return 'qld';
+    }
+  });
+  const switchImagery = () => {
+    const next = imageryPref === 'qld' ? 'esri' : 'qld';
+    setImageryPref(next);
+    try {
+      localStorage.setItem('gtg.imagery', next);
+    } catch {
+      /* ignore */
+    }
+  };
 
   if (!round || !hole) {
     return (
@@ -204,6 +223,7 @@ export function Play({ go, roundId }: { go: Go; roundId: string }) {
   const mePlayer = round.players.find((p) => p.id === round.meId);
   const caddyHcp = mePlayer?.dailyHandicap ?? settings.me.gaHandicap;
   const rules = aidsFor(round.compIds, store.comps());
+  const qldCourse = inQueensland(hole.green?.centre ?? course?.location ?? { lat: 0, lon: 0 });
   const caddyAllowed = rules.aids === 'full';
   const extrasAllowed = rules.aids !== 'distancesOnly';
   let advice: Advice | null = null;
@@ -354,6 +374,8 @@ export function Play({ go, roundId }: { go: Go; roundId: string }) {
               playsLike={extrasAllowed ? pl?.distance : undefined}
               wind={extrasAllowed && wx ? { kmh: wx.windKmh, fromDeg: wx.windFromDeg } : undefined}
               dem={rules.aids === 'full' ? dem : null}
+              imagery={qldCourse && imageryPref === 'qld' ? QLD_AERIAL : ESRI}
+              onSwitchImagery={qldCourse ? switchImagery : undefined}
               rulesNote={rules.aids !== 'full' ? `🏆 ${rules.comp?.name ?? 'Comp'} rules: ${AIDS_LABELS[rules.aids]}` : undefined}
               gpsWarning={geo.accuracy != null && geo.accuracy > 15 ? `GPS ±${Math.round(geo.accuracy)} m` : undefined}
             />

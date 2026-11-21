@@ -100,37 +100,68 @@ export interface TileLayout {
   tiles: { key: string; href: string; x: number; y: number }[];
 }
 
-export function tileLayout(f: Frame, width: number, height: number, dpr = 1, maxZoom = 19): TileLayout {
+/** A satellite / aerial photo source in the standard z/y/x tile layout. */
+export interface Imagery {
+  id: 'qld' | 'esri';
+  label: string;
+  maxZoom: number;
+  credit: string;
+  url: (z: number, x: number, y: number) => string;
+}
+
+export const ESRI: Imagery = {
+  id: 'esri',
+  label: 'Esri',
+  maxZoom: 19,
+  credit: 'Imagery © Esri, Maxar',
+  url: (z, x, y) => `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${z}/${y}/${x}`,
+};
+
+/** Queensland Government aerial photos: down to about 15 cm per pixel (zoom 20). */
+export const QLD_AERIAL: Imagery = {
+  id: 'qld',
+  label: 'Qld aerial',
+  maxZoom: 20,
+  credit: 'Imagery © State of Queensland',
+  url: (z, x, y) => `https://spatial-img.information.qld.gov.au/arcgis/rest/services/Basemaps/LatestStateProgram_AllUsers/ImageServer/tile/${z}/${y}/${x}`,
+};
+
+/** Most tiles we'll ask for at once (a phone screen at the sharpest zoom). */
+const MAX_TILES = 150;
+
+export function tileLayout(f: Frame, width: number, height: number, dpr = 1, source: Imagery = ESRI): TileLayout {
   const cosLat = Math.cos(rad(f.origin.lat));
-  const want = Math.log2(EARTH_MPP0 * cosLat * f.scale * Math.min(2, Math.max(1, dpr)));
-  const z = Math.max(12, Math.min(maxZoom, Math.round(want)));
-  const mpp = (EARTH_MPP0 * cosLat) / 2 ** z;
-  const o = mercator(f.origin, z);
-  const k = f.scale * mpp;
-  const t = rad(f.upDeg);
-  const { u: uo, v: vo } = { u: 0, v: 0 }; // origin is (0,0) in u/v
-  const e = f.cx + (uo - f.uc) * f.scale;
-  const fy = f.cy + (f.vc - vo) * f.scale;
-  const matrix = `matrix(${k * Math.cos(t)} ${-k * Math.sin(t)} ${k * Math.sin(t)} ${k * Math.cos(t)} ${e} ${fy})`;
+  // Enough detail for the phone's real screen pixels (up to 3x on recent iPhones)
+  const want = Math.log2(EARTH_MPP0 * cosLat * f.scale * Math.min(3, Math.max(1, dpr)));
+  let z = Math.max(12, Math.min(source.maxZoom, Math.ceil(want - 0.25)));
   const corners = [
     [0, 0],
     [width, 0],
     [0, height],
     [width, height],
-  ].map(([x, y]) => mercator(unproject(f, x, y), z));
-  const x0 = Math.floor(Math.min(...corners.map((c) => c.x)) / TILE);
-  const x1 = Math.floor(Math.max(...corners.map((c) => c.x)) / TILE);
-  const y0 = Math.floor(Math.min(...corners.map((c) => c.y)) / TILE);
-  const y1 = Math.floor(Math.max(...corners.map((c) => c.y)) / TILE);
+  ].map(([x, y]) => unproject(f, x, y));
+  const range = (zz: number) => {
+    const c = corners.map((p) => mercator(p, zz));
+    return {
+      x0: Math.floor(Math.min(...c.map((q) => q.x)) / TILE),
+      x1: Math.floor(Math.max(...c.map((q) => q.x)) / TILE),
+      y0: Math.floor(Math.min(...c.map((q) => q.y)) / TILE),
+      y1: Math.floor(Math.max(...c.map((q) => q.y)) / TILE),
+    };
+  };
+  let r = range(z);
+  while (z > 12 && (r.x1 - r.x0 + 1) * (r.y1 - r.y0 + 1) > MAX_TILES) r = range(--z);
+  const mpp = (EARTH_MPP0 * cosLat) / 2 ** z;
+  const o = mercator(f.origin, z);
+  const k = f.scale * mpp;
+  const t = rad(f.upDeg);
+  const e = f.cx - f.uc * f.scale;
+  const fy = f.cy + f.vc * f.scale;
+  const matrix = `matrix(${k * Math.cos(t)} ${-k * Math.sin(t)} ${k * Math.sin(t)} ${k * Math.cos(t)} ${e} ${fy})`;
   const tiles: TileLayout['tiles'] = [];
-  for (let ty = y0; ty <= y1; ty++)
-    for (let tx = x0; tx <= x1; tx++)
-      tiles.push({
-        key: `${z}/${tx}/${ty}`,
-        href: `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${z}/${ty}/${tx}`,
-        x: tx * TILE - o.x,
-        y: ty * TILE - o.y,
-      });
+  for (let ty = r.y0; ty <= r.y1; ty++)
+    for (let tx = r.x0; tx <= r.x1; tx++)
+      tiles.push({ key: `${source.id}/${z}/${tx}/${ty}`, href: source.url(z, tx, ty), x: tx * TILE - o.x, y: ty * TILE - o.y });
   return { z, matrix, tiles, ox: o.x, oy: o.y };
 }
 

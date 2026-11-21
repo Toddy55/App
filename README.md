@@ -32,6 +32,8 @@ It runs in the browser and installs to your home screen (Share → Add to Home S
 - Ambrose rounds count in league mode, with team-mates sharing the team's position. Ties share the points
 - Rounds are tagged to comps at setup (ticked automatically when enough members are playing) and can be changed after the round
 - All-time table across your whole crew, plus live comps on the home screen
+- **Linking up as friends, automatically:** "Invite mates to the app" sends a link-up link. When your mate opens it they're linked straight away: you're added to their Friends and they're added to yours. If the app is brand new to them it just asks their name first. Comp invites work the same way
+- **iPhone tip built in:** the Home Screen app on an iPhone has its own storage, separate from Safari. Invite screens opened in Safari on an iPhone show three steps: copy the invite, Add to Home Screen, then open the app and tap **Paste an invite**. Every invite message says the same
 - **Invites by text or email:** Friends → "Invite mates to the app", or a comp's "Invite a mate to join". On Android, "Choose from my contacts" lets you tick several mates at once; on iPhone, tap Text with no number and add mates from your contacts in Messages. Or type mobile numbers (opens Messages) or email addresses (opens your email), or use Share / Copy. Every invite includes the steps to add the app to their home screen on iPhone and Android
 - **Invite a mate to a comp:** "Invite a mate to join" sends a link. Your mate taps it, sees the comp and the table so far, puts in their name and handicap and taps Join. They appear in the comp on everyone's phone by themselves (or, without live sync set up, they send an "I'm in" link back)
 - **Live in the comp:** when a round that counts towards a comp goes live, the comp page on everyone's phone shows a **Live now** card with the leaderboard (thru, points or net to par) and the comp table "if it finished now", updating as the scorer enters scores
@@ -61,6 +63,7 @@ It runs in the browser and installs to your home screen (Share → Add to Home S
 - Tap anywhere to drop a target: you get the distance to it and from it to the pin. Drag the target ring to move it
 - Every bunker and water hazard in play shows two numbers: how far to reach it and how far to carry it. Rings across the fairway mark every 50 m (or yards)
 - The caddy's club, aim line and landing zone sit on the picture, with its call along the bottom
+- On Queensland courses the photos come from the Queensland Government's aerial imagery (down to about 15 cm per pixel, much sharper than the global satellite photos). The **Qld HD / Esri** button swaps between them, since they're taken at different times and one may be more up to date. The app picks the sharpest zoom your phone's screen can show
 - **Green** zooms in on the green; **Pin** lets you tap where today's flag is; swipe between holes with the arrows by the hole number
 
 **Green slope maps (Queensland)**

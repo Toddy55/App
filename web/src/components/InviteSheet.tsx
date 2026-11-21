@@ -15,7 +15,7 @@ interface ContactsManager {
 /** How to put the app on a phone's home screen, added to every invite. */
 const INSTALL_STEPS = [
   '📲 To make it an app on your phone:',
-  '• iPhone: open the link in Safari, tap the Share button (square with the arrow), then "Add to Home Screen", then Add.',
+  '• iPhone: open the link in Safari, tap the Share button (square with the arrow), then "Add to Home Screen", then Add. Then open Fairway Coach from your Home Screen, tap "Paste an invite" and paste this link (the Home Screen app is separate from Safari).',
   '• Android: open the link in Chrome, tap the ⋮ menu, then "Install app" (or "Add to Home screen").',
 ].join('\n');
 

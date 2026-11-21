@@ -1,17 +1,50 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { Player } from '../types';
 import { store, uid } from '../lib/storage';
 import { headToHead } from '../lib/comps';
 import { computeResult, FORMAT_LABELS } from '../lib/scoring';
 import { Card, Header, type Go } from '../components/ui';
 import { InviteSheet } from '../components/InviteSheet';
+import { encodeBundle, friendUrl, makeBundle, personKey } from '../lib/share';
+import { PasteInvite } from '../components/PasteInvite';
 import { HandicapEditor, handicapLabel, STALE_MS } from '../components/HandicapEditor';
 
 export function Friends({ go }: { go: Go }) {
   const [friends, setFriends] = useState<Player[]>(store.friends());
   const [name, setName] = useState('');
   const [ga, setGa] = useState('');
-  const [inviting, setInviting] = useState(false);
+  const [inviting, setInviting] = useState<string | null>(null);
+  const [linked, setLinked] = useState<string | null>(null);
+  // Mates who tap your link and link up are added here by themselves
+  useEffect(() => {
+    let unsub: (() => void) | undefined;
+    let stop = false;
+    import('../live/crewChannel')
+      .then(({ watchMyCrew }) =>
+        watchMyCrew((names) => {
+          if (stop) return;
+          setFriends(store.friends());
+          if (names.length) setLinked(`${names.join(' and ')} linked up with you 🤝`);
+        }),
+      )
+      .then((u) => (stop ? u() : (unsub = u)))
+      .catch(() => undefined);
+    return () => {
+      stop = true;
+      unsub?.();
+    };
+  }, []);
+  const startInvite = async () => {
+    const { myCrewCode } = await import('../live/crewChannel');
+    const s = store.settings();
+    // Just you: your name and handicap, plus your crew code so you hear when they link up
+    const b = {
+      ...makeBundle({ me: s.me, friends: [], rounds: [], comps: [] }),
+      people: [{ key: personKey(s.me.name), name: s.me.name, ga: s.me.gaHandicap, ...(s.me.gaNumber ? { gaNo: s.me.gaNumber } : {}), ...(s.me.hcpSource ? { src: s.me.hcpSource } : {}) }],
+      crew: myCrewCode(),
+    };
+    setInviting(friendUrl(await encodeBundle(b)));
+  };
   const rounds = store.rounds();
 
   const add = () => {
@@ -34,18 +67,20 @@ export function Friends({ go }: { go: Go }) {
           </form>
           <p className="muted small">Use the same name your mate uses in their own app, so shared rounds match up automatically. Tap a mate to add their GA number (or mark them as having no GA handicap).</p>
         </Card>
+        {linked && <p className="ok">{linked}</p>}
         {inviting ? (
           <InviteSheet
             title="Get on Fairway Coach"
-            intro={`${store.settings().me.name} wants you on Fairway Coach, the app for our scores, comps, live leaderboards and banter ⛳🍻 Tap the link to open it:`}
-            url={`${location.origin}${location.pathname}`}
-            onClose={() => setInviting(false)}
+            intro={`${store.settings().me.name} wants you on Fairway Coach, the app for our scores, comps, live leaderboards and banter ⛳🍻 Tap the link to link up:`}
+            url={inviting}
+            onClose={() => setInviting(null)}
           />
         ) : (
-          <button className="btn primary block" onClick={() => setInviting(true)}>
+          <button className="btn primary block" onClick={startInvite}>
             📲 Invite mates to the app
           </button>
         )}
+        <PasteInvite />
         <Card title={`Your crew (${friends.length})`}>
           {friends.length === 0 && <p className="muted">No mates yet. Add them here or when you set up a round.</p>}
           <ul className="list">

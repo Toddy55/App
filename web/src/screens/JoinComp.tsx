@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Trophy } from 'lucide-react';
 import { store, uid } from '../lib/storage';
 import { applyBundle, autoMap, decodeBundle, encodeBundle, makeBundle, personKey, shareLink, shareUrl, type Bundle } from '../lib/share';
@@ -6,6 +6,7 @@ import { computeComp, SCORING_LABELS } from '../lib/comps';
 import { liveAvailable } from '../live/config';
 import { StandingsTable } from './Leaderboards';
 import { HandicapEditor } from '../components/HandicapEditor';
+import { InstallFirst } from '../components/InstallFirst';
 import { Card, Header, type Go } from '../components/ui';
 
 /** Someone opened a comp invite: show them the comp and let them join in one tap. */
@@ -25,6 +26,17 @@ export function JoinComp({ go, data }: { go: Go; data: string }) {
   }, [data]);
 
   const comp = bundle?.comps[0];
+  // Known on this phone already? Join straight away
+  const knownName = settings.me.name && settings.me.name !== 'Me' ? settings.me.name : null;
+  const autoRan = useRef(false);
+  const [inviteLink] = useState(() => location.href);
+  useEffect(() => {
+    if (bundle?.comps.length && knownName && !autoRan.current) {
+      autoRan.current = true;
+      join();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bundle]);
   const already = !!comp && !!store.comp(comp.id)?.memberIds.includes('me');
   const preview = comp && bundle ? computeComp(comp, bundle.rounds, (k) => bundle.people.find((p) => p.key === k)?.name ?? k) : null;
   const memberNames = comp && bundle ? comp.memberIds.map((k) => bundle.people.find((p) => p.key === k)?.name ?? k) : [];
@@ -80,7 +92,8 @@ export function JoinComp({ go, data }: { go: Go; data: string }) {
       <div className="content">
         {err && <p className="error">{err}</p>}
         {!bundle && !err && <p className="muted">Opening the invite…</p>}
-        {comp && bundle && !done && (
+        {comp && bundle && !done && knownName && <p className="muted">Joining {comp.name}…</p>}
+        {comp && bundle && !done && !knownName && (
           <>
             <Card className="join-hero">
               <div className="eyebrow">
@@ -105,7 +118,10 @@ export function JoinComp({ go, data }: { go: Go; data: string }) {
                 <span>Your name (the one your mates know you by)</span>
                 <input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Sam" autoComplete="name" />
               </label>
-              <HandicapEditor player={hcp} onChange={setHcp} />
+              <details className="small">
+                <summary className="muted">Add your handicap now (optional, or later in Settings)</summary>
+                <HandicapEditor player={hcp} onChange={setHcp} />
+              </details>
               {name.trim() && memberNames.some((n) => personKey(n) === personKey(name)) && !already && (
                 <p className="muted small">You're already on their list as {name.trim()}, so this links you up.</p>
               )}
@@ -118,6 +134,7 @@ export function JoinComp({ go, data }: { go: Go; data: string }) {
         {done && (
           <Card className="join-hero">
             <h2>You're in 🎉</h2>
+            <InstallFirst after link={inviteLink} />
             {done.synced ? (
               <p>Everyone in the comp will see your name next time they open it. Tick the comp under "Counts towards" when you set up a round.</p>
             ) : (

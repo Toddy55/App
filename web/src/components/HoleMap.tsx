@@ -4,6 +4,8 @@ import 'leaflet/dist/leaflet.css';
 import type { Hazard, Hole, LatLon } from '../types';
 import { distanceM, fmtDist } from '../lib/geo';
 import { arcLatLngs, shotLegs } from '../lib/tracer';
+import { ESRI, QLD_AERIAL } from '../lib/holeFrame';
+import { inQueensland } from '../lib/greenDem';
 
 interface Props {
   hole?: Hole;
@@ -44,10 +46,19 @@ export function HoleMap({ hole, player, pin, shots, centre, units, onTap, measur
   useEffect(() => {
     if (!el.current || map.current) return;
     const m = L.map(el.current, { zoomControl: false, attributionControl: true });
-    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-      maxZoom: 20,
-      maxNativeZoom: 19,
-      attribution: 'Imagery © Esri, Maxar, Earthstar Geographics',
+    // Sharper Queensland Government aerial photos on Queensland courses (unless switched to Esri)
+    let pref = 'qld';
+    try {
+      pref = localStorage.getItem('gtg.imagery') ?? 'qld';
+    } catch {
+      /* ignore */
+    }
+    const qld = pref !== 'esri' && !!centre && inQueensland(centre);
+    const src = qld ? QLD_AERIAL : ESRI;
+    L.tileLayer(src.url(-1, -1, -1).replace('/-1/-1/-1', '/{z}/{y}/{x}'), {
+      maxZoom: src.maxZoom + 1,
+      maxNativeZoom: src.maxZoom,
+      attribution: qld ? src.credit : 'Imagery © Esri, Maxar, Earthstar Geographics',
     }).addTo(m);
     L.control.zoom({ position: 'bottomright' }).addTo(m);
     m.on('click', (e: L.LeafletMouseEvent) => tapRef.current?.({ lat: e.latlng.lat, lon: e.latlng.lng }));
