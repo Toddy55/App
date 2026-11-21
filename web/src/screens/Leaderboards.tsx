@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
-import type { Competition } from '../types';
+import type { Aids, Competition } from '../types';
 import { store, uid } from '../lib/storage';
-import { COMP_PRESETS, computeComp, newComp, SCORING_BLURB, SCORING_LABELS, standingsText, valueLabel } from '../lib/comps';
-import { encodeBundle, joinUrl, makeBundle, shareLink, shareText, shareUrl } from '../lib/share';
+import { AIDS_BLURB, AIDS_LABELS, COMP_PRESETS, computeComp, newComp, SCORING_BLURB, SCORING_LABELS, standingsText, valueLabel } from '../lib/comps';
+import { encodeBundle, joinUrl, makeBundle, personKey, shareLink, shareText, shareUrl } from '../lib/share';
 import { Card, Header, Segmented, type Go } from '../components/ui';
 import { liveAvailable } from '../live/config';
 import { CompLive } from '../components/CompLive';
@@ -141,8 +141,10 @@ export function CompDetail({ go, id }: { go: Go; id: string }) {
     let unsub: (() => void) | undefined;
     let stop = false;
     import('../live/compChannel').then(async ({ watchJoiners, addJoiners }) => {
-      const u = await watchJoiners(c, (joiners, live) => {
+      const { applyRules } = await import('../live/compChannel');
+      const u = await watchJoiners(c, (joiners, live, rules) => {
         setLiveNotes(live);
+        if (applyRules(store.comp(id) ?? c, rules)) setRev((n) => n + 1);
         const { added } = addJoiners(store.comp(id) ?? c, joiners);
         if (added.length) {
           setMsg(`${added.join(' and ')} joined the comp.`);
@@ -238,6 +240,11 @@ export function CompDetail({ go, id }: { go: Go; id: string }) {
           <p className="small">
             <strong>In the comp:</strong> {members.join(', ')}
           </p>
+          {(comp.aids ?? 'full') !== 'full' && (
+            <p className="small rules-note">
+              🏆 <strong>Tournament rules: {AIDS_LABELS[comp.aids!]}.</strong> {AIDS_BLURB[comp.aids!]}
+            </p>
+          )}
           {inviteUrl ? (
             <InviteSheet
               title={`Join ${comp.name}`}
@@ -301,14 +308,21 @@ export function CompDetail({ go, id }: { go: Go; id: string }) {
 
 export function CompEditor({ go, id }: { go: Go; id?: string }) {
   const friends = store.friends();
-  const [c, setC] = useState<Competition>(() => store.comp(id ?? '') ?? newComp(uid(), ['me', ...friends.map((f) => f.id)], COMP_PRESETS[0].make()));
+  const myName = store.settings().me.name;
+  const [c, setC] = useState<Competition>(
+    () => store.comp(id ?? '') ?? newComp(uid(), ['me', ...friends.map((f) => f.id)], { ...COMP_PRESETS[0].make(), organiser: myName }),
+  );
+  // Only whoever set the comp up can change the tournament rules
+  const isOrganiser = !c.organiser || personKey(c.organiser) === personKey(myName);
   const set = (p: Partial<Competition>) => setC({ ...c, ...p });
   const people = [{ id: 'me', name: store.settings().me.name }, ...friends];
   const num = (v: string) => (v.trim() === '' ? undefined : Math.max(0, Number(v) || 0));
   const isNew = !store.comp(c.id);
 
   const save = () => {
-    store.saveComp(c);
+    const saved = isOrganiser ? { ...c, organiser: c.organiser ?? myName } : c;
+    store.saveComp(saved);
+    if (isOrganiser && liveAvailable()) import('../live/compChannel').then(({ publishRules }) => publishRules(saved, myName)).catch(() => undefined);
     // Tag already-finished rounds in the date range that have enough members, so the table starts populated
     if (isNew) {
       for (const r of store.rounds()) {
@@ -370,6 +384,22 @@ export function CompEditor({ go, id }: { go: Go; id?: string }) {
             <span>Min. players for a round to count</span>
             <input inputMode="numeric" value={c.minPlayers} onChange={(e) => set({ minPlayers: Math.max(1, Number(e.target.value) || 1) })} />
           </label>
+        </Card>
+
+        <Card title="Tournament rules">
+          <div className="format-grid">
+            {(['full', 'noCaddy', 'distancesOnly'] as Aids[]).map((k) => (
+              <button key={k} disabled={!isOrganiser} className={`format ${(c.aids ?? 'full') === k ? 'on' : ''}`} onClick={() => set({ aids: k })}>
+                {AIDS_LABELS[k]}
+              </button>
+            ))}
+          </div>
+          <p className="muted small">{AIDS_BLURB[c.aids ?? 'full']}</p>
+          <p className="muted small">
+            {isOrganiser
+              ? 'Applies to every round that counts towards this comp, on everyone\'s phone.'
+              : `Only ${c.organiser} (who set up the comp) can change this.`}
+          </p>
         </Card>
 
         <Card title="Scoring">

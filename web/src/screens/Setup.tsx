@@ -3,7 +3,7 @@ import type { Format, Round, RoundPlayer, Team } from '../types';
 import { store, uid } from '../lib/storage';
 import { ambroseTeamHandicap, dailyHandicap, DEFAULT_ALLOWANCE, playingHandicap } from '../lib/handicap';
 import { FORMAT_BLURB, FORMAT_LABELS } from '../lib/scoring';
-import { suggestedComps } from '../lib/comps';
+import { aidsFor, AIDS_BLURB, AIDS_LABELS, suggestedComps } from '../lib/comps';
 import { newGroupId } from '../live/payload';
 import { Card, Header, Segmented, type Go } from '../components/ui';
 
@@ -314,6 +314,14 @@ export function Setup({ go, courseId, join }: { go: Go; courseId?: string; join?
               })}
             </div>
             <p className="muted small">Only comp members' scores count. You can change this after the round too.</p>
+            {(() => {
+              const r = aidsFor(compIds, store.comps());
+              return r.aids !== 'full' ? (
+                <p className="small rules-note">
+                  🏆 {r.comp?.name} rules: <strong>{AIDS_LABELS[r.aids]}</strong>. {AIDS_BLURB[r.aids]}
+                </p>
+              ) : null;
+            })()}
           </Card>
         )}
 

@@ -1,4 +1,4 @@
-import type { Competition, Player } from '../types';
+import type { Aids, Competition, Player } from '../types';
 import { personKey } from '../lib/share';
 import { store, uid } from '../lib/storage';
 import { liveAvailable } from './config';
@@ -59,8 +59,36 @@ export async function announceLive(compIds: string[], code: string, group: strin
   );
 }
 
-/** Watch the comp's channel: mates who joined from a link, and rounds being scored live. */
-export async function watchJoiners(comp: Competition, onJoiners: (j: Joiner[], live: LiveRoundNote[]) => void): Promise<() => void> {
+/** The organiser's tournament rules, posted so every member's phone follows them. */
+export interface RulesNote {
+  kind: 'rules';
+  aids: Aids;
+  by: string;
+  at: number;
+}
+
+export async function publishRules(comp: Competition, by: string): Promise<void> {
+  if (!liveAvailable()) return;
+  const { pushGroup } = await import('./live');
+  const note: RulesNote = { kind: 'rules', aids: comp.aids ?? 'full', by, at: Date.now() };
+  // The first phone to write 'rules' owns it, so only the organiser can change them
+  await pushGroup(channel(comp), 'rules', { data: JSON.stringify(note), status: 'live', hole: 0, headline: 'rules', scorer: by });
+}
+
+/** Take the organiser's rules into this phone's copy of the comp. Returns true if anything changed. */
+export function applyRules(comp: Competition, rules: RulesNote | undefined): boolean {
+  if (!rules) return false;
+  if (comp.organiser && personKey(comp.organiser) !== personKey(rules.by)) return false;
+  if ((comp.aids ?? 'full') === rules.aids && comp.organiser) return false;
+  store.saveComp({ ...comp, aids: rules.aids, organiser: comp.organiser ?? rules.by });
+  return true;
+}
+
+/** Watch the comp's channel: mates who joined from a link, rounds being scored live, and the tournament rules. */
+export async function watchJoiners(
+  comp: Competition,
+  onJoiners: (j: Joiner[], live: LiveRoundNote[], rules?: RulesNote) => void,
+): Promise<() => void> {
   if (!liveAvailable()) return () => undefined;
   const { watchEvent } = await import('./live');
   return watchEvent(
@@ -68,10 +96,13 @@ export async function watchJoiners(comp: Competition, onJoiners: (j: Joiner[], l
     (docs) => {
       const list: Joiner[] = [];
       const live: LiveRoundNote[] = [];
+      let rules: RulesNote | undefined;
       for (const d of Object.values(docs ?? {})) {
         try {
-          const j = JSON.parse(d.data) as Joiner & Partial<LiveRoundNote>;
-          if (j?.kind === 'live') {
+          const j = JSON.parse(d.data) as Joiner & Partial<LiveRoundNote> & Partial<RulesNote>;
+          if (j?.kind === 'rules') {
+            if (j.aids === 'full' || j.aids === 'noCaddy' || j.aids === 'distancesOnly') rules = { kind: 'rules', aids: j.aids, by: String(j.by ?? ''), at: Number(j.at) || 0 };
+          } else if (j?.kind === 'live') {
             // Only rounds started in the last 8 hours count as "on now"
             if (typeof j.code === 'string' && Date.now() - Number(j.at) < 8 * 3600 * 1000)
               live.push({ kind: 'live', code: j.code, course: String(j.course ?? ''), scorer: String(j.scorer ?? ''), at: Number(j.at) });
@@ -80,7 +111,7 @@ export async function watchJoiners(comp: Competition, onJoiners: (j: Joiner[], l
           /* not one of ours */
         }
       }
-      onJoiners(list, live.sort((a, b) => b.at - a.at));
+      onJoiners(list, live.sort((a, b) => b.at - a.at), rules);
     },
     () => undefined,
   );

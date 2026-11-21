@@ -1,4 +1,4 @@
-import type { Competition, Round } from '../types';
+import type { Aids, Competition, Round } from '../types';
 import { sideRows, sidesFor, type LeaderRow } from './scoring';
 
 export const SCORING_LABELS: Record<Competition['scoring'], string> = {
@@ -302,3 +302,28 @@ export function headToHead(rounds: Round[], a: string, b: string): HeadToHead {
   }
   return out;
 }
+
+const AIDS_RANK: Record<Aids, number> = { full: 0, noCaddy: 1, distancesOnly: 2 };
+
+/** The strictest tournament rules among the comps a round counts towards. */
+export function aidsFor(compIds: string[] | undefined, comps: Competition[]): { aids: Aids; comp?: Competition } {
+  let best: { aids: Aids; comp?: Competition } = { aids: 'full' };
+  for (const id of compIds ?? []) {
+    const c = comps.find((x) => x.id === id);
+    const a = c?.aids ?? 'full';
+    if (AIDS_RANK[a] > AIDS_RANK[best.aids]) best = { aids: a, comp: c };
+  }
+  return best;
+}
+
+export const AIDS_LABELS: Record<Aids, string> = {
+  full: 'Everything on',
+  noCaddy: 'AI caddy off',
+  distancesOnly: 'Distances only',
+};
+
+export const AIDS_BLURB: Record<Aids, string> = {
+  full: 'Distances, plays-like, wind and the AI caddy.',
+  noCaddy: 'No club or aim advice from the caddy (the Rules of Golf don\'t allow advice). Distances, plays-like and wind stay on.',
+  distancesOnly: 'GPS distances only: no caddy, plays-like, wind or slope. Like a rangefinder under the Rules of Golf local rule for distance-measuring devices.',
+};

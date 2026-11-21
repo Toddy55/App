@@ -30,6 +30,8 @@ interface Props {
   playsLike?: number;
   wind?: { kmh: number; fromDeg: number };
   gpsWarning?: string;
+  /** Tournament rules in force, e.g. caddy off. */
+  rulesNote?: string;
 }
 
 const PAD = { top: 58, right: 86, bottom: 44, left: 14 };
@@ -60,7 +62,7 @@ export function HoleView(p: Props) {
   // Where you're playing from: you, if you're on the hole, else the tee
   const from = (p.onHole && p.player) || tee || p.player;
 
-  const pad = { ...PAD, bottom: p.advice ? 122 : 44 };
+  const pad = { ...PAD, bottom: p.advice ? 122 : p.rulesNote ? 84 : 44 };
   const frame: Frame = useMemo(() => {
     const greenPts = green.polygon?.length ? green.polygon : [green.centre];
     if (view === 'green') {
@@ -375,6 +377,7 @@ export function HoleView(p: Props) {
       )}
       {p.pinMode && <div className="hv-hint on">Tap where the pin is today</div>}
       {p.gpsWarning && <div className="hv-gps">{p.gpsWarning}</div>}
+      {p.rulesNote && !p.advice && <div className="hv-rules">{p.rulesNote}</div>}
       <div className="hv-credit">Imagery © Esri, Maxar</div>
     </div>
   );

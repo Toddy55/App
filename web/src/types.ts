@@ -190,4 +190,14 @@ export interface Competition {
   minRounds: number;
   holes: 'any' | '18' | '9';
   createdAt: number;
+  /** Name of whoever set the comp up; only they can change the tournament rules. */
+  organiser?: string;
+  /**
+   * Tournament rules for rounds in this comp: 'full' = everything on;
+   * 'noCaddy' = no AI caddy (club and aim advice); 'distancesOnly' = also no
+   * plays-like, wind or slope (a plain GPS rangefinder).
+   */
+  aids?: Aids;
 }
+
+export type Aids = 'full' | 'noCaddy' | 'distancesOnly';
