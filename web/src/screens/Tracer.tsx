@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { drawTracer, flightProgress, tracePoints, type Pt } from '../lib/tracer';
 import { Card, Header, type Go } from '../components/ui';
+import { takeHandoff } from '../lib/traceHandoff';
 
 type Step = 'pick' | 'start' | 'end' | 'apex' | 'done';
 interface Mark extends Pt {
@@ -24,11 +25,13 @@ const PROMPTS: Record<Step, string> = {
 
 /** Film a shot (or pick a video) and draw a TV-style tracer over the ball flight. */
 export function Tracer({ go }: { go: Go }) {
-  const [url, setUrl] = useState<string | null>(null);
-  const [step, setStep] = useState<Step>('pick');
-  const [start, setStart] = useState<Mark | null>(null);
-  const [end, setEnd] = useState<Mark | null>(null);
-  const [apex, setApex] = useState<Pt | null>(null);
+  // A clip from the live tracer arrives already traced
+  const [handoff] = useState(() => takeHandoff());
+  const [url, setUrl] = useState<string | null>(() => (handoff ? URL.createObjectURL(handoff.file) : null));
+  const [step, setStep] = useState<Step>(handoff ? 'done' : 'pick');
+  const [start, setStart] = useState<Mark | null>(handoff?.start ?? null);
+  const [end, setEnd] = useState<Mark | null>(handoff?.end ?? null);
+  const [apex, setApex] = useState<Pt | null>(handoff?.apex ?? null);
   const [colour, setColour] = useState(COLOURS[0].value);
   const [thick, setThick] = useState(1);
   const [time, setTime] = useState(0);
@@ -223,6 +226,9 @@ export function Tracer({ go }: { go: Go }) {
             <p className="muted small">
               Best results: stand behind the golfer, hold the phone still (or lean it on the bag), and keep filming until the ball lands.
             </p>
+            <button className="btn block" onClick={() => go({ name: 'livetracer' })}>
+              📡 Live tracer: traces as the ball flies
+            </button>
           </Card>
         )}
 
@@ -237,14 +243,28 @@ export function Tracer({ go }: { go: Go }) {
                 preload="auto"
                 className="tracer-video"
                 onLoadedMetadata={(e) => {
-                  setDuration(e.currentTarget.duration);
-                  e.currentTarget.currentTime = 0.05;
+                  const v = e.currentTarget;
+                  const ready = () => {
+                    setDuration(v.duration);
+                    v.currentTime = handoff ? Math.max(0, handoff.start.t - 1) : 0.05;
+                  };
+                  if (Number.isFinite(v.duration)) ready();
+                  else {
+                    // Recorded clips can report an unknown length until we seek to the end once
+                    v.addEventListener('durationchange', function fix() {
+                      if (!Number.isFinite(v.duration)) return;
+                      v.removeEventListener('durationchange', fix);
+                      ready();
+                    });
+                    v.currentTime = 1e9;
+                  }
                 }}
                 onPlay={() => setPlaying(true)}
                 onPause={() => setPlaying(false)}
               />
               <canvas ref={canvas} className="tracer-canvas" onPointerDown={tap} />
             </div>
+            {handoff && step === 'done' && <p className="tracer-prompt">Traced live. Tap ▶ to watch, then save it. If the line's off, tap "Change height/shape".</p>}
             {PROMPTS[step] && <p className="tracer-prompt">{PROMPTS[step]}</p>}
             {msg && <p className="small">{msg}</p>}
 

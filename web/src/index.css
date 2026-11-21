@@ -288,3 +288,7 @@ table.standings tr.cutline td { border-top: 2px dashed var(--muted); }
 .tracer-scrub { min-height: 0; padding: 0; accent-color: var(--gold); }
 .swatch { width: 40px; height: 40px; border-radius: 999px; border: 3px solid var(--line); cursor: pointer; }
 .swatch.on { border-color: var(--ink); box-shadow: 0 0 0 2px var(--gold); }
+.live-badge { position: absolute; top: 10px; left: 10px; z-index: 2; background: rgba(0,0,0,.65); color: #fff; font-weight: 700; font-size: .85rem; padding: 5px 10px; border-radius: 999px; }
+.live-badge.armed { color: #4cd964; }
+.live-badge.flying { color: #ff6b6b; }
+.tracer-stage.collapsed { height: 0; min-height: 0; overflow: hidden; }

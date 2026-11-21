@@ -43,6 +43,7 @@ It runs in the browser and installs to your home screen (Share → Add to Home S
 
 **Shot tracer**
 - **Video tracer:** film a shot (or pick a video), tap where the ball starts, lands and peaks, and a TV-style tracer follows the ball in time with the video. Choose the colour and thickness, then save the clip or share it to the group chat
+- **Live tracer:** lean the phone on the bag behind the golfer, tap the ball, and hit. The app hears the strike, spots the ball leaving, follows it frame by frame and draws the tracer as it flies, finishing the arc once the ball is too small to see. The clip is saved for sharing, or for touching up in the video tracer
 - **GPS tracer:** shots marked during a round are drawn as curved flight lines on the satellite map with club and distance, plus a hole-by-hole animated **shot replay** after the round
 
 **Coaching**
