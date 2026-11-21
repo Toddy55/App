@@ -49,6 +49,14 @@ It runs in the browser and installs to your home screen (Share → Add to Home S
   - Accuracy on simulated test footage: landing side within about 6 m; carry within a few percent for typical club golfers, about 5–12% before calibration for stronger hitters; real-world accuracy depends on a still phone and a ball that stands out
 - **GPS tracer:** shots marked during a round are drawn as curved flight lines on the satellite map with club and distance, plus a hole-by-hole animated **shot replay** after the round
 
+**Hole view**
+- Each hole is a full-size satellite picture turned so you're looking down it: tee at the bottom, green at the top, doglegs and all
+- Front, centre (or pin) and back distances down the side, plus the plays-like number; the hole number, par, length and stroke index; and the wind arrow turned to match the hole
+- Tap anywhere to drop a target: you get the distance to it and from it to the pin. Drag the target ring to move it
+- Every bunker and water hazard in play shows two numbers: how far to reach it and how far to carry it. Rings across the fairway mark every 50 m (or yards)
+- The caddy's club, aim line and landing zone sit on the picture, with its call along the bottom
+- **Green** zooms in on the green; **Pin** lets you tap where today's flag is; swipe between holes with the arrows by the hole number
+
 **AI caddy**
 - On every hole: the club and the exact aim point (e.g. "7-iron, aim 6 m left of the pin, pin-high"), the plays-like distance, and the odds of finding water or sand
 - How it decides: it plays each sensible club and aim line a few hundred times with your distance, spread and usual miss (from your shot tracker, sim calibration and stats), plus wind, slope and temperature. Every landing spot is scored with the expected strokes to hole out (green, fairway, rough, bunker or water) and the option that saves the most shots wins. It lays up when going for it doesn't pay, and plays safer after a blow-up or when you're protecting a good card
