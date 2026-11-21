@@ -134,13 +134,16 @@ export function Play({ go, roundId }: { go: Go; roundId: string }) {
   const stats: HoleStats = round.stats[hole.number] ?? {};
   const setStats = (patch: Partial<HoleStats>) =>
     update((r) => ({ ...r, stats: { ...r.stats, [hole.number]: { ...(r.stats[hole.number] ?? {}), ...patch } } }));
-  const setScore = (sideId: string, v: number | undefined) =>
+  const setScore = (sideId: string, v: number | undefined) => {
     update((r) => {
       const s = { ...(r.scores[sideId] ?? {}) };
       if (v == null) delete s[hole.number];
       else s[hole.number] = v;
       return { ...r, scores: { ...r.scores, [sideId]: s } };
     });
+    // Birdies and blow-ups go to the comp banter
+    if (v != null && round.compIds?.length) import('../live/shoutouts').then((m) => m.queueShoutout(round.id, sideId, hole.number));
+  };
 
   const dist = geo.pos && hole.green ? greenDistances(geo.pos, hole.green, pin) : undefined;
   const far = dist && dist.centre > 1200;
@@ -300,6 +303,16 @@ export function Play({ go, roundId }: { go: Go; roundId: string }) {
             />
           )}
           <LiveControl round={round} hole={hole.number} go={go} onLive={(code, group) => update((r) => ({ ...r, liveCode: code, liveGroup: group }))} />
+          {round.compIds?.length ? (
+            <button className="banter-btn" onClick={() => go({ name: 'chat', compId: round.compIds![0] })}>
+              <span className="banter-icon">💬</span>
+              <span className="grow">
+                <strong>Comp banter</strong>
+                <span className="muted small banter-last">Birdies and blow-ups get posted by themselves 🐦💀</span>
+              </span>
+              <span>›</span>
+            </button>
+          ) : null}
           {advice && (
             <div id="caddy-card">
             <CaddyCard

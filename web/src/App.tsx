@@ -13,6 +13,7 @@ import { FriendDetail, Friends } from './screens/Friends';
 import { CompDetail, CompEditor, Leaderboards } from './screens/Leaderboards';
 import { Import } from './screens/Import';
 import { JoinComp } from './screens/JoinComp';
+import { Chat } from './screens/Chat';
 import { LiveView } from './live/LiveView';
 import { Tracer } from './screens/Tracer';
 import { LiveTracer } from './screens/LiveTracer';
@@ -77,6 +78,8 @@ function renderScreen(route: Route, key: string, go: (r: Route) => void): ReactN
       return <Friends key={key} go={go} />;
     case 'friend':
       return <FriendDetail key={key} go={go} id={route.id} />;
+    case 'chat':
+      return <Chat key={key} go={go} compId={route.compId} />;
     case 'joinComp':
       return <JoinComp key={key} go={go} data={route.data} />;
     case 'leaderboards':

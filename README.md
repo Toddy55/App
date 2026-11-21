@@ -33,6 +33,8 @@ It runs in the browser and installs to your home screen (Share → Add to Home S
 - Rounds are tagged to comps at setup (ticked automatically when enough members are playing) and can be changed after the round
 - All-time table across your whole crew, plus live comps on the home screen
 - **Invite a mate to a comp:** "Invite a mate to join" sends a link. Your mate taps it, sees the comp and the table so far, puts in their name and handicap and taps Join. They appear in the comp on everyone's phone by themselves (or, without live sync set up, they send an "I'm in" link back)
+- **Live in the comp:** when a round that counts towards a comp goes live, the comp page on everyone's phone shows a **Live now** card with the leaderboard (thru, points or net to par) and the comp table "if it finished now", updating as the scorer enters scores
+- **Banter:** every comp has its own group chat. Golf and stirring emojis (🐦🦆🐔🐐🌊🏖️🤡💀🍻 and more), one-tap sledges ("Sandbagger alert 🚨", "Wet one! 🌊", "Is that your score or your handicap? 🤣"…) and automatic shout-outs when someone birdies or blows up a hole during a live comp round. The comp page shows the latest message and how many are new
 - **Sharing, no accounts needed:** "Share round" or "Sync rounds" makes a link for the group chat. Opening it on a mate's phone imports the rounds and comp, matching players by name (confirmable), skipping rounds they already scored themselves, and keeping their own stats private. "Share table" posts the standings as text
 
 **Live scoring**
@@ -66,6 +68,7 @@ It runs in the browser and installs to your home screen (Share → Add to Home S
 - Green slopes aren't in public map data, so it doesn't read the break
 
 **Coaching**
+- Mid-round, net scores are fair: an Ambrose team's handicap comes off pro rata for the holes played (half after 9), and the leader shows as e.g. "2.5 under net thru 9"
 - Built-in coach (no internet or key needed): compares your putts, fairways, GIR, up-and-downs, penalties, bunker play, blow-up holes, par-5 scoring and back-nine fade against typical numbers for your handicap. It ranks the areas costing you the most shots, lists your costliest holes and why, gives a drill and an on-course tip for each, and builds a 60-minute practice plan
 - Optional AI coach: a deeper Claude write-up of the round, using your own Anthropic API key (Settings)
 - Stats page: trends over your last 10 rounds, your recurring #1 weakness, and club distances

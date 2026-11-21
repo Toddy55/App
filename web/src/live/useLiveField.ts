@@ -10,10 +10,30 @@ import { liveAvailable } from './config';
  * same event so your own scorecard can show their teams too. Your own group
  * always comes from this phone (it's newer than what's on the server).
  */
-export function useLiveField(round: Round | undefined): { field: Round | null; groups: number } {
+export function useLiveField(round: Round | undefined): { field: Round | null; bundle: Bundle | null; groups: number } {
   const code = round?.liveCode;
-  const [others, setOthers] = useState<{ id: string; bundle: Bundle }[]>([]);
+  const others = useEventGroups(code);
 
+  const bundle = useMemo(() => {
+    if (!round || !code) return null;
+    const theirs = others.filter((g) => g.id !== round.liveGroup && g.bundle.rounds[0]);
+    if (!theirs.length) return null;
+    const settings = store.settings();
+    const mine = makeBundle({ me: settings.me, friends: store.friends(), rounds: [round], comps: [] });
+    try {
+      return mergeEventBundles([mine, ...theirs.map((g) => g.bundle)], code);
+    } catch {
+      return null;
+    }
+  }, [round, code, others]);
+  const field = bundle?.rounds[0] ?? null;
+
+  return { field, bundle, groups: field ? others.filter((g) => g.id !== round?.liveGroup).length + 1 : 1 };
+}
+
+/** Every group's latest card in a live event (empty until it connects). */
+export function useEventGroups(code: string | undefined): { id: string; bundle: Bundle }[] {
+  const [others, setOthers] = useState<{ id: string; bundle: Bundle }[]>([]);
   useEffect(() => {
     setOthers([]);
     if (!code || !liveAvailable()) return;
@@ -48,18 +68,5 @@ export function useLiveField(round: Round | undefined): { field: Round | null; g
     };
   }, [code]);
 
-  const field = useMemo(() => {
-    if (!round || !code) return null;
-    const theirs = others.filter((g) => g.id !== round.liveGroup && g.bundle.rounds[0]);
-    if (!theirs.length) return null;
-    const settings = store.settings();
-    const mine = makeBundle({ me: settings.me, friends: store.friends(), rounds: [round], comps: [] });
-    try {
-      return mergeEventBundles([mine, ...theirs.map((g) => g.bundle)], code).rounds[0] ?? null;
-    } catch {
-      return null;
-    }
-  }, [round, code, others]);
-
-  return { field, groups: field ? others.filter((g) => g.id !== round?.liveGroup).length + 1 : 1 };
+  return others;
 }

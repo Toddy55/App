@@ -5,6 +5,9 @@ import { COMP_PRESETS, computeComp, newComp, SCORING_BLURB, SCORING_LABELS, stan
 import { encodeBundle, joinUrl, makeBundle, shareLink, shareText, shareUrl } from '../lib/share';
 import { Card, Header, Segmented, type Go } from '../components/ui';
 import { liveAvailable } from '../live/config';
+import { CompLive } from '../components/CompLive';
+import type { LiveRoundNote } from '../live/compChannel';
+import { lastSeen, type ChatMsg } from '../live/chat';
 
 const nameOf = (id: string) => store.nameOf(id);
 
@@ -113,6 +116,22 @@ export function CompDetail({ go, id }: { go: Go; id: string }) {
   const [rev, setRev] = useState(0);
   const comp = store.comp(id);
   const [msg, setMsg] = useState<string | null>(null);
+  const [liveNotes, setLiveNotes] = useState<LiveRoundNote[]>([]);
+  const [chat, setChat] = useState<ChatMsg[]>([]);
+  // Latest banter, for the preview and the "new" count
+  useEffect(() => {
+    if (!liveAvailable()) return;
+    let unsub: (() => void) | undefined;
+    let stop = false;
+    import('../live/chat')
+      .then(({ watchChat }) => watchChat(id, (m) => !stop && setChat(m), 30))
+      .then((u) => (stop ? u() : (unsub = u)))
+      .catch(() => undefined);
+    return () => {
+      stop = true;
+      unsub?.();
+    };
+  }, [id]);
   // Mates who joined from an invite link show up here by themselves
   useEffect(() => {
     const c = store.comp(id);
@@ -120,7 +139,8 @@ export function CompDetail({ go, id }: { go: Go; id: string }) {
     let unsub: (() => void) | undefined;
     let stop = false;
     import('../live/compChannel').then(async ({ watchJoiners, addJoiners }) => {
-      const u = await watchJoiners(c, (joiners) => {
+      const u = await watchJoiners(c, (joiners, live) => {
+        setLiveNotes(live);
         const { added } = addJoiners(store.comp(id) ?? c, joiners);
         if (added.length) {
           setMsg(`${added.join(' and ')} joined the comp.`);
@@ -163,6 +183,12 @@ export function CompDetail({ go, id }: { go: Go; id: string }) {
     setMsg(how === 'copied' ? 'Link copied. Paste it in the group chat.' : null);
   };
   const members = comp.memberIds.map((m) => nameOf(m));
+  // Rounds for this comp being played right now: this phone's, and anyone else's that's live
+  const localLive = rounds.find((r) => !r.completed && r.compIds?.includes(comp.id) && Date.now() - r.startedAt < 12 * 3600 * 1000);
+  const otherLive = liveNotes.filter((n, i, a) => n.code !== localLive?.liveCode && a.findIndex((x) => x.code === n.code) === i);
+  const seen = lastSeen(comp.id);
+  const unread = chat.filter((m) => !m.mine && m.id > seen).length;
+  const lastMsg = chat[chat.length - 1];
   const shareTable = async () => {
     const how = await shareText(comp.name, standingsText(comp, res));
     setMsg(how === 'copied' ? 'Table copied. Paste it in the group chat.' : null);
@@ -172,6 +198,23 @@ export function CompDetail({ go, id }: { go: Go; id: string }) {
     <div className="screen">
       <Header title={comp.name} onBack={() => go({ name: 'leaderboards' })} right={<button className="btn small" onClick={() => go({ name: 'compEdit', id: comp.id })}>Edit</button>} />
       <div className="content">
+        {localLive && <CompLive comp={comp} local={localLive} code={localLive.liveCode} go={go} />}
+        {otherLive.map((n) => (
+          <CompLive key={n.code} comp={comp} code={n.code} course={n.course} scorer={n.scorer} go={go} />
+        ))}
+        {liveAvailable() && (
+          <button className="banter-btn" onClick={() => go({ name: 'chat', compId: comp.id })}>
+            <span className="banter-icon">💬</span>
+            <span className="grow">
+              <strong>Banter</strong>
+              <span className="muted small banter-last">
+                {lastMsg ? `${lastMsg.mine ? 'You' : lastMsg.name}: ${lastMsg.text}` : 'Start stirring the pot 🔥'}
+              </span>
+            </span>
+            {unread > 0 && <span className="badge">{unread}</span>}
+            <span>›</span>
+          </button>
+        )}
         <Card>
           <div className="eyebrow">
             {res.status === 'complete' ? '🏁 Final standings' : res.status === 'upcoming' ? `⏳ Starts ${comp.start}` : '🟢 Live'} · {SCORING_LABELS[comp.scoring]}
