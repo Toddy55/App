@@ -10,6 +10,9 @@ import { HoleMap } from '../components/HoleMap';
 import { HoleView } from '../components/HoleView';
 import { LiveControl, pushFinal } from '../live/LiveControl';
 import { useLiveField } from '../live/useLiveField';
+import { aidsFor, AIDS_LABELS } from '../lib/comps';
+import { fetchGreenDem, type Dem } from '../lib/greenDem';
+import { approachNote, smooth } from '../lib/greenRead';
 import { Scorecard } from '../components/Scorecard';
 import { Card, Header, Segmented, Stepper, scoreClass, type Go } from '../components/ui';
 import { CaddyCard } from '../components/CaddyCard';
@@ -119,6 +122,49 @@ export function Play({ go, roundId }: { go: Go; roundId: string }) {
   // Other groups in the same live event (e.g. the other Ambrose team), for the scorecard
   const live = useLiveField(round);
   const [cardView, setCardView] = useState<'field' | 'group'>('field');
+  // Tournament rules from the comps this round counts towards (the organiser can change them live)
+  const [rulesRev, setRulesRev] = useState(0);
+  const compKey = (round?.compIds ?? []).join(',');
+  useEffect(() => {
+    if (!compKey) return;
+    const unsubs: (() => void)[] = [];
+    let stop = false;
+    import('../live/compChannel')
+      .then(async ({ watchJoiners, applyRules }) => {
+        for (const id of compKey.split(',')) {
+          const c = store.comp(id);
+          if (!c) continue;
+          const u = await watchJoiners(c, (_j, _l, rules) => {
+            if (applyRules(store.comp(id) ?? c, rules)) setRulesRev((n) => n + 1);
+          });
+          if (stop) u();
+          else unsubs.push(u);
+        }
+      })
+      .catch(() => undefined);
+    return () => {
+      stop = true;
+      unsubs.forEach((u) => u());
+    };
+  }, [compKey]);
+  void rulesRev;
+  // Ground heights for this green (Queensland LiDAR) for the slope map and the caddy's green read
+  const holeGreen = round?.holes[idx]?.green;
+  const greenKey = holeGreen ? `${holeGreen.centre.lat},${holeGreen.centre.lon}` : '';
+  const [demState, setDemState] = useState<{ key: string; dem: Dem | null } | null>(null);
+  useEffect(() => {
+    if (!holeGreen) return;
+    let stop = false;
+    fetchGreenDem(holeGreen)
+      .then((d) => !stop && setDemState({ key: greenKey, dem: d }))
+      .catch(() => !stop && setDemState({ key: greenKey, dem: null }));
+    return () => {
+      stop = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [greenKey]);
+  const dem = demState?.key === greenKey ? demState.dem : null;
+  const demSmooth = useMemo(() => (dem ? smooth(dem) : null), [dem]);
 
   if (!round || !hole) {
     return (
@@ -157,8 +203,11 @@ export function Play({ go, roundId }: { go: Go; roundId: string }) {
   const caddyFrom = onHole ? geo.pos : hole.tee;
   const mePlayer = round.players.find((p) => p.id === round.meId);
   const caddyHcp = mePlayer?.dailyHandicap ?? settings.me.gaHandicap;
+  const rules = aidsFor(round.compIds, store.comps());
+  const caddyAllowed = rules.aids === 'full';
+  const extrasAllowed = rules.aids !== 'distancesOnly';
   let advice: Advice | null = null;
-  if (caddyFrom && hole.green) {
+  if (caddyAllowed && caddyFrom && hole.green) {
     const key = [
       round.id,
       hole.number,
@@ -196,6 +245,11 @@ export function Play({ go, roundId }: { go: Go; roundId: string }) {
       };
     }
     advice = caddyCache.value;
+    // Add how the green falls around the pin, and where to miss
+    if (advice && demSmooth && advice.toPin < 260) {
+      const note = approachNote(demSmooth, pin ?? hole.green.centre, caddyFrom);
+      if (note) advice = { ...advice, lines: [...advice.lines, `🟢 ${note}`] };
+    }
   }
   const holeHazards = course?.hazards;
   const shots = round.shots[hole.number] ?? [];
@@ -297,8 +351,10 @@ export function Play({ go, roundId }: { go: Go; roundId: string }) {
               onNext={!isLast ? () => { setIdx(idx + 1); setMeasure(undefined); } : undefined}
               onCaddyTap={() => document.getElementById('caddy-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
               units={units}
-              playsLike={pl?.distance}
-              wind={wx ? { kmh: wx.windKmh, fromDeg: wx.windFromDeg } : undefined}
+              playsLike={extrasAllowed ? pl?.distance : undefined}
+              wind={extrasAllowed && wx ? { kmh: wx.windKmh, fromDeg: wx.windFromDeg } : undefined}
+              dem={rules.aids === 'full' ? dem : null}
+              rulesNote={rules.aids !== 'full' ? `🏆 ${rules.comp?.name ?? 'Comp'} rules: ${AIDS_LABELS[rules.aids]}` : undefined}
               gpsWarning={geo.accuracy != null && geo.accuracy > 15 ? `GPS ±${Math.round(geo.accuracy)} m` : undefined}
             />
           )}

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Round, RoundPlayer } from '../types';
 import { blankHoles } from './courses';
-import { computeComp, headToHead, newComp, standingsText, suggestedComps } from './comps';
+import { aidsFor, computeComp, headToHead, newComp, standingsText, suggestedComps } from './comps';
 import { applyBundle, autoMap, decodeBundle, encodeBundle, makeBundle } from './share';
 
 const holes = blankHoles(18);
@@ -194,5 +194,17 @@ describe('multi-group live events', () => {
     const field = mergeGroupRounds([mk('a', ['me', 'd']), { ...mk('b', ['s', 'b']), startedAt: Date.parse('2026-11-07') }], 'EV2');
     expect(field.teams!.map((t) => t.id)).toEqual(['g1-t1', 'g2-t1']);
     expect(Object.keys(field.scores).sort()).toEqual(['g1-t1', 'g2-t1']);
+  });
+});
+
+describe('tournament rules', () => {
+  it('uses the strictest rules of the comps a round counts towards', () => {
+    const a = newComp('a', ['me'], { aids: 'noCaddy' });
+    const b = newComp('b', ['me'], { aids: 'distancesOnly' });
+    const c = newComp('c', ['me']);
+    expect(aidsFor(['c'], [a, b, c]).aids).toBe('full');
+    expect(aidsFor(['a', 'c'], [a, b, c]).aids).toBe('noCaddy');
+    expect(aidsFor(['a', 'b'], [a, b, c])).toMatchObject({ aids: 'distancesOnly', comp: { id: 'b' } });
+    expect(aidsFor(undefined, [a]).aids).toBe('full');
   });
 });

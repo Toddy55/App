@@ -7,6 +7,7 @@ import { computeResult, parLabel, toParLabel, type LeaderRow } from '../lib/scor
 import { useEventGroups } from '../live/useLiveField';
 import { StandingsTable } from '../screens/Leaderboards';
 import { Card, type Go } from './ui';
+import { ShotCam } from './ShotCam';
 
 /**
  * A comp round being played right now: the live leaderboard and where the
@@ -64,6 +65,7 @@ export function CompLive({ comp, code, local, course, scorer, go }: { comp: Comp
         )}
       </div>
       <h3 className="comp-live-head">{result.headline}</h3>
+      {code && <ShotCam code={code} compact />}
       <table className="live-board">
         <thead>
           <tr>

@@ -51,6 +51,12 @@ export interface Player {
   name: string;
   /** GA Handicap (index). Negative for plus markers. */
   gaHandicap: number;
+  /** Golf Australia (GOLF Link) number, 10 digits, for checking the official handicap. */
+  gaNumber?: string;
+  /** 'ga' = official GA Handicap; 'manual' = no GA handicap, a number the group agreed on. */
+  hcpSource?: 'ga' | 'manual';
+  /** When the GA Handicap was last checked against Golf Australia. */
+  hcpCheckedAt?: number;
 }
 
 export type Format =
@@ -190,4 +196,14 @@ export interface Competition {
   minRounds: number;
   holes: 'any' | '18' | '9';
   createdAt: number;
+  /** Name of whoever set the comp up; only they can change the tournament rules. */
+  organiser?: string;
+  /**
+   * Tournament rules for rounds in this comp: 'full' = everything on;
+   * 'noCaddy' = no AI caddy (club and aim advice); 'distancesOnly' = also no
+   * plays-like, wind or slope (a plain GPS rangefinder).
+   */
+  aids?: Aids;
 }
+
+export type Aids = 'full' | 'noCaddy' | 'distancesOnly';

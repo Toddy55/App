@@ -69,7 +69,7 @@ export function Home({ go }: { go: Go }) {
           {[
             { icon: <MapIcon />, label: 'Courses', sub: 'Find & map courses', to: { name: 'courses' } as const },
             { icon: <Trophy />, label: 'Leaderboards', sub: 'Comps & tables', to: { name: 'leaderboards' } as const },
-            { icon: <Users />, label: 'Friends', sub: 'Your crew', to: { name: 'friends' } as const },
+            { icon: <Users />, label: 'Friends', sub: 'Crew & invites', to: { name: 'friends' } as const },
             { icon: <Video />, label: 'Shot tracer', sub: 'Sim & video', to: { name: 'tracer' } as const },
             { icon: <ChartColumn />, label: 'My stats', sub: 'Trends & clubs', to: { name: 'stats' } as const },
             { icon: <SettingsIcon />, label: 'Settings', sub: 'Profile & app', to: { name: 'settings' } as const },

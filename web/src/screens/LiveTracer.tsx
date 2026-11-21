@@ -58,6 +58,13 @@ export function LiveTracer({ go }: { go: Go }) {
   const [cal, setCal] = useState(() => readNum(CAL_KEY, 1));
   const [height, setHeight] = useState(() => readNum(HEIGHT_KEY, 1.0));
   const [actual, setActual] = useState('');
+  // A live round on this phone: send each shot to the mates watching it
+  const [liveRound] = useState(() => store.rounds().find((x) => !x.completed && x.liveCode && Date.now() - x.startedAt < 14 * 3600 * 1000));
+  const [sendLive, setSendLive] = useState(true);
+  const sendLiveRef = useRef(true);
+  sendLiveRef.current = sendLive;
+  const [sendMsg, setSendMsg] = useState<string | null>(null);
+  const sendQueue = useRef<Promise<void>>(Promise.resolve());
   const video = useRef<HTMLVideoElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
   const r = useRef({
@@ -270,8 +277,33 @@ export function LiveTracer({ go }: { go: Go }) {
     const clubNow = s.club;
     const seen = s.seen ?? undefined;
     setShots((prev) => [{ n, club: clubNow, result: res, handoff, seen }, ...prev].slice(0, 30));
+    if (liveRound?.liveCode && sendLiveRef.current && handoff.path) sendToLive(handoff, clubNow);
     // Straight back to ready for the next one
     arm(s.tapLaunch);
+  };
+
+  /** Shrink the shot to a small traced clip and send it to everyone watching the live round. */
+  const sendToLive = (h: TraceHandoff, clubNow: string) => {
+    const round = liveRound!;
+    sendQueue.current = sendQueue.current.then(async () => {
+      setSendMsg('📡 Sending the shot to your mates…');
+      try {
+        const [{ renderShareClip }, { publishClip }] = await Promise.all([import('../lib/clipRender'), import('../live/clips')]);
+        const clip = await renderShareClip(h);
+        if (!clip) throw new Error("this phone can't make the clip");
+        const me = round.scores[round.meId] ?? {};
+        const hole = round.holes.find((x) => me[x.number] == null)?.number;
+        await publishClip(round.liveCode!, clip.blob, { name: settings.me.name, club: clubNow || undefined, info: h.info ?? [], mime: clip.mime, hole });
+        setSendMsg(`📡 Sent to your live round (${Math.round(clip.blob.size / 1024)} KB). Your mates see it on the live card.`);
+        if (round.compIds?.length) {
+          const { sendChat } = await import('../live/chat');
+          const line = h.info?.[0] ?? 'a shot';
+          await Promise.all(round.compIds.map((c) => sendChat(c, settings.me.name, `📹 ${settings.me.name}: ${line}. Watch it on the live card 👀`, true))).catch(() => undefined);
+        }
+      } catch (e) {
+        setSendMsg(`Couldn't send that one: ${e instanceof Error ? e.message : String(e)}`);
+      }
+    });
   };
 
   type FrameMeta = { captureTime?: number; expectedDisplayTime?: number; mediaTime?: number };
@@ -454,6 +486,17 @@ export function LiveTracer({ go }: { go: Go }) {
             <button className="btn primary block big" onClick={startCamera}>
               📹 Start
             </button>
+          </Card>
+        )}
+        {liveRound?.liveCode && (
+          <Card className="live-send">
+            <label className="check">
+              <input type="checkbox" checked={sendLive} onChange={(e) => setSendLive(e.target.checked)} />
+              <span>
+                📡 <strong>Send my shots to the live round</strong> at {liveRound.courseName}, so mates watching see every one
+              </span>
+            </label>
+            {sendMsg && <p className="small muted">{sendMsg}</p>}
           </Card>
         )}
         {err && <p className="error">{err}</p>}

@@ -32,8 +32,10 @@ It runs in the browser and installs to your home screen (Share → Add to Home S
 - Ambrose rounds count in league mode, with team-mates sharing the team's position. Ties share the points
 - Rounds are tagged to comps at setup (ticked automatically when enough members are playing) and can be changed after the round
 - All-time table across your whole crew, plus live comps on the home screen
+- **Invites by text or email:** Friends → "Invite mates to the app", or a comp's "Invite a mate to join". On Android, "Choose from my contacts" lets you tick several mates at once; on iPhone, tap Text with no number and add mates from your contacts in Messages. Or type mobile numbers (opens Messages) or email addresses (opens your email), or use Share / Copy. Every invite includes the steps to add the app to their home screen on iPhone and Android
 - **Invite a mate to a comp:** "Invite a mate to join" sends a link. Your mate taps it, sees the comp and the table so far, puts in their name and handicap and taps Join. They appear in the comp on everyone's phone by themselves (or, without live sync set up, they send an "I'm in" link back)
 - **Live in the comp:** when a round that counts towards a comp goes live, the comp page on everyone's phone shows a **Live now** card with the leaderboard (thru, points or net to par) and the comp table "if it finished now", updating as the scorer enters scores
+- **Tournament rules:** whoever set up the comp can choose *Everything on*, *AI caddy off* (no club or aim advice, which the Rules of Golf treat as advice) or *Distances only* (also no plays-like, wind or slope, like a rangefinder under the distance-measuring-device local rule). It applies to every round in the comp on everyone's phone, updates live, and only the organiser can change it
 - **Banter:** every comp has its own group chat. Golf and stirring emojis (🐦🦆🐔🐐🌊🏖️🤡💀🍻 and more), one-tap sledges ("Sandbagger alert 🚨", "Wet one! 🌊", "Is that your score or your handicap? 🤣"…) and automatic shout-outs when someone birdies or blows up a hole during a live comp round. The comp page shows the latest message and how many are new
 - **Sharing, no accounts needed:** "Share round" or "Sync rounds" makes a link for the group chat. Opening it on a mate's phone imports the rounds and comp, matching players by name (confirmable), skipping rounds they already scored themselves, and keeping their own stats private. "Share table" posts the standings as text
 
@@ -50,6 +52,7 @@ It runs in the browser and installs to your home screen (Share → Add to Home S
   - Pick the club: ball speed is the hardest thing for a camera to see from behind, so the club's typical speed is the starting point
   - **Calibrate** once with a shot of known carry. It learns how much harder or softer than a typical club golfer you hit it, and that applies to every club
   - Accuracy on simulated test footage: landing side within about 6 m; carry within a few percent for typical club golfers, about 5–12% before calibration for stronger hitters; real-world accuracy depends on a still phone and a ball that stands out
+- **Shot cam for mates watching live:** during a live round, every sim shot is turned into a small traced clip (about 360p, a few seconds, under 500 KB) and sent to the live round. Everyone watching the live card or the comp's Live now card sees it play by itself the moment it lands, with the club, carry, apex and shape, and can flick back through the last few. In a comp round the banter gets a "📹 Toddy: 7i · Carry 128 m. Watch it" shout-out. Switch it off on the sim screen
 - **GPS tracer:** shots marked during a round are drawn as curved flight lines on the satellite map with club and distance, plus a hole-by-hole animated **shot replay** after the round
 
 **Hole view**
@@ -60,12 +63,25 @@ It runs in the browser and installs to your home screen (Share → Add to Home S
 - The caddy's club, aim line and landing zone sit on the picture, with its call along the bottom
 - **Green** zooms in on the green; **Pin** lets you tap where today's flag is; swipe between holes with the arrows by the hole number
 
+**Green slope maps (Queensland)**
+- Tap **Green** on the hole view: the green is coloured by slope (green flat, yellow 2%, orange 3%, red 4.5%+), with arrows showing which way it falls and contour lines every 10 cm
+- Tap where your ball is (or stand on the green) for a **putt read**: length, how much uphill or downhill, which way it breaks and roughly how many cups to aim outside the hole, with the curve drawn on the green
+- The caddy adds where to miss each approach from how the green falls around the pin (e.g. "falls back to front: stay below the hole")
+- Uses the Queensland Government's free LiDAR elevation model (0.5–1 m), so it works on Queensland courses. Each green is fetched once and kept on the phone. It's survey data, not a green-book: it won't show recent green rebuilds or tiny breaks, and the putt break is a rule-of-thumb estimate for medium-paced greens
+- Off when a comp's tournament rules are "AI caddy off" or "Distances only"
+
 **AI caddy**
 - On every hole: the club and the exact aim point (e.g. "7-iron, aim 6 m left of the pin, pin-high"), the plays-like distance, and the odds of finding water or sand
 - How it decides: it plays each sensible club and aim line a few hundred times with your distance, spread and usual miss (from your shot tracker, sim calibration and stats), plus wind, slope and temperature. Every landing spot is scored with the expected strokes to hole out (green, fairway, rough, bunker or water) and the option that saves the most shots wins. It lays up when going for it doesn't pay, and plays safer after a blow-up or when you're protecting a good card
 - The map shows the aim point, the landing zone and the bunkers, water and fairways
 - "Ask the caddy" chats about the shot with Claude (needs your Anthropic key)
 - Green slopes aren't in public map data, so it doesn't read the break
+
+**Handicaps**
+- Each player (you in Settings, mates under Friends, or when joining a comp) is either **GA Handicap** or **No GA handicap**
+- GA Handicap: add their 10-digit GA number and tap **Check it on Golf Australia** to open their official record, then enter the GA Handicap shown. It's flagged ⏰ if it hasn't been checked in a week (GA Handicaps change after every round), and Setup warns before you tee off
+- No GA handicap: a manual handicap agreed with the group, shown as "manual". Plus handicaps: type +2.1
+- Daily Handicaps use the course's slope and scratch ratings when they're set
 
 **Coaching**
 - Mid-round, net scores are fair: an Ambrose team's handicap comes off pro rata for the holes played (half after 9), and the leader shows as e.g. "2.5 under net thru 9"

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { Settings as S } from '../types';
 import { DEFAULT_CLUBS, store } from '../lib/storage';
+import { HandicapEditor } from '../components/HandicapEditor';
 import { Card, Header, Segmented, type Go } from '../components/ui';
 import { PALETTES, readAppearance, saveAppearance, type Mode, type Palette } from '../lib/appearance';
 
@@ -32,15 +33,7 @@ export function Settings({ go }: { go: Go }) {
             <span>Name</span>
             <input value={s.me.name} onChange={(e) => save({ ...s, me: { ...s.me, name: e.target.value } })} />
           </label>
-          <label className="field narrow">
-            <span>GA Handicap</span>
-            <input
-              inputMode="decimal"
-              value={String(s.me.gaHandicap)}
-              onChange={(e) => save({ ...s, me: { ...s.me, gaHandicap: Number(e.target.value) || 0 } })}
-            />
-          </label>
-          <p className="muted small">Use your current GA Handicap from the Golf Australia app. Enter plus handicaps as a negative number (e.g. −1.2).</p>
+          <HandicapEditor player={s.me} onChange={(me) => save({ ...s, me })} />
         </Card>
         <Card title="Look">
           <div className="field">

@@ -1,9 +1,12 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { ChevronLeft, ChevronRight, Crosshair, Flag, Maximize2, Minimize2, Sparkles, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Crosshair, Flag, Layers, Maximize2, Minimize2, Sparkles, X } from 'lucide-react';
 import type { Hazard, Hole, LatLon, Shot } from '../types';
-import { bearingDeg, centroid, distanceM, fmtDist, greenDistances } from '../lib/geo';
+import { bearingDeg, centroid, distanceM, fmtDist, greenDistances, pointInPolygon } from '../lib/geo';
 import { along, makeFrame, project, tileLayout, unproject, type Frame } from '../lib/holeFrame';
 import { landingEllipse, type Advice } from '../lib/caddy';
+import { DEM_CREDIT, type Dem } from '../lib/greenDem';
+import { readPutt } from '../lib/greenRead';
+import { GreenSlopeLayer, fallWords, useGreenSlope } from './GreenSlope';
 
 interface Props {
   hole: Hole;
@@ -30,10 +33,14 @@ interface Props {
   playsLike?: number;
   wind?: { kmh: number; fromDeg: number };
   gpsWarning?: string;
+  /** Tournament rules in force, e.g. caddy off. */
+  rulesNote?: string;
+  /** Ground heights around the green (slope map), when allowed. */
+  dem?: Dem | null;
 }
 
 const PAD = { top: 58, right: 86, bottom: 44, left: 14 };
-const GREEN_PAD = { top: 70, right: 96, bottom: 80, left: 30 };
+const GREEN_PAD = { top: 64, right: 90, bottom: 70, left: 64 };
 
 /** Full-size, turned satellite picture of the hole with every number on it. */
 export function HoleView(p: Props) {
@@ -41,6 +48,7 @@ export function HoleView(p: Props) {
   const box = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ w: 380, h: 560 });
   const [view, setView] = useState<'hole' | 'green'>('hole');
+  const [showSlope, setShowSlope] = useState(true);
   const drag = useRef<{ id: number; x: number; y: number; moved: boolean; target: boolean } | null>(null);
 
   useLayoutEffect(() => {
@@ -60,7 +68,7 @@ export function HoleView(p: Props) {
   // Where you're playing from: you, if you're on the hole, else the tee
   const from = (p.onHole && p.player) || tee || p.player;
 
-  const pad = { ...PAD, bottom: p.advice ? 122 : 44 };
+  const pad = { ...PAD, bottom: p.advice ? 122 : p.rulesNote ? 84 : 44 };
   const frame: Frame = useMemo(() => {
     const greenPts = green.polygon?.length ? green.polygon : [green.centre];
     if (view === 'green') {
@@ -72,7 +80,7 @@ export function HoleView(p: Props) {
         width: size.w,
         height: size.h,
         pad: { ...GREEN_PAD, bottom: pad.bottom + 10 },
-        minSpanM: 45,
+        minSpanM: 34,
       });
     }
     const start = tee ?? from ?? green.centre;
@@ -121,8 +129,18 @@ export function HoleView(p: Props) {
   }, [from, lineBearing, toGreen, units, view]);
 
   const target = p.target;
-  const aim = p.showCaddy && p.advice ? p.advice.best.aim : undefined;
-  const zone = p.showCaddy && p.advice ? landingEllipse(p.advice.best.landing, p.advice.from) : undefined;
+  const slope = useGreenSlope(p.dem, hole.green);
+  const slopeOn = !!slope && showSlope && view === 'green';
+  // The putt read: from where you tapped, or from you if you're on the green
+  const onGreen = !!p.player && p.onHole && (green.polygon?.length ? distanceM(p.player, green.centre) < 30 : distanceM(p.player, green.centre) < 16);
+  const ball = view === 'green' ? (target ?? (onGreen ? p.player : undefined)) : undefined;
+  // Only read putts from on (or right on the edge of) the green
+  const ballOnGreen = !!ball && (green.polygon?.length ? pointInPolygon(ball, green.polygon) || distanceToPoly(ball, green.polygon) < 2 : distanceM(ball, green.centre) < 15);
+  const putt = slope && ball && ballOnGreen ? readPutt(slope.dem, ball, p.pin ?? green.centre) : null;
+  // The caddy's aim and landing zone clutter the green close-up when the slope map is on
+  const caddyOverlay = p.showCaddy && p.advice && !slopeOn;
+  const aim = caddyOverlay ? p.advice!.best.aim : undefined;
+  const zone = caddyOverlay ? landingEllipse(p.advice!.best.landing, p.advice!.from) : undefined;
 
   // ---- Touch: tap to place the target (or the pin), drag the target ring
   const pos = (e: React.PointerEvent) => {
@@ -213,7 +231,8 @@ export function HoleView(p: Props) {
         {p.hazards?.map((z, i) =>
           z.kind === 'fairway' ? null : <polygon key={i} points={pts(z.poly)} className={`hv-haz ${z.kind}`} />,
         )}
-        {green.polygon && <polygon points={pts(green.polygon)} className="hv-green" />}
+        {green.polygon && <polygon points={pts(green.polygon)} className={`hv-green ${slopeOn ? 'with-slope' : ''}`} />}
+        {slopeOn && slope && <GreenSlopeLayer data={slope} frame={frame} tiles={tiles} green={green} putt={putt} ball={ball} hole={p.pin ?? green.centre} />}
 
         {rings.map((r) => (
           <g key={r.r} className="hv-ring">
@@ -240,7 +259,7 @@ export function HoleView(p: Props) {
 
         {/* You → target → pin, with the distances on the lines */}
         {youPt && !target && view === 'hole' && <Leg a={youPt} b={pinS} label={`${d(distanceM(from!, pinPt))}`} />}
-        {youPt && target && (
+        {youPt && target && !putt && (
           <>
             <Leg a={youPt} b={P(target)} label={d(distanceM(from!, target))} strong />
             <Leg a={P(target)} b={pinS} label={d(distanceM(target, pinPt))} />
@@ -353,6 +372,12 @@ export function HoleView(p: Props) {
             <span>No pin</span>
           </button>
         )}
+        {view === 'green' && slope && (
+          <button className={`hv-btn ${showSlope ? 'on' : ''}`} onClick={() => setShowSlope(!showSlope)} aria-label="Slope map">
+            <Layers />
+            <span>Slope</span>
+          </button>
+        )}
         {target && (
           <button className="hv-btn" onClick={() => p.onTarget(undefined)} aria-label="Clear the target">
             <X />
@@ -361,21 +386,40 @@ export function HoleView(p: Props) {
         )}
       </div>
 
-      {p.advice && (
+      {slopeOn && slope && (
+        <div className="hv-caddy hv-putt">
+          {putt ? (
+            <span className="aim">⛳ {putt.text}</span>
+          ) : ball && !ballOnGreen ? (
+            <span className="aim">That's off the green. Tap where your ball is on the green for the putt read.</span>
+          ) : (
+            <span className="aim">
+              {slope.summary && slope.summary.tilt.pct >= 0.5 ? `Falls to ${fallWords(slope.summary.tilt.downhillDeg, frame.upDeg)} (${slope.summary.tilt.pct.toFixed(1)}%)` : 'Fairly flat overall'}
+              {slope.summary ? `, up to ${slope.summary.p90.toFixed(1)}% in places.` : '.'} Tap where your ball is for the putt read.
+            </span>
+          )}
+          <span className="gs-legend" aria-hidden>
+            <i />
+            <small>flat · 2% · 4%+</small>
+          </span>
+        </div>
+      )}
+      {p.advice && !slopeOn && (
         <button className={`hv-caddy ${p.showCaddy ? '' : 'off'}`} onClick={p.onCaddyTap}>
           <Sparkles />
           <span className="club">{p.advice.headline}</span>
           <span className="aim">{p.advice.aimText}</span>
         </button>
       )}
-      {!target && !p.pinMode && (
+      {!target && !p.pinMode && !slopeOn && (
         <div className="hv-hint">
           <Crosshair /> Tap anywhere for distances
         </div>
       )}
       {p.pinMode && <div className="hv-hint on">Tap where the pin is today</div>}
       {p.gpsWarning && <div className="hv-gps">{p.gpsWarning}</div>}
-      <div className="hv-credit">Imagery © Esri, Maxar</div>
+      {p.rulesNote && !p.advice && <div className="hv-rules">{p.rulesNote}</div>}
+      <div className="hv-credit">Imagery © Esri, Maxar{slopeOn ? ` · ${DEM_CREDIT}` : ''}</div>
     </div>
   );
 }
@@ -402,4 +446,9 @@ function destination(p: LatLon, brg: number, m: number): LatLon {
   const dLat = (m * Math.cos(b)) / 111320;
   const dLon = (m * Math.sin(b)) / (111320 * Math.cos((p.lat * Math.PI) / 180));
   return { lat: p.lat + dLat, lon: p.lon + dLon };
+}
+
+/** Rough distance (m) from a point to the nearest corner of an outline. */
+function distanceToPoly(p: LatLon, poly: LatLon[]) {
+  return Math.min(...poly.map((q) => distanceM(p, q)));
 }

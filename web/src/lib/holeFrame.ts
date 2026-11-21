@@ -92,6 +92,9 @@ function mercator(p: LatLon, z: number) {
 
 export interface TileLayout {
   z: number;
+  /** Tile-pixel position of the frame origin (the matrix works relative to this). */
+  ox: number;
+  oy: number;
   /** SVG transform that puts tile pixel space on the screen. */
   matrix: string;
   tiles: { key: string; href: string; x: number; y: number }[];
@@ -128,5 +131,12 @@ export function tileLayout(f: Frame, width: number, height: number, dpr = 1, max
         x: tx * TILE - o.x,
         y: ty * TILE - o.y,
       });
-  return { z, matrix, tiles };
+  return { z, matrix, tiles, ox: o.x, oy: o.y };
+}
+
+/** Tile-pixel position (at zoom z) of a Web Mercator point, for laying images over the tiles. */
+export function mercToTilePx(x: number, y: number, z: number) {
+  const half = Math.PI * 6378137;
+  const n = TILE * 2 ** z;
+  return { x: ((x + half) / (2 * half)) * n, y: ((half - y) / (2 * half)) * n };
 }

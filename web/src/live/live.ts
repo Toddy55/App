@@ -1,6 +1,6 @@
 import { initializeApp, type FirebaseApp } from 'firebase/app';
 import { connectAuthEmulator, getAuth, signInAnonymously } from 'firebase/auth';
-import { connectDatabaseEmulator, getDatabase, limitToLast, onValue, orderByKey, query, ref, set, type Database } from 'firebase/database';
+import { connectDatabaseEmulator, endAt, get, getDatabase, limitToLast, onValue, orderByKey, query, ref, set, startAt, type Database } from 'firebase/database';
 import { emulator, firebaseConfig } from './config';
 
 /**
@@ -76,4 +76,26 @@ export async function watchLatest(
 /** This phone's anonymous sign-in id (to tell your own chat messages apart). */
 export async function myUid(): Promise<string> {
   return (await init()).uid;
+}
+
+/** Watch only the entries whose key starts with `prefix` (e.g. clip index entries, not their data). */
+export async function watchPrefix(
+  code: string,
+  prefix: string,
+  onGroups: (groups: Record<string, GroupDoc> | null) => void,
+  onError: (e: Error) => void,
+): Promise<() => void> {
+  const { db } = await init();
+  return onValue(
+    query(ref(db, `events/${code}/groups`), orderByKey(), startAt(prefix), endAt(prefix + '\uf8ff')),
+    (snap) => onGroups(snap.exists() ? (snap.val() as Record<string, GroupDoc>) : null),
+    (e) => onError(e),
+  );
+}
+
+/** Read one entry once. */
+export async function getEntry(code: string, id: string): Promise<GroupDoc | null> {
+  const { db } = await init();
+  const snap = await get(ref(db, `events/${code}/groups/${id}`));
+  return snap.exists() ? (snap.val() as GroupDoc) : null;
 }
