@@ -59,6 +59,10 @@ export function Home({ go }: { go: Go }) {
             <span className="tile-icon">👥</span>
             <span>Friends</span>
           </button>
+          <button className="tile" onClick={() => go({ name: 'tracer' })}>
+            <span className="tile-icon">🎥</span>
+            <span>Shot tracer</span>
+          </button>
           <button className="tile" onClick={() => go({ name: 'stats' })}>
             <span className="tile-icon">📈</span>
             <span>My stats</span>

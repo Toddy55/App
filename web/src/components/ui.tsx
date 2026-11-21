@@ -16,7 +16,8 @@ export type Route =
   | { name: 'comp'; id: string }
   | { name: 'compEdit'; id?: string }
   | { name: 'import'; data: string }
-  | { name: 'live'; code: string };
+  | { name: 'live'; code: string }
+  | { name: 'tracer' };
 
 export type Go = (r: Route) => void;
 

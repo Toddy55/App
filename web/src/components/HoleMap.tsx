@@ -3,12 +3,17 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import type { Hole, LatLon } from '../types';
 import { distanceM, fmtDist } from '../lib/geo';
+import { arcLatLngs, shotLegs } from '../lib/tracer';
 
 interface Props {
   hole?: Hole;
   player?: LatLon;
   pin?: LatLon;
-  shots?: LatLon[];
+  shots?: (LatLon & { club?: string })[];
+  /** Draw the last shot on to the green (for replays of finished holes). */
+  finishToGreen?: boolean;
+  /** Animate the shot tracers one after another. */
+  animate?: boolean;
   centre?: LatLon;
   units: 'm' | 'yd';
   /** Called when the map is tapped. */
@@ -23,7 +28,7 @@ const label = (text: string) =>
   L.divIcon({ className: '', html: `<div class="mk-label">${text}</div>`, iconSize: [60, 22], iconAnchor: [30, 26] });
 
 /** Satellite hole map (Esri World Imagery) with player, green, pin and shot markers. */
-export function HoleMap({ hole, player, pin, shots, centre, units, onTap, measure, height = 320 }: Props) {
+export function HoleMap({ hole, player, pin, shots, centre, units, onTap, measure, height = 320, finishToGreen, animate }: Props) {
   const el = useRef<HTMLDivElement>(null);
   const map = useRef<L.Map | null>(null);
   const layer = useRef<L.LayerGroup | null>(null);
@@ -62,10 +67,33 @@ export function HoleMap({ hole, player, pin, shots, centre, units, onTap, measur
     if (green) L.marker(ll(green.centre), { icon: dot('green') }).addTo(g);
     if (hole?.tee) L.marker(ll(hole.tee), { icon: dot('tee') }).addTo(g);
     if (pin) L.marker(ll(pin), { icon: L.divIcon({ className: '', html: '<div class="mk-flag">⛳</div>', iconSize: [24, 24], iconAnchor: [6, 22] }) }).addTo(g);
+    // Shot tracers: a curved flight line per shot, labelled with club and distance
+    shotLegs(shots ?? [], finishToGreen ? green?.centre : undefined).forEach((leg, i) => {
+      const line = L.polyline(arcLatLngs(leg.from, leg.to).map(ll), {
+        color: '#ffd166',
+        weight: 3.5,
+        opacity: 0.95,
+        className: animate ? 'tracer-line animate' : 'tracer-line',
+      }).addTo(g);
+      const el = line.getElement() as SVGPathElement | undefined;
+      if (el && animate) {
+        el.setAttribute('pathLength', '1');
+        el.style.animationDelay = `${i * 0.9}s`;
+      }
+      const mid = arcLatLngs(leg.from, leg.to)[12];
+      L.marker(ll(mid), {
+        interactive: false,
+        icon: L.divIcon({
+          className: '',
+          html: `<div class="mk-shot-label">${leg.club ? `${leg.club} · ` : ''}${fmtDist(leg.distance, units)}${units}</div>`,
+          iconSize: [90, 20],
+          iconAnchor: [45, 10],
+        }),
+      }).addTo(g);
+    });
     (shots ?? []).forEach((s, i) => {
       L.marker(ll(s), { icon: L.divIcon({ className: '', html: `<div class="mk shot">${i + 1}</div>`, iconSize: [18, 18], iconAnchor: [9, 9] }) }).addTo(g);
     });
-    if (shots && shots.length > 1) L.polyline(shots.map(ll), { color: '#fff', weight: 1.5, dashArray: '4 4' }).addTo(g);
     if (player) L.marker(ll(player), { icon: dot('me') }).addTo(g);
     const target = pin ?? green?.centre;
     if (measure && player) {
@@ -95,7 +123,7 @@ export function HoleMap({ hole, player, pin, shots, centre, units, onTap, measur
         fittedFor.current = key;
       }
     }
-  }, [hole, player, pin, shots, measure, units, centre]);
+  }, [hole, player, pin, shots, measure, units, centre, finishToGreen, animate]);
 
   return <div ref={el} className="hole-map" style={{ height }} />;
 }

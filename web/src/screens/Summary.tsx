@@ -5,6 +5,7 @@ import { coach, toPar } from '../lib/analysis';
 import { computeResult, FORMAT_LABELS } from '../lib/scoring';
 import { Scorecard } from '../components/Scorecard';
 import { Markdown } from '../components/Markdown';
+import { ShotReplay } from '../components/ShotReplay';
 import { Card, Header, type Go } from '../components/ui';
 import { encodeBundle, makeBundle, shareLink, shareUrl } from '../lib/share';
 
@@ -200,6 +201,8 @@ export function Summary({ go, roundId }: { go: Go; roundId: string }) {
             </button>
           )}
         </Card>
+
+        <ShotReplay round={round} units={settings.units} />
 
         <Card title="Scorecard">
           <Scorecard round={round} />

@@ -272,3 +272,19 @@ table.standings tr.cutline td { border-top: 2px dashed var(--muted); }
 .live-head.flash { background: color-mix(in srgb, var(--gold) 25%, var(--card)); }
 .group-status { list-style: none; padding: 0 !important; margin: 0; display: flex; flex-direction: column; gap: 4px !important; font-size: .9rem; }
 .install-tip { border-color: var(--gold); } .install-tip ol { margin: 0; }
+
+/* Shot tracers on the map */
+.tracer-line { filter: drop-shadow(0 0 3px rgba(255, 209, 102, 0.9)); }
+.tracer-line.animate { stroke-dasharray: 1; stroke-dashoffset: 1; animation: trace 0.9s ease-out forwards; }
+@keyframes trace { to { stroke-dashoffset: 0; } }
+.mk-shot-label { background: rgba(0,0,0,.72); color: #ffd166; font-weight: 800; font-size: 11px; padding: 1px 6px; border-radius: 999px; white-space: nowrap; text-align: center; width: max-content; margin: 0 auto; }
+.shot-list { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 2px; }
+
+/* Video shot tracer */
+.tracer-stage { position: relative; background: #000; border-radius: 12px; overflow: hidden; }
+.tracer-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; pointer-events: none; z-index: 0; }
+.tracer-canvas { position: relative; z-index: 1; display: block; width: 100%; max-height: 70vh; object-fit: contain; touch-action: manipulation; cursor: crosshair; }
+.tracer-prompt { background: var(--brand); color: var(--brand-ink); padding: 10px 12px; border-radius: 10px; margin: 0; font-weight: 600; }
+.tracer-scrub { min-height: 0; padding: 0; accent-color: var(--gold); }
+.swatch { width: 40px; height: 40px; border-radius: 999px; border: 3px solid var(--line); cursor: pointer; }
+.swatch.on { border-color: var(--ink); box-shadow: 0 0 0 2px var(--gold); }
