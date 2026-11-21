@@ -438,3 +438,12 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--brand-soft)
 .accent-pick.on { border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-soft); }
 .accent-swatch { width: 34px; height: 34px; border-radius: 50%; display: block; }
 .tabbar .tab-play span.play-dot { color: #fff; }
+
+/* ---------- Colour schemes (Settings → Look) ---------- */
+:root[data-palette='midnight'] { --brand: #13315c; --brand-deep: #08162e; --brand-grad: linear-gradient(135deg, #08162e 0%, #0f2747 55%, #13315c 100%); --brand-soft: rgba(19,49,92,.1); --gold: #c6f432; --gold-ink: #142000; --accent-soft: rgba(198,244,50,.18); --bg: #f3f5f9; }
+:root[data-palette='augusta'] { --brand: #0f5a3f; --brand-deep: #06291c; --brand-grad: linear-gradient(135deg, #06291c 0%, #0b4430 55%, #0f5a3f 100%); --brand-soft: rgba(15,90,63,.1); --gold: #e9b949; --gold-ink: #2b1d00; --accent-soft: rgba(233,185,73,.2); --bg: #f5f4ee; }
+:root[data-palette='plum'] { --brand: #6a2361; --brand-deep: #2e0f2a; --brand-grad: linear-gradient(135deg, #2e0f2a 0%, #4f1a49 55%, #6a2361 100%); --brand-soft: rgba(106,35,97,.1); --gold: #ff9f7a; --gold-ink: #3a1405; --accent-soft: rgba(255,159,122,.2); --bg: #faf5f6; }
+:root[data-palette='carbon'] { --brand: #2c2c30; --brand-deep: #111113; --brand-grad: linear-gradient(135deg, #111113 0%, #1f1f23 55%, #2c2c30 100%); --brand-soft: rgba(255,122,26,.12); --gold: #ff7a1a; --gold-ink: #2a1100; --accent-soft: rgba(255,122,26,.2); --bg: #f4f4f5; }
+:root[data-palette='lavender'] { --brand: #6b4fd8; --brand-deep: #4330a8; --brand-grad: linear-gradient(135deg, #4330a8 0%, #5a40c9 55%, #7b5ff0 100%); --brand-soft: rgba(107,79,216,.12); --gold: #14d1b8; --gold-ink: #002b25; --accent-soft: rgba(20,209,184,.18); --bg: #f6f4fd; }
+:root[data-palette='ocean'] { --brand: #0a5c8c; --brand-deep: #032a45; --brand-grad: linear-gradient(135deg, #032a45 0%, #074a73 55%, #0a6aa0 100%); --brand-soft: rgba(10,92,140,.1); --gold: #ffd23f; --gold-ink: #2a2000; --accent-soft: rgba(255,210,63,.2); --bg: #f2f6f9; }
+:root[data-palette='carbon'] .tile-icon, :root[data-palette='carbon'] .score-pill { color: #ff7a1a; }
