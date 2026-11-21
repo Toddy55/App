@@ -82,6 +82,11 @@ It runs in the browser and installs to your home screen (Share → Add to Home S
 - "Ask the caddy" chats about the shot with Claude (needs your Anthropic key)
 - Green slopes aren't in public map data, so it doesn't read the break
 
+**Scorecards (pars and stroke indexes)**
+- Pars come from OpenStreetMap. Where a course was mapped without pars, the app works them out from each hole's length (under 230 m a par 3, over 430 m a par 5, otherwise a par 4; right on about 93% of SEQ holes that do have pars) and marks them *est.*
+- The course page has a quick **Scorecard** editor: tap 3 / 4 / 5 for each hole and type the stroke index, then **Matches the club card**. Your card is then kept as you set it
+- Courses saved on your phone, and a round in progress, pick up corrected pars automatically (unless you've edited the card). Setup and the hole view flag estimated pars
+
 **Handicaps**
 - Each player (you in Settings, mates under Friends, or when joining a comp) is either **GA Handicap** or **No GA handicap**
 - GA Handicap: add their 10-digit GA number and tap **Check it on Golf Australia** to open their official record, then enter the GA Handicap shown. It's flagged ⏰ if it hasn't been checked in a week (GA Handicaps change after every round), and Setup warns before you tee off

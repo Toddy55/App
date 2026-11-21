@@ -61,25 +61,33 @@ export function Play({ go, roundId }: { go: Go; roundId: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [round?.courseId, courseRev],
   );
-  // Courses saved before the caddy existed: pick up bunkers, water and fairways from the built-in list
+  // Saved courses: pick up corrected pars, stroke indexes, bunkers, water and doglegs from the built-in list.
+  // A round in progress follows the corrected card (pars and stroke indexes) too.
+  const refreshed = useRef(false);
   useEffect(() => {
-    if (!course?.osmRef || course.hazards?.length) return;
+    if (!course?.osmRef || refreshed.current) return;
+    refreshed.current = true;
     let stop = false;
-    import('../lib/courseCatalog').then(async ({ loadCatalog, catalogToCourse }) => {
-      const cat = await loadCatalog();
-      const entry = cat.courses.find((c) => c.ref === course.osmRef);
-      if (stop || !entry?.hz?.length) return;
-      const fresh = catalogToCourse(entry);
-      store.saveCourse({
-        ...course,
-        hazards: fresh.hazards,
-        holes: course.holes.map((h) => ({ ...h, path: h.path ?? fresh.holes.find((f) => f.number === h.number)?.path })),
-      });
-      setCourseRev((n) => n + 1);
-    });
+    import('../lib/courseCatalog')
+      .then(({ refreshCourse }) => refreshCourse(course))
+      .then((fresh) => {
+        if (stop || !fresh) return;
+        store.saveCourse(fresh);
+        setCourseRev((n) => n + 1);
+        update((r) => {
+          if (r.completed || r.courseId !== fresh.id) return r;
+          const holes = r.holes.map((h) => {
+            const f = fresh.holes.find((x) => x.number === h.number);
+            return f ? { ...h, par: f.par, si: f.si, parEst: f.parEst, siEst: f.siEst } : h;
+          });
+          return { ...r, holes };
+        });
+      })
+      .catch(() => undefined);
     return () => {
       stop = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [course]);
 
   // --- Weather: fetch on start and every 10 minutes

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import type { Course, Hole, LatLon } from '../types';
 import { store } from '../lib/storage';
 import { blankHoles, courseCompleteness } from '../lib/courses';
-import { distanceM } from '../lib/geo';
+import { distanceM, fmtDist } from '../lib/geo';
 import { getPosition } from '../hooks';
 import { HoleMap } from '../components/HoleMap';
 import { Card, Header, Segmented, Stepper, type Go } from '../components/ui';
@@ -23,6 +23,26 @@ export function CourseEditor({ go, id }: { go: Go; id: string }) {
   const setHole = (n: number, patch: Partial<Hole>) => {
     const holes = course.holes.map((h) => (h.number === n ? recalc({ ...h, ...patch }) : h));
     save({ ...course, holes });
+  };
+  /** Pars / stroke indexes changed by hand: they're now the golfer's, not estimates. */
+  const setCard = (n: number, patch: Partial<Hole>) => {
+    const holes = course.holes.map((h) => {
+      if (h.number !== n) return h;
+      const next: Hole = { ...h, ...patch };
+      if ('par' in patch) delete next.parEst;
+      if ('si' in patch) delete next.siEst;
+      return next;
+    });
+    save({ ...course, holes, cardEdited: true });
+  };
+  const confirmCard = () => {
+    const holes = course.holes.map((h) => {
+      const next = { ...h };
+      delete next.parEst;
+      delete next.siEst;
+      return next;
+    });
+    save({ ...course, holes, cardEdited: true });
   };
   const recalc = (h: Hole): Hole => (h.tee && h.green ? { ...h, lengthM: Math.round(distanceM(h.tee, h.green.centre)) } : h);
   const hole = course.holes.find((h) => h.number === sel) ?? course.holes[0];
@@ -77,6 +97,67 @@ export function CourseEditor({ go, id }: { go: Go; id: string }) {
           </div>
         </Card>
 
+        <Card title="Scorecard">
+          {!course.cardEdited && course.holes.some((h) => h.parEst || h.siEst) && (
+            <p className="warn small">
+              ⚠️ Pars marked <em>est.</em> were worked out from the hole's length because the map data has none, and stroke indexes marked{' '}
+              <em>est.</em> are just the hole number. Match them to the club scorecard.
+            </p>
+          )}
+          <table className="card-edit">
+            <thead>
+              <tr>
+                <th>Hole</th>
+                <th>{units}</th>
+                <th>Par</th>
+                <th>SI</th>
+              </tr>
+            </thead>
+            <tbody>
+              {course.holes.map((h) => {
+                const dupSI = course.holes.filter((x) => x.si === h.si).length > 1;
+                return (
+                  <tr key={h.number}>
+                    <td className="n">{h.number}</td>
+                    <td className="len">{h.lengthM ? fmtDist(h.lengthM, units) : '–'}</td>
+                    <td>
+                      <div className="par-pick">
+                        {[3, 4, 5].map((v) => (
+                          <button key={v} className={h.par === v ? 'on' : ''} onClick={() => setCard(h.number, { par: v })}>
+                            {v}
+                          </button>
+                        ))}
+                        {h.parEst && !course.cardEdited && <span className="est">est.</span>}
+                      </div>
+                    </td>
+                    <td>
+                      <input
+                        className={`si-in ${dupSI ? 'dup' : ''}`}
+                        inputMode="numeric"
+                        value={h.si}
+                        onChange={(e) => {
+                          const v = Math.round(Number(e.target.value));
+                          if (v >= 1 && v <= 18) setCard(h.number, { si: v });
+                        }}
+                      />
+                      {h.siEst && !course.cardEdited && <span className="est">est.</span>}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+          <p className="muted small">
+            Par {course.holes.reduce((a, h) => a + h.par, 0)}
+            {new Set(course.holes.map((h) => h.si)).size !== course.holes.length ? ' · ⚠️ two holes share a stroke index' : ''}
+          </p>
+          {!course.cardEdited && (
+            <button className="btn block" onClick={confirmCard}>
+              ✅ Matches the club card
+            </button>
+          )}
+        </Card>
+
         <div className="hole-chips">
           {course.holes.map((h) => (
             <button key={h.number} className={`chip ${h.number === sel ? 'on' : ''} ${h.green ? 'mapped' : ''}`} onClick={() => setSel(h.number)}>
@@ -87,8 +168,8 @@ export function CourseEditor({ go, id }: { go: Go; id: string }) {
 
         <Card title={`Hole ${hole.number}`}>
           <div className="row gap wrap">
-            <Stepper label="Par" value={hole.par} min={3} max={6} onChange={(v) => setHole(hole.number, { par: v })} />
-            <Stepper label="SI" value={hole.si} min={1} max={18} onChange={(v) => setHole(hole.number, { si: v })} />
+            <Stepper label="Par" value={hole.par} min={3} max={6} onChange={(v) => setCard(hole.number, { par: v })} />
+            <Stepper label="SI" value={hole.si} min={1} max={18} onChange={(v) => setCard(hole.number, { si: v })} />
             <label className="field narrow">
               <span>Length (m)</span>
               <input inputMode="numeric" value={hole.lengthM ?? ''} onChange={(e) => setHole(hole.number, { lengthM: e.target.value ? Number(e.target.value) : undefined })} />

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { Format, Round, RoundPlayer, Team } from '../types';
 import { store, uid } from '../lib/storage';
 import { ambroseTeamHandicap, dailyHandicap, DEFAULT_ALLOWANCE, playingHandicap } from '../lib/handicap';
@@ -17,9 +17,28 @@ const FORMATS: Format[] = ['stableford', 'stroke', 'par', 'ambrose', 'fourball',
 
 export function Setup({ go, courseId, join }: { go: Go; courseId?: string; join?: { code: string; format?: Format; holes?: number[]; compIds?: string[] } }) {
   const settings = store.settings();
+  const [rev, setRev] = useState(0);
   const courses = store.courses();
+  void rev;
   const [cid, setCid] = useState(courseId ?? courses[0]?.id);
   const course = courses.find((c) => c.id === cid);
+  // Corrected pars and stroke indexes from the built-in list before you tee off
+  useEffect(() => {
+    const c = store.courses().find((x) => x.id === cid);
+    if (!c?.osmRef) return;
+    let stop = false;
+    import('../lib/courseCatalog')
+      .then(({ refreshCourse }) => refreshCourse(c))
+      .then((fresh) => {
+        if (stop || !fresh) return;
+        store.saveCourse(fresh);
+        setRev((n) => n + 1);
+      })
+      .catch(() => undefined);
+    return () => {
+      stop = true;
+    };
+  }, [cid]);
   const [format, setFormat] = useState<Format>(join?.format ?? 'stableford');
   const [which, setWhich] = useState<'18' | 'front' | 'back'>(() =>
     !join?.holes || join.holes.length > 9 ? '18' : join.holes[0] === 1 ? 'front' : 'back',
@@ -151,6 +170,16 @@ export function Setup({ go, courseId, join }: { go: Go; courseId?: string; join?
               Change
             </button>
           </div>
+          {!course.cardEdited && holes.some((h) => h.parEst || h.siEst) && (
+            <p className="warn small">
+              ⚠️ The map data for {course.name} is missing {holes.some((h) => h.parEst) ? 'some pars (worked out from hole lengths)' : ''}
+              {holes.some((h) => h.parEst) && holes.some((h) => h.siEst) ? ' and ' : ''}
+              {holes.some((h) => h.siEst) ? 'the stroke indexes' : ''}. Check them against the club scorecard so points and shots are right.{' '}
+              <button className="link" onClick={() => go({ name: 'course', id: course.id })}>
+                Check the scorecard
+              </button>
+            </p>
+          )}
           {courses.length > 1 && (
             <select value={cid} onChange={(e) => setCid(e.target.value)}>
               {courses.map((c) => (

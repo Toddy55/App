@@ -251,13 +251,18 @@ export function buildCourse(hit: CourseHit, els: OsmElement[]): Course {
         .sort((a, b) => a.d - b.d)[0];
       green = near && near.d < 60 ? near.g : { centre: end };
     }
-    const par = parseInt(w.tags?.par ?? '', 10);
-    const si = parseInt(w.tags?.handicap ?? w.tags?.['stroke_index'] ?? '', 10);
+    const par = parseInt(w.tags?.par ?? w.tags?.['golf:par'] ?? '', 10);
+    const si = parseInt(w.tags?.handicap ?? w.tags?.['stroke_index'] ?? w.tags?.['golf:handicap'] ?? '', 10);
+    const lengthM = Math.round(pathLength(line));
+    const hasPar = Number.isFinite(par) && par >= 3 && par <= 6;
+    const hasSI = Number.isFinite(si) && si >= 1 && si <= 18;
     byNumber.set(num, {
       number: num,
-      par: Number.isFinite(par) ? par : 4,
-      si: Number.isFinite(si) ? si : num,
-      lengthM: Math.round(pathLength(line)),
+      par: hasPar ? par : parFromLength(lengthM),
+      si: hasSI ? si : num,
+      ...(hasPar ? {} : { parEst: true }),
+      ...(hasSI ? {} : { siEst: true }),
+      lengthM,
       tee: line[0],
       green,
       path: line.length > 2 ? thin(line, 6) : undefined,
@@ -285,9 +290,19 @@ export function buildCourse(hit: CourseHit, els: OsmElement[]): Course {
   };
 }
 
+/**
+ * Par from a hole's tee-to-green length when the map has no par: under 230 m
+ * a par 3, over 430 m a par 5, otherwise a par 4. Right on about 93% of SEQ
+ * holes that do have a par; flagged so the golfer checks it.
+ */
+export function parFromLength(m: number | undefined): number {
+  if (!m) return 4;
+  return m < 230 ? 3 : m > 430 ? 5 : 4;
+}
+
 export function blankHoles(n: number): Hole[] {
   const pars = [4, 4, 3, 5, 4, 4, 3, 4, 5, 4, 4, 3, 5, 4, 4, 3, 4, 5];
-  return Array.from({ length: n }, (_, i) => ({ number: i + 1, par: pars[i % 18], si: i + 1 }));
+  return Array.from({ length: n }, (_, i) => ({ number: i + 1, par: pars[i % 18], si: i + 1, parEst: true, siEst: true }));
 }
 
 export function courseCompleteness(c: Course): { mapped: number; total: number; hasSI: boolean } {

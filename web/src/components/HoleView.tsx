@@ -416,6 +416,7 @@ export function HoleView(p: Props) {
           <span className="hv-no">{hole.number}</span>
           <span className="hv-par">
             Par {hole.par}
+            {hole.parEst ? <span className="hv-est"> est.</span> : null}
             <small>
               {hole.lengthM ? `${d(hole.lengthM)}${units} · ` : ''}SI {hole.si}
             </small>

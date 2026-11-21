@@ -19,6 +19,10 @@ export interface Hole {
   green?: Green;
   /** Line of play from tee to green, including any dogleg. */
   path?: LatLon[];
+  /** Par worked out from the hole's length (the map data had none): check against the club card. */
+  parEst?: boolean;
+  /** Stroke index missing from the map data (just the hole number): check against the club card. */
+  siEst?: boolean;
 }
 
 export type HazardKind = 'bunker' | 'water' | 'fairway';
@@ -43,6 +47,8 @@ export interface Course {
   slopeRating?: number;
   source: 'osm' | 'manual';
   osmRef?: string;
+  /** The scorecard (pars and stroke indexes) has been checked or edited by hand: don't overwrite it. */
+  cardEdited?: boolean;
   updatedAt: number;
 }
 

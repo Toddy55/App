@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { catalogToCourse, searchCatalog, type Catalog } from './courseCatalog';
+import { parFromLength } from './courses';
 
 const cat: Catalog = {
   v: 1,
@@ -30,5 +31,29 @@ describe('built-in course list', () => {
     const blank = catalogToCourse(cat.courses[1]);
     expect(blank.holes.length).toBe(18);
     expect(blank.location).toEqual({ lat: -27.43, lon: 153.07 });
+  });
+});
+
+
+describe('pars when the map has none', () => {
+  it('works par out from the hole length', () => {
+    expect(parFromLength(150)).toBe(3);
+    expect(parFromLength(229)).toBe(3);
+    expect(parFromLength(340)).toBe(4);
+    expect(parFromLength(431)).toBe(5);
+    expect(parFromLength(undefined)).toBe(4);
+  });
+
+  it('a list with every hole a par 4 (no pars in the map) gets estimated pars, flagged', () => {
+    const lens = [344, 157, 375, 515, 490, 147, 330, 360, 400, 380, 150, 470, 350, 320, 180, 500, 390, 410];
+    const c = catalogToCourse({ ref: 'way/1', name: 'Test GC', at: [-26.8, 153.1], holes: lens.map((len, i) => ({ n: i + 1, par: 4, si: i + 1, len })) });
+    expect(c.holes.map((h) => h.par)).toEqual(lens.map((l) => parFromLength(l)));
+    expect(c.holes.every((h) => h.parEst && h.siEst)).toBe(true);
+  });
+
+  it('leaves real pars and stroke indexes alone', () => {
+    const c = catalogToCourse({ ref: 'way/2', name: 'Real GC', at: [-26.6, 152.9], holes: [{ n: 1, par: 4, si: 7, len: 200 }, { n: 2, par: 3, si: 3, len: 150 }, { n: 3, par: 5, si: 1, len: 470 }] });
+    expect(c.holes.map((h) => h.par)).toEqual([4, 3, 5]);
+    expect(c.holes.some((h) => h.parEst)).toBe(false);
   });
 });

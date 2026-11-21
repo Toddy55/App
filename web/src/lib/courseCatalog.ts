@@ -1,5 +1,5 @@
 import type { Course, Hole } from '../types';
-import { blankHoles } from './courses';
+import { blankHoles, parFromLength } from './courses';
 
 /**
  * Built-in course list (generated from OpenStreetMap by
@@ -15,6 +15,9 @@ export interface CatalogHole {
   poly?: [number, number][];
   /** Dogleg points between tee and green. */
   path?: [number, number][];
+  /** 1 = par estimated from length; 1 = stroke index missing. */
+  pe?: 1;
+  se?: 1;
 }
 
 export interface CatalogHazard {
@@ -77,11 +80,17 @@ export function searchCatalog(cat: Catalog, text: string, limit = 12): CatalogCo
 
 export function catalogToCourse(c: CatalogCourse): Course {
   const P = (p: [number, number]) => ({ lat: p[0], lon: p[1] });
+  // Lists built before pars were estimated: a full card of 4s means the map had no pars
+  const untagged = !!c.holes && c.holes.length >= 9 && c.holes.every((h) => h.par === 4 && !h.pe);
+  const sis = new Set(c.holes?.map((h) => h.si));
+  const noSI = !!c.holes && c.holes.every((h) => h.si === h.n);
   const holes: Hole[] = c.holes
     ? c.holes.map((h) => ({
         number: h.n,
-        par: h.par,
+        par: untagged ? parFromLength(h.len) : h.par,
         si: h.si,
+        ...(h.pe || untagged ? { parEst: true } : {}),
+        ...(h.se || noSI || sis.size !== c.holes!.length ? { siEst: true } : {}),
         lengthM: h.len,
         tee: h.tee ? P(h.tee) : undefined,
         green: h.g ? { centre: P(h.g), polygon: h.poly?.map(P) } : undefined,
@@ -100,4 +109,36 @@ export function catalogToCourse(c: CatalogCourse): Course {
     osmRef: c.ref,
     updatedAt: Date.now(),
   };
+}
+
+/**
+ * Bring a course saved on this phone up to date from the built-in list:
+ * pars and stroke indexes (unless the golfer has checked or edited the
+ * scorecard), plus hazards and dogleg lines. Returns null if nothing changed.
+ */
+export async function refreshCourse(course: Course): Promise<Course | null> {
+  if (!course.osmRef) return null;
+  const cat = await loadCatalog();
+  const entry = cat.courses.find((c) => c.ref === course.osmRef);
+  if (!entry) return null;
+  const fresh = catalogToCourse(entry);
+  let changed = false;
+  const holes = course.holes.map((h) => {
+    const f = fresh.holes.find((x) => x.number === h.number);
+    if (!f) return h;
+    const next: Hole = { ...h, path: h.path ?? f.path };
+    if (!course.cardEdited && entry.holes) {
+      next.par = f.par;
+      next.si = f.si;
+      next.parEst = f.parEst;
+      next.siEst = f.siEst;
+      if (!next.parEst) delete next.parEst;
+      if (!next.siEst) delete next.siEst;
+    }
+    if (JSON.stringify(next) !== JSON.stringify(h)) changed = true;
+    return next;
+  });
+  const hazards = course.hazards?.length ? course.hazards : fresh.hazards;
+  if (hazards !== course.hazards) changed = true;
+  return changed ? { ...course, holes, hazards } : null;
 }
