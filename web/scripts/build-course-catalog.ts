@@ -59,18 +59,25 @@ async function main() {
   console.log('Fetching holes and greens…');
   const features = await overpass(`[out:json][timeout:300];(way["golf"="hole"](${B});way["golf"="green"](${B});relation["golf"="green"](${B}););out geom tags;`);
   console.log(`  ${features.length} holes/greens`);
+  console.log('Fetching bunkers, water and fairways…');
+  // Only hazards that sit on a golf course (otherwise every dam and creek in SEQ comes back)
+  const hazards = await overpass(
+    `[out:json][timeout:300];nwr["leisure"="golf_course"](${B})->.c;.c map_to_area->.a;(way["golf"~"^(bunker|fairway|water_hazard|lateral_water_hazard)$"](area.a);way["natural"="water"](area.a););out geom tags;`,
+  );
+  console.log(`  ${hazards.length} hazards/fairways`);
   console.log('Fetching town names…');
   const places = (await overpass(`[out:json][timeout:120];node["place"~"^(suburb|town|city|village)$"](${B});out tags;`)).filter((p) => p.tags?.name && p.lat != null);
 
   // Which course does each hole/green belong to? Inside its boundary, else the nearest course centre within 1.5 km
   const bounds = courses.map((c) => ({ c, polys: outlines(c).filter((p) => p.length >= 3), centre: centreOf(c) }));
   const owned = new Map<OsmElement, OsmElement[]>(courses.map((c) => [c, []]));
-  for (const f of features) {
+  const isHazard = new Set(hazards);
+  for (const f of [...features, ...hazards]) {
     const g = f.geometry ?? f.members?.find((m) => m.geometry)?.geometry;
     if (!g?.length) continue;
     const probe = ll(g[Math.floor(g.length / 2)]);
-    let home = bounds.find((b) => b.polys.some((p) => pointInPolygon(probe, p)))?.c;
-    if (!home) {
+    let home = bounds.find((b) => b.polys.some((p) => pointInPolygon(probe, p) || g.some((q) => pointInPolygon(ll(q), p))))?.c;
+    if (!home && !isHazard.has(f)) {
       const near = bounds.filter((b) => b.centre).map((b) => ({ b, d: distanceM(probe, b.centre!) })).sort((a, b) => a.d - b.d)[0];
       if (near && near.d < 1500) home = near.b.c;
     }
@@ -101,7 +108,11 @@ async function main() {
             ...(h.tee ? { tee: pt(h.tee) } : {}),
             ...(h.green ? { g: pt(h.green.centre) } : {}),
             ...(h.green?.polygon ? { poly: h.green.polygon.filter((_, i, a) => a.length <= 24 || i % Math.ceil(a.length / 24) === 0).map(pt) } : {}),
+            ...(h.path ? { path: h.path.map(pt) } : {}),
           }))
+        : undefined,
+      hz: built.hazards?.length
+        ? built.hazards.map((z) => ({ k: z.kind === 'bunker' ? ('b' as const) : z.kind === 'water' ? ('w' as const) : ('f' as const), p: z.poly.map(pt) }))
         : undefined,
     });
   }
@@ -119,6 +130,7 @@ async function main() {
   writeFileSync(new URL('../src/data/seq-courses.json', import.meta.url), JSON.stringify(catalog));
   const detailed = final.filter((c) => c.holes).length;
   console.log(`Wrote ${final.length} courses (${detailed} with hole detail).`);
+  console.log(`Hazards: ${final.reduce((n, c) => n + (c.hz?.length ?? 0), 0)} across ${final.filter((c) => c.hz).length} courses; size ${(JSON.stringify(catalog).length / 1024).toFixed(0)} KB`);
   console.log('With hole detail:', final.filter((c) => c.holes).map((c) => `${c.name} (${c.holes!.filter((h) => h.g).length} greens)`).join('; '));
 }
 

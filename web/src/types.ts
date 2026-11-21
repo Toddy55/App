@@ -17,6 +17,16 @@ export interface Hole {
   lengthM?: number;
   tee?: LatLon;
   green?: Green;
+  /** Line of play from tee to green, including any dogleg. */
+  path?: LatLon[];
+}
+
+export type HazardKind = 'bunker' | 'water' | 'fairway';
+
+/** Bunkers, water and fairways, used by the caddy for course management. */
+export interface Hazard {
+  kind: HazardKind;
+  poly: LatLon[];
 }
 
 export interface Course {
@@ -26,6 +36,7 @@ export interface Course {
   suburb?: string;
   location?: LatLon;
   holes: Hole[];
+  hazards?: Hazard[];
   /** Golf Australia scratch rating for the tee you play. */
   scratchRating?: number;
   /** Golf Australia slope rating for the tee you play (113 = neutral). */

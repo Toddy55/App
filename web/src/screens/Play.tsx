@@ -10,6 +10,11 @@ import { HoleMap } from '../components/HoleMap';
 import { LiveControl, pushFinal } from '../live/LiveControl';
 import { Scorecard } from '../components/Scorecard';
 import { Card, Header, Segmented, Stepper, scoreClass, type Go } from '../components/ui';
+import { CaddyCard } from '../components/CaddyCard';
+import { advise, buildBag, landingEllipse, roundMood, tendencies, type Advice } from '../lib/caddy';
+
+// The caddy plays each option a few hundred times; only re-think when something changes
+let caddyCache: { key: string; value: Advice | null } = { key: '', value: null };
 
 export function Play({ go, roundId }: { go: Go; roundId: string }) {
   const [round, setRound] = useState<Round | undefined>(() => store.round(roundId));
@@ -25,6 +30,7 @@ export function Play({ go, roundId }: { go: Go; roundId: string }) {
   const [measure, setMeasure] = useState<LatLon | undefined>();
   const [club, setClub] = useState<string>('Driver');
   const [wxErr, setWxErr] = useState<string | null>(null);
+  const [caddyOnMap, setCaddyOnMap] = useState(true);
   const [elev, setElev] = useState<{ at: LatLon; hole: number; diff: number } | null>(null);
   const settings = store.settings();
   const units = settings.units;
@@ -41,7 +47,32 @@ export function Play({ go, roundId }: { go: Go; roundId: string }) {
   };
 
   const hole = round?.holes[idx];
-  const course = useMemo(() => (round ? store.courses().find((c) => c.id === round.courseId) : undefined), [round?.courseId]);
+  const [courseRev, setCourseRev] = useState(0);
+  const course = useMemo(
+    () => (round ? store.courses().find((c) => c.id === round.courseId) : undefined),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [round?.courseId, courseRev],
+  );
+  // Courses saved before the caddy existed: pick up bunkers, water and fairways from the built-in list
+  useEffect(() => {
+    if (!course?.osmRef || course.hazards?.length) return;
+    let stop = false;
+    import('../lib/courseCatalog').then(async ({ loadCatalog, catalogToCourse }) => {
+      const cat = await loadCatalog();
+      const entry = cat.courses.find((c) => c.ref === course.osmRef);
+      if (stop || !entry?.hz?.length) return;
+      const fresh = catalogToCourse(entry);
+      store.saveCourse({
+        ...course,
+        hazards: fresh.hazards,
+        holes: course.holes.map((h) => ({ ...h, path: h.path ?? fresh.holes.find((f) => f.number === h.number)?.path })),
+      });
+      setCourseRev((n) => n + 1);
+    });
+    return () => {
+      stop = true;
+    };
+  }, [course]);
 
   // --- Weather: fetch on start and every 10 minutes
   const wxAt = geo.pos ?? course?.location ?? hole?.green?.centre;
@@ -112,6 +143,53 @@ export function Play({ go, roundId }: { go: Go; roundId: string }) {
   const effect = wx && dist ? windEffect(wx.windFromDeg, wx.windKmh, dist.bearing) : undefined;
   const elevDiff = elev && elev.hole === hole.number ? elev.diff : 0;
   const pl = dist ? playsLike(dist.pin, effect, elevDiff, wx?.tempC) : undefined;
+
+  // ---- Caddy: from where you're standing, or from the tee when you're not on the hole yet
+  const onHole = !!(geo.pos && hole.green && distanceM(geo.pos, hole.green.centre) < 700);
+  const caddyFrom = onHole ? geo.pos : hole.tee;
+  const mePlayer = round.players.find((p) => p.id === round.meId);
+  const caddyHcp = mePlayer?.dailyHandicap ?? settings.me.gaHandicap;
+  let advice: Advice | null = null;
+  if (caddyFrom && hole.green) {
+    const key = [
+      round.id,
+      hole.number,
+      Math.round(caddyFrom.lat * 20000),
+      Math.round(caddyFrom.lon * 20000),
+      pin?.lat,
+      pin?.lon,
+      wx ? `${Math.round(wx.windKmh)}/${Math.round(wx.windFromDeg / 10)}` : '',
+      onHole ? Math.round(elevDiff) : 0,
+      Object.keys(round.scores[round.meId] ?? {}).length,
+    ].join('|');
+    if (caddyCache.key !== key) {
+      let speed = 1;
+      try {
+        speed = Number(localStorage.getItem('gtg.tracerSpeed')) || 1;
+      } catch {
+        /* ignore */
+      }
+      const allRounds = store.rounds();
+      caddyCache = {
+        key,
+        value: advise({
+          // the round keeps its own copy of the holes; take the dogleg line from the course if it has one
+          hole: { ...hole, path: hole.path ?? course?.holes.find((h) => h.number === hole.number)?.path },
+          hazards: course?.hazards,
+          pin,
+          from: caddyFrom,
+          bag: buildBag(settings, allRounds, caddyHcp, speed),
+          cond: wx ? { windKmh: wx.windKmh, windFromDeg: wx.windFromDeg, tempC: wx.tempC, elevDiff: onHole ? elevDiff : 0 } : {},
+          tend: tendencies(allRounds.filter((r) => r.id !== round.id), round),
+          handicap: caddyHcp,
+          mood: roundMood(round, hole.number),
+          units,
+        }),
+      };
+    }
+    advice = caddyCache.value;
+  }
+  const holeHazards = course?.hazards;
   const shots = round.shots[hole.number] ?? [];
   const lastShot = shots[shots.length - 1];
   const lastShotDist = lastShot && geo.pos ? distanceM(lastShot, geo.pos) : undefined;
@@ -171,6 +249,27 @@ export function Play({ go, roundId }: { go: Go; roundId: string }) {
       ) : (
         <div className="content">
           <LiveControl round={round} hole={hole.number} go={go} onLive={(code, group) => update((r) => ({ ...r, liveCode: code, liveGroup: group }))} />
+          {advice && (
+            <CaddyCard
+              advice={advice}
+              planning={!onHole}
+              apiKey={settings.anthropicKey}
+              showOnMap={caddyOnMap}
+              onToggleMap={() => setCaddyOnMap((v) => !v)}
+              units={units}
+              context={() => ({
+                course: round.courseName,
+                hole: { number: hole.number, par: hole.par, strokeIndex: hole.si, lengthM: hole.lengthM },
+                metresToPin: Math.round(advice!.toPin),
+                playsLikeM: Math.round(advice!.playsLike),
+                recommendation: { club: advice!.headline, aim: advice!.aimText, expectedStrokesToFinish: +advice!.best.ev.toFixed(2), troubleOdds: advice!.trouble },
+                alternative: advice!.alt ? { club: advice!.alt.club.club, expectedStrokesToFinish: +advice!.alt.ev.toFixed(2), troubleOdds: advice!.alt.trouble } : undefined,
+                reasons: advice!.lines,
+                wind: wx ? { kmh: Math.round(wx.windKmh), gustKmh: Math.round(wx.gustKmh), fromDeg: Math.round(wx.windFromDeg), tempC: Math.round(wx.tempC) } : 'unknown',
+                golfer: { handicap: caddyHcp, scoreSoFar: round.scores[round.meId] },
+              })}
+            />
+          )}
           {/* Distances */}
           <Card className="yardage">
             {!hole.green ? (
@@ -257,7 +356,20 @@ export function Play({ go, roundId }: { go: Go; roundId: string }) {
                 </button>
               )}
             </div>
-            <HoleMap hole={hole} player={geo.pos} pin={pin} shots={shots} units={units} onTap={onMapTap} measure={measure} centre={hole.green?.centre ?? course?.location} height={300} />
+            <HoleMap
+              hole={hole}
+              player={onHole ? geo.pos : (geo.pos ?? undefined)}
+              pin={pin}
+              shots={shots}
+              units={units}
+              onTap={onMapTap}
+              measure={measure}
+              centre={hole.green?.centre ?? course?.location}
+              height={300}
+              hazards={holeHazards}
+              aim={advice && caddyOnMap ? advice.best.aim : undefined}
+              landingZone={advice && caddyOnMap ? landingEllipse(advice.best.landing, advice.from) : undefined}
+            />
             {!hole.green && course && (
               <button className="btn small" onClick={() => go({ name: 'course', id: course.id })}>
                 Map green in course editor

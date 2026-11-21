@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import type { Hole, LatLon } from '../types';
+import type { Hazard, Hole, LatLon } from '../types';
 import { distanceM, fmtDist } from '../lib/geo';
 import { arcLatLngs, shotLegs } from '../lib/tracer';
 
@@ -21,6 +21,11 @@ interface Props {
   /** Show a measuring line from player to the tapped point and on to the green. */
   measure?: LatLon;
   height?: number | string;
+  /** Bunkers, water and fairways to shade. */
+  hazards?: Hazard[];
+  /** Caddy's aim point and the zone most shots will finish in. */
+  aim?: LatLon;
+  landingZone?: LatLon[];
 }
 
 const dot = (cls: string) => L.divIcon({ className: '', html: `<div class="mk ${cls}"></div>`, iconSize: [18, 18], iconAnchor: [9, 9] });
@@ -28,7 +33,7 @@ const label = (text: string) =>
   L.divIcon({ className: '', html: `<div class="mk-label">${text}</div>`, iconSize: [60, 22], iconAnchor: [30, 26] });
 
 /** Satellite hole map (Esri World Imagery) with player, green, pin and shot markers. */
-export function HoleMap({ hole, player, pin, shots, centre, units, onTap, measure, height = 320, finishToGreen, animate }: Props) {
+export function HoleMap({ hole, player, pin, shots, centre, units, onTap, measure, height = 320, finishToGreen, animate, hazards, aim, landingZone }: Props) {
   const el = useRef<HTMLDivElement>(null);
   const map = useRef<L.Map | null>(null);
   const layer = useRef<L.LayerGroup | null>(null);
@@ -63,6 +68,19 @@ export function HoleMap({ hole, player, pin, shots, centre, units, onTap, measur
     g.clearLayers();
     const ll = (p: LatLon) => L.latLng(p.lat, p.lon);
     const green = hole?.green;
+    // Course features under everything else
+    for (const z of hazards ?? []) {
+      const style =
+        z.kind === 'water'
+          ? { color: '#3b82f6', weight: 1, fillColor: '#3b82f6', fillOpacity: 0.35 }
+          : z.kind === 'bunker'
+            ? { color: '#e8d5a0', weight: 1, fillColor: '#f3e3b5', fillOpacity: 0.55 }
+            : { color: '#86efac', weight: 0.5, fillColor: '#86efac', fillOpacity: 0.12 };
+      L.polygon(z.poly.map(ll), { ...style, interactive: false }).addTo(g);
+    }
+    if (landingZone) L.polygon(landingZone.map(ll), { color: '#c6f432', weight: 2, dashArray: '5 5', fillColor: '#c6f432', fillOpacity: 0.12, interactive: false }).addTo(g);
+    if (aim && player) L.polyline([ll(player), ll(aim)], { color: '#c6f432', weight: 2, opacity: 0.9, interactive: false }).addTo(g);
+    if (aim) L.marker(ll(aim), { icon: L.divIcon({ className: '', html: '<div class="mk-aim"></div>', iconSize: [26, 26], iconAnchor: [13, 13] }), interactive: false }).addTo(g);
     if (green?.polygon) L.polygon(green.polygon.map(ll), { color: '#7CFC9A', weight: 2, fillOpacity: 0.15 }).addTo(g);
     if (green) L.marker(ll(green.centre), { icon: dot('green') }).addTo(g);
     if (hole?.tee) L.marker(ll(hole.tee), { icon: dot('tee') }).addTo(g);
@@ -123,7 +141,7 @@ export function HoleMap({ hole, player, pin, shots, centre, units, onTap, measur
         fittedFor.current = key;
       }
     }
-  }, [hole, player, pin, shots, measure, units, centre, finishToGreen, animate]);
+  }, [hole, player, pin, shots, measure, units, centre, finishToGreen, animate, hazards, aim, landingZone]);
 
   return <div ref={el} className="hole-map" style={{ height }} />;
 }
