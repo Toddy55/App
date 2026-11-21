@@ -1,19 +1,22 @@
 /* ---------- Design tokens: purple with an accent (electric blue by default) ---------- */
 :root {
-  --bg: #f4f5fa;
+  --bg: #f3f5f9;
   --card: #ffffff;
-  --ink: #1b1733;
-  --muted: #6b6889;
-  --line: #e6e4f1;
-  --brand: #4a2bb3;
-  --brand-deep: #241a5e;
-  --brand-grad: linear-gradient(135deg, #241a5e 0%, #3b22a0 55%, #4a2bb3 100%);
+  --ink: #111a2e;
+  --muted: #64708a;
+  --line: #e2e7ef;
+  /* Midnight navy & lime (default). Other schemes below override these. */
+  --brand: #13315c;
+  --brand-deep: #08162e;
+  --brand-grad: linear-gradient(135deg, #08162e 0%, #0f2747 55%, #13315c 100%);
   --brand-ink: #ffffff;
-  --brand-soft: rgba(74, 43, 179, 0.1);
+  --brand-soft: rgba(19, 49, 92, 0.1);
+  --brand-light: #7ea6e6; /* brand colour used on dark backgrounds */
+  --brand-shadow: rgba(19, 49, 92, 0.3);
   /* accent (named --gold for history; it's the highlight colour) */
-  --gold: #2bc4ff;
-  --gold-ink: #04121f;
-  --accent-soft: rgba(43, 196, 255, 0.16);
+  --gold: #c6f432;
+  --gold-ink: #142000;
+  --accent-soft: rgba(198, 244, 50, 0.18);
   --ok: #13a06b;
   --warn: #b7791f;
   --err: #d64550;
@@ -21,7 +24,7 @@
   --eagle: #f5a524;
   --bogey: #3b6fe0;
   --double: #1f3a8a;
-  --chip: #eeecf8;
+  --chip: #eaeef5;
   --radius: 18px;
   --shadow: 0 1px 2px rgba(24, 18, 72, 0.06), 0 8px 24px rgba(24, 18, 72, 0.06);
   --shadow-lift: 0 2px 6px rgba(24, 18, 72, 0.1), 0 14px 32px rgba(24, 18, 72, 0.12);
@@ -32,19 +35,17 @@
   -webkit-text-size-adjust: 100%;
   -webkit-font-smoothing: antialiased;
 }
-:root[data-accent='mint'] { --gold: #2ee6a6; --gold-ink: #052b1e; --accent-soft: rgba(46, 230, 166, 0.16); }
-:root[data-accent='gold'] { --gold: #f2b705; --gold-ink: #2a1d00; --accent-soft: rgba(242, 183, 5, 0.16); }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
-    --bg: #0e0c1e;
-    --card: #1a1733;
-    --ink: #eeedf8;
-    --muted: #a5a2c4;
-    --line: #2c2852;
-    --brand: #7b5cf0;
-    --brand-soft: rgba(123, 92, 240, 0.18);
-    --chip: #252149;
+    --bg: #0a0f1c;
+    --card: #131b2e;
+    --ink: #eef2fa;
+    --muted: #9aa6c0;
+    --line: #23304a;
+    --brand: var(--brand-light);
+    --brand-soft: var(--accent-soft);
+    --chip: #1c2740;
     --bogey: #7aa7ff;
     --double: #a9c1ff;
     --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.25);
@@ -52,14 +53,14 @@
   }
 }
 :root[data-theme='dark'] {
-  --bg: #0e0c1e;
-  --card: #1a1733;
-  --ink: #eeedf8;
-  --muted: #a5a2c4;
-  --line: #2c2852;
-  --brand: #7b5cf0;
-  --brand-soft: rgba(123, 92, 240, 0.18);
-  --chip: #252149;
+  --bg: #0a0f1c;
+  --card: #131b2e;
+  --ink: #eef2fa;
+  --muted: #9aa6c0;
+  --line: #23304a;
+  --brand: var(--brand-light);
+  --brand-soft: var(--accent-soft);
+  --chip: #1c2740;
   --bogey: #7aa7ff;
   --double: #a9c1ff;
   color-scheme: dark;
@@ -352,7 +353,7 @@ body.has-nav .screen { padding-bottom: calc(92px + env(safe-area-inset-bottom));
 .btn:active { transform: scale(0.98); }
 .btn.primary {
   background: var(--brand-grad); color: #fff; border-color: transparent; text-transform: none; letter-spacing: 0;
-  box-shadow: 0 6px 16px rgba(74, 43, 179, 0.3);
+  box-shadow: 0 6px 16px var(--brand-shadow);
 }
 .btn.ghost { border-color: var(--line); }
 .btn svg { width: 18px; height: 18px; }
@@ -380,7 +381,7 @@ body.has-nav .screen { padding-bottom: calc(92px + env(safe-area-inset-bottom));
 /* Controls */
 .segmented { background: var(--chip); border-radius: 14px; padding: 4px; }
 .segmented button { border-radius: 10px; }
-.segmented button.on { background: var(--brand); color: #fff; box-shadow: 0 2px 8px rgba(74, 43, 179, 0.3); }
+.segmented button.on { background: var(--brand); color: #fff; box-shadow: 0 2px 8px var(--brand-shadow); }
 .chip { border-radius: 10px; }
 .chip.on { background: var(--brand); border-color: var(--brand); }
 .format { border-radius: 14px; }
@@ -410,7 +411,7 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--brand-soft)
 .scorecard thead .sticky { background: var(--brand-deep); }
 .form-dot.p1 { background: var(--gold); color: var(--gold-ink); }
 .team-tag { background: var(--gold); color: var(--gold-ink); }
-.disp-bg { fill: #1e1650; }
+.disp-bg { fill: var(--brand-deep); }
 .disp-dot { fill: var(--gold); }
 .live-card.on { border-color: var(--gold); }
 
@@ -430,7 +431,7 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--brand-soft)
 }
 .tabbar button svg { width: 22px; height: 22px; }
 .tabbar button.on { color: var(--brand); }
-.tabbar button.on svg { filter: drop-shadow(0 2px 6px rgba(74, 43, 179, 0.35)); }
+.tabbar button.on svg { filter: drop-shadow(0 2px 6px var(--brand-shadow)); }
 .tabbar .tab-play { color: #fff; }
 .tabbar .tab-play .play-dot { width: 46px; height: 46px; border-radius: 16px; background: var(--brand-grad); display: flex; align-items: center; justify-content: center; margin-top: -18px; box-shadow: var(--shadow-lift); border: 3px solid var(--bg); }
 .tabbar .tab-play span { color: var(--muted); }
@@ -439,11 +440,12 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--brand-soft)
 .accent-swatch { width: 34px; height: 34px; border-radius: 50%; display: block; }
 .tabbar .tab-play span.play-dot { color: #fff; }
 
-/* ---------- Colour schemes (Settings → Look) ---------- */
-:root[data-palette='midnight'] { --brand: #13315c; --brand-deep: #08162e; --brand-grad: linear-gradient(135deg, #08162e 0%, #0f2747 55%, #13315c 100%); --brand-soft: rgba(19,49,92,.1); --gold: #c6f432; --gold-ink: #142000; --accent-soft: rgba(198,244,50,.18); --bg: #f3f5f9; }
-:root[data-palette='augusta'] { --brand: #0f5a3f; --brand-deep: #06291c; --brand-grad: linear-gradient(135deg, #06291c 0%, #0b4430 55%, #0f5a3f 100%); --brand-soft: rgba(15,90,63,.1); --gold: #e9b949; --gold-ink: #2b1d00; --accent-soft: rgba(233,185,73,.2); --bg: #f5f4ee; }
-:root[data-palette='plum'] { --brand: #6a2361; --brand-deep: #2e0f2a; --brand-grad: linear-gradient(135deg, #2e0f2a 0%, #4f1a49 55%, #6a2361 100%); --brand-soft: rgba(106,35,97,.1); --gold: #ff9f7a; --gold-ink: #3a1405; --accent-soft: rgba(255,159,122,.2); --bg: #faf5f6; }
-:root[data-palette='carbon'] { --brand: #2c2c30; --brand-deep: #111113; --brand-grad: linear-gradient(135deg, #111113 0%, #1f1f23 55%, #2c2c30 100%); --brand-soft: rgba(255,122,26,.12); --gold: #ff7a1a; --gold-ink: #2a1100; --accent-soft: rgba(255,122,26,.2); --bg: #f4f4f5; }
-:root[data-palette='lavender'] { --brand: #6b4fd8; --brand-deep: #4330a8; --brand-grad: linear-gradient(135deg, #4330a8 0%, #5a40c9 55%, #7b5ff0 100%); --brand-soft: rgba(107,79,216,.12); --gold: #14d1b8; --gold-ink: #002b25; --accent-soft: rgba(20,209,184,.18); --bg: #f6f4fd; }
-:root[data-palette='ocean'] { --brand: #0a5c8c; --brand-deep: #032a45; --brand-grad: linear-gradient(135deg, #032a45 0%, #074a73 55%, #0a6aa0 100%); --brand-soft: rgba(10,92,140,.1); --gold: #ffd23f; --gold-ink: #2a2000; --accent-soft: rgba(255,210,63,.2); --bg: #f2f6f9; }
+/* ---------- Colour schemes (Settings → Look). Midnight navy & lime is the default above. ---------- */
+:root[data-palette='purple'] { --brand: #4a2bb3; --brand-deep: #241a5e; --brand-grad: linear-gradient(135deg, #241a5e 0%, #3b22a0 55%, #4a2bb3 100%); --brand-soft: rgba(74,43,179,.1); --brand-light: #9b84f5; --brand-shadow: rgba(74,43,179,.3); --gold: #2bc4ff; --gold-ink: #04121f; --accent-soft: rgba(43,196,255,.16); }
+:root[data-palette='augusta'] { --brand: #0f5a3f; --brand-deep: #06291c; --brand-grad: linear-gradient(135deg, #06291c 0%, #0b4430 55%, #0f5a3f 100%); --brand-soft: rgba(15,90,63,.1); --brand-light: #5fcf9f; --brand-shadow: rgba(15,90,63,.3); --gold: #e9b949; --gold-ink: #2b1d00; --accent-soft: rgba(233,185,73,.2); }
+:root[data-palette='plum'] { --brand: #6a2361; --brand-deep: #2e0f2a; --brand-grad: linear-gradient(135deg, #2e0f2a 0%, #4f1a49 55%, #6a2361 100%); --brand-soft: rgba(106,35,97,.1); --brand-light: #e08fd3; --brand-shadow: rgba(106,35,97,.3); --gold: #ff9f7a; --gold-ink: #3a1405; --accent-soft: rgba(255,159,122,.2); }
+:root[data-palette='carbon'] { --brand: #2c2c30; --brand-deep: #111113; --brand-grad: linear-gradient(135deg, #111113 0%, #1f1f23 55%, #2c2c30 100%); --brand-soft: rgba(255,122,26,.12); --brand-light: #ff9a52; --brand-shadow: rgba(0,0,0,.3); --gold: #ff7a1a; --gold-ink: #2a1100; --accent-soft: rgba(255,122,26,.2); }
+:root[data-palette='ocean'] { --brand: #0a5c8c; --brand-deep: #032a45; --brand-grad: linear-gradient(135deg, #032a45 0%, #074a73 55%, #0a6aa0 100%); --brand-soft: rgba(10,92,140,.1); --brand-light: #6cc4f5; --brand-shadow: rgba(10,92,140,.3); --gold: #ffd23f; --gold-ink: #2a2000; --accent-soft: rgba(255,210,63,.2); }
+:root[data-palette='lavender'] { --brand: #6b4fd8; --brand-deep: #4330a8; --brand-grad: linear-gradient(135deg, #4330a8 0%, #5a40c9 55%, #7b5ff0 100%); --brand-soft: rgba(107,79,216,.12); --brand-light: #a996ff; --brand-shadow: rgba(107,79,216,.3); --gold: #14d1b8; --gold-ink: #002b25; --accent-soft: rgba(20,209,184,.18); }
 :root[data-palette='carbon'] .tile-icon, :root[data-palette='carbon'] .score-pill { color: #ff7a1a; }
+.palette-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; }
