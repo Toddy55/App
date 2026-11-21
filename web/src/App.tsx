@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
+import { TabBar, TAB_SCREENS } from './components/TabBar';
 import type { Route } from './components/ui';
 import { Home } from './screens/Home';
 import { Courses } from './screens/Courses';
@@ -39,6 +40,20 @@ export default function App() {
     window.scrollTo(0, 0);
   };
   const key = JSON.stringify(route);
+  const withNav = TAB_SCREENS.includes(route.name);
+  useEffect(() => {
+    document.body.classList.toggle('has-nav', withNav);
+  }, [withNav]);
+  const screen = renderScreen(route, key, go);
+  return (
+    <>
+      {screen}
+      {withNav && <TabBar route={route} go={go} />}
+    </>
+  );
+}
+
+function renderScreen(route: Route, key: string, go: (r: Route) => void): ReactNode {
   switch (route.name) {
     case 'home':
       return <Home key={key} go={go} />;
