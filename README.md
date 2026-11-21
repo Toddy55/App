@@ -61,6 +61,7 @@ It runs in the browser and installs to your home screen (Share → Add to Home S
 - Tap anywhere to drop a target: you get the distance to it and from it to the pin. Drag the target ring to move it
 - Every bunker and water hazard in play shows two numbers: how far to reach it and how far to carry it. Rings across the fairway mark every 50 m (or yards)
 - The caddy's club, aim line and landing zone sit on the picture, with its call along the bottom
+- On Queensland courses the photos come from the Queensland Government's aerial imagery (down to about 15 cm per pixel, much sharper than the global satellite photos). The **Qld HD / Esri** button swaps between them, since they're taken at different times and one may be more up to date. The app picks the sharpest zoom your phone's screen can show
 - **Green** zooms in on the green; **Pin** lets you tap where today's flag is; swipe between holes with the arrows by the hole number
 
 **Green slope maps (Queensland)**

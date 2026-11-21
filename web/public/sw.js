@@ -1,6 +1,6 @@
 // Offline support: cache the app shell, and serve map tiles from cache when there's no signal.
 const SHELL = 'fc-shell-v1';
-const TILES = 'fc-tiles-v1';
+const TILES = 'fc-tiles-v2';
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(SHELL).then((c) => c.addAll(['./', './index.html', './manifest.webmanifest'])));
@@ -15,7 +15,8 @@ self.addEventListener('activate', (e) => {
 self.addEventListener('fetch', (e) => {
   const url = new URL(e.request.url);
   if (e.request.method !== 'GET') return;
-  if (url.hostname === 'server.arcgisonline.com') {
+  const isTile = url.hostname === 'server.arcgisonline.com' || (url.hostname === 'spatial-img.information.qld.gov.au' && url.pathname.includes('/tile/'));
+  if (isTile) {
     // cache-first for satellite tiles
     e.respondWith(
       caches.open(TILES).then(async (c) => {

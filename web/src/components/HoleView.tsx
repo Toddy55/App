@@ -1,8 +1,8 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { ChevronLeft, ChevronRight, Crosshair, Flag, Layers, Maximize2, Minimize2, Sparkles, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Crosshair, Flag, Image as ImageIcon, Layers, Maximize2, Minimize2, Sparkles, X } from 'lucide-react';
 import type { Hazard, Hole, LatLon, Shot } from '../types';
 import { bearingDeg, centroid, distanceM, fmtDist, greenDistances, pointInPolygon } from '../lib/geo';
-import { along, makeFrame, project, tileLayout, unproject, type Frame } from '../lib/holeFrame';
+import { along, ESRI, makeFrame, project, tileLayout, unproject, type Frame, type Imagery } from '../lib/holeFrame';
 import { landingEllipse, type Advice } from '../lib/caddy';
 import { DEM_CREDIT, type Dem } from '../lib/greenDem';
 import { readPutt } from '../lib/greenRead';
@@ -37,6 +37,9 @@ interface Props {
   rulesNote?: string;
   /** Ground heights around the green (slope map), when allowed. */
   dem?: Dem | null;
+  /** Which photos to draw, and a way to switch (e.g. when one is out of date). */
+  imagery?: Imagery;
+  onSwitchImagery?: () => void;
 }
 
 const PAD = { top: 58, right: 86, bottom: 44, left: 14 };
@@ -91,7 +94,8 @@ export function HoleView(p: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [view, hole, size.w, size.h, pad.bottom, p.onHole, p.player?.lat, p.player?.lon, pinPt.lat, pinPt.lon]);
 
-  const tiles = useMemo(() => tileLayout(frame, size.w, size.h, window.devicePixelRatio || 1), [frame, size.w, size.h]);
+  const imagery = p.imagery ?? ESRI;
+  const tiles = useMemo(() => tileLayout(frame, size.w, size.h, window.devicePixelRatio || 1, imagery), [frame, size.w, size.h, imagery]);
   const P = (q: LatLon) => project(frame, q);
   const pts = (poly: LatLon[]) => poly.map((q) => { const s = P(q); return `${s.x.toFixed(1)},${s.y.toFixed(1)}`; }).join(' ');
   const d = (m: number) => fmtDist(m, units);
@@ -372,6 +376,12 @@ export function HoleView(p: Props) {
             <span>No pin</span>
           </button>
         )}
+        {p.onSwitchImagery && (
+          <button className="hv-btn" onClick={p.onSwitchImagery} aria-label="Switch photos">
+            <ImageIcon />
+            <span>{imagery.id === 'qld' ? 'Qld HD' : 'Esri'}</span>
+          </button>
+        )}
         {view === 'green' && slope && (
           <button className={`hv-btn ${showSlope ? 'on' : ''}`} onClick={() => setShowSlope(!showSlope)} aria-label="Slope map">
             <Layers />
@@ -419,7 +429,7 @@ export function HoleView(p: Props) {
       {p.pinMode && <div className="hv-hint on">Tap where the pin is today</div>}
       {p.gpsWarning && <div className="hv-gps">{p.gpsWarning}</div>}
       {p.rulesNote && !p.advice && <div className="hv-rules">{p.rulesNote}</div>}
-      <div className="hv-credit">Imagery © Esri, Maxar{slopeOn ? ` · ${DEM_CREDIT}` : ''}</div>
+      <div className="hv-credit">{imagery.credit}{slopeOn ? ` · ${DEM_CREDIT}` : ''}</div>
     </div>
   );
 }
