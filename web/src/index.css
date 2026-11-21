@@ -306,3 +306,7 @@ table.standings tr.cutline td { border-top: 2px dashed var(--muted); }
 .disp-flight { fill: none; stroke: #ff3b30; stroke-width: 2; }
 .disp-dot { fill: #ffd166; stroke: #000; stroke-width: 1; }
 .disp-dot.latest { fill: #ff3b30; stroke: #fff; stroke-width: 1.5; }
+.typeahead { position: relative; display: flex; }
+.typeahead-list { list-style: none; margin: 4px 0 0; padding: 0; position: absolute; top: 100%; left: 0; right: 0; z-index: 1100; background: var(--card); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,.18); max-height: 55vh; overflow-y: auto; }
+.typeahead-list li { border-bottom: 1px solid var(--line); padding: 4px 12px; }
+.typeahead-list li:last-child { border-bottom: none; }
