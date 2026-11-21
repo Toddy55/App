@@ -10,6 +10,8 @@ import { HoleMap } from '../components/HoleMap';
 import { HoleView } from '../components/HoleView';
 import { LiveControl, pushFinal } from '../live/LiveControl';
 import { useLiveField } from '../live/useLiveField';
+import { assignMarkers, sideKeys, type MarkerPhone } from '../lib/markers';
+import { personKey } from '../lib/share';
 import { aidsFor, AIDS_LABELS } from '../lib/comps';
 import { fetchGreenDem, inQueensland, type Dem } from '../lib/greenDem';
 import { ESRI, QLD_AERIAL } from '../lib/holeFrame';
@@ -123,6 +125,44 @@ export function Play({ go, roundId }: { go: Go; roundId: string }) {
   // Other groups in the same live event (e.g. the other Ambrose team), for the scorecard
   const live = useLiveField(round);
   const [cardView, setCardView] = useState<'field' | 'group'>('field');
+  // Cross-marking: with two or more phones on this card, each marks the other side, never its own
+  const marking = useMemo(() => {
+    if (!round?.liveGroup) return null;
+    const host = round.liveSameAs ?? round.liveGroup;
+    const myName = store.settings().me.name;
+    const others = live.others.filter((g) => g.id !== round.liveGroup && g.bundle.rounds[0]);
+    const mePhone: MarkerPhone = { group: round.liveGroup, owner: personKey(myName), name: myName };
+    const phones: MarkerPhone[] = [];
+    if (round.liveSameAs) {
+      const h = others.find((g) => g.id === host);
+      if (!h) return null;
+      phones.push({ group: host, owner: personKey(h.bundle.from), name: h.bundle.from });
+    } else phones.push(mePhone);
+    const markers = others
+      .filter((g) => g.bundle.rounds[0].liveSameAs === host)
+      .map((g) => ({ group: g.id, owner: personKey(g.bundle.from), name: g.bundle.from }));
+    if (round.liveSameAs) markers.push(mePhone);
+    phones.push(...markers.sort((a, b) => (a.group < b.group ? -1 : 1)));
+    const assign = assignMarkers(sideKeys(round), phones);
+    return assign ? { assign, phones, others } : null;
+  }, [round, live.others]);
+  // Scores for the sides another phone marks come from that phone
+  useEffect(() => {
+    if (!round || !marking) return;
+    const mine = sideKeys(round);
+    const patch: Record<string, Record<number, number>> = {};
+    for (const sk of mine) {
+      const g = marking.assign[sk.id];
+      if (!g || g === round.liveGroup) continue;
+      const src = marking.others.find((o) => o.id === g)?.bundle.rounds[0];
+      if (!src) continue;
+      const match = sideKeys(src).find((x) => [...x.members].sort().join('|') === [...sk.members].sort().join('|'));
+      const theirs = match ? src.scores[match.id] : undefined;
+      if (theirs && JSON.stringify(theirs) !== JSON.stringify(round.scores[sk.id] ?? {})) patch[sk.id] = theirs;
+    }
+    if (Object.keys(patch).length) update((r) => ({ ...r, scores: { ...r.scores, ...patch } }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [marking]);
   // Tournament rules from the comps this round counts towards (the organiser can change them live)
   const [rulesRev, setRulesRev] = useState(0);
   const compKey = (round?.compIds ?? []).join(',');
@@ -199,7 +239,12 @@ export function Play({ go, roundId }: { go: Go; roundId: string }) {
   const stats: HoleStats = round.stats[hole.number] ?? {};
   const setStats = (patch: Partial<HoleStats>) =>
     update((r) => ({ ...r, stats: { ...r.stats, [hole.number]: { ...(r.stats[hole.number] ?? {}), ...patch } } }));
+  const lockedBy = (sideId: string) => {
+    const g = marking?.assign[sideId];
+    return g && g !== round.liveGroup ? (marking!.phones.find((p) => p.group === g)?.name ?? 'another phone') : null;
+  };
   const setScore = (sideId: string, v: number | undefined) => {
+    if (lockedBy(sideId)) return;
     update((r) => {
       const s = { ...(r.scores[sideId] ?? {}) };
       if (v == null) delete s[hole.number];
@@ -477,26 +522,34 @@ export function Play({ go, roundId }: { go: Go; roundId: string }) {
 
           {/* Scores */}
           <Card title="Scores">
+            {marking && (
+              <p className="marking-note small">
+                ✍️ <strong>Cross-marking</strong> with {marking.phones.filter((p) => p.group !== round.liveGroup).map((p) => p.name).join(' & ')}. You mark{' '}
+                {sides.filter((x) => !lockedBy(x.id)).map((x) => x.name).join(', ') || 'nobody yet'}. Everyone else is marked on another phone and shows up here as they enter it, so nobody scores themselves.
+              </p>
+            )}
             {sides.map((s) => {
               const v = round.scores[s.id]?.[hole.number];
               const strokes = strokeMap[s.id]?.[hole.number] ?? 0;
+              const by = lockedBy(s.id);
               return (
-                <div key={s.id} className="score-row">
+                <div key={s.id} className={`score-row ${by ? 'locked' : ''}`}>
                   <div>
                     <strong>{s.name}</strong>
                     <div className="muted small">
                       {round.format === 'ambrose' ? `Team hcp ${s.handicap}` : `Hcp ${s.handicap}`}
                       {strokes ? ` · ${strokes > 0 ? '+' : ''}${strokes} shot${Math.abs(strokes) > 1 ? 's' : ''} here` : ''}
+                      {by ? ` · 🔒 marked by ${by}` : ''}
                     </div>
                   </div>
                   <div className="row gap">
-                    <button className="icon-btn" onClick={() => setScore(s.id, v == null ? hole.par : Math.max(1, v - 1))} aria-label={`${s.name} minus`}>
+                    <button className="icon-btn" disabled={!!by} onClick={() => setScore(s.id, v == null ? hole.par : Math.max(1, v - 1))} aria-label={`${s.name} minus`}>
                       −
                     </button>
                     <span className={`score-val ${scoreClass(v, hole.par)}`} onClick={() => v == null && setScore(s.id, hole.par)}>
-                      {v ?? '–'}
+                      {v ?? (by ? '…' : '–')}
                     </span>
-                    <button className="icon-btn" onClick={() => setScore(s.id, v == null ? hole.par : Math.min(15, v + 1))} aria-label={`${s.name} plus`}>
+                    <button className="icon-btn" disabled={!!by} onClick={() => setScore(s.id, v == null ? hole.par : Math.min(15, v + 1))} aria-label={`${s.name} plus`}>
                       +
                     </button>
                   </div>

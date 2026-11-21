@@ -72,7 +72,7 @@ export function HoleView(p: Props) {
   const from = (p.onHole && p.player) || tee || p.player;
 
   const pad = { ...PAD, bottom: p.advice ? 122 : p.rulesNote ? 84 : 44 };
-  const frame: Frame = useMemo(() => {
+  const baseFrame: Frame = useMemo(() => {
     const greenPts = green.polygon?.length ? green.polygon : [green.centre];
     if (view === 'green') {
       const look = from ?? tee;
@@ -94,8 +94,100 @@ export function HoleView(p: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [view, hole, size.w, size.h, pad.bottom, p.onHole, p.player?.lat, p.player?.lon, pinPt.lat, pinPt.lon]);
 
+  // ---- Zoom: pinch, drag to look around when zoomed, or the +/- buttons
+  const [zoom, setZoom] = useState({ k: 1, du: 0, dv: 0 });
+  const zoomRef = useRef(zoom);
+  zoomRef.current = zoom;
+  useEffect(() => setZoom({ k: 1, du: 0, dv: 0 }), [hole.number, view]);
+  const frame: Frame = useMemo(
+    () => ({ ...baseFrame, scale: baseFrame.scale * zoom.k, uc: baseFrame.uc + zoom.du, vc: baseFrame.vc + zoom.dv }),
+    [baseFrame, zoom],
+  );
+  const frameRef = useRef(frame);
+  frameRef.current = frame;
+  const baseRef = useRef(baseFrame);
+  baseRef.current = baseFrame;
+  const gesture = useRef<{ kind: 'pinch' | 'pan'; d0: number; k0: number; g0: { u: number; v: number }; x0: number; y0: number; du0: number; dv0: number } | null>(null);
+  const suppressTap = useRef(false);
+  const zoomBy = (f: number) => {
+    const z = zoomRef.current;
+    const k = Math.max(1, Math.min(10, z.k * f));
+    setZoom(k === 1 ? { k: 1, du: 0, dv: 0 } : { ...z, k });
+  };
+  useEffect(() => {
+    const el = box.current;
+    if (!el) return;
+    const local = (t: Touch) => {
+      const r = el.getBoundingClientRect();
+      return { x: t.clientX - r.left, y: t.clientY - r.top };
+    };
+    const ground = (x: number, y: number) => {
+      const f = frameRef.current;
+      return { u: f.uc + (x - f.cx) / f.scale, v: f.vc - (y - f.cy) / f.scale };
+    };
+    const start = (e: TouchEvent) => {
+      const z = zoomRef.current;
+      if (e.touches.length === 2) {
+        const a = local(e.touches[0]);
+        const b = local(e.touches[1]);
+        const m = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+        gesture.current = { kind: 'pinch', d0: Math.hypot(a.x - b.x, a.y - b.y) || 1, k0: z.k, g0: ground(m.x, m.y), x0: m.x, y0: m.y, du0: z.du, dv0: z.dv };
+        suppressTap.current = true;
+        drag.current = null;
+      } else if (e.touches.length === 1 && z.k > 1 && !drag.current?.target) {
+        const a = local(e.touches[0]);
+        gesture.current = { kind: 'pan', d0: 1, k0: z.k, g0: { u: 0, v: 0 }, x0: a.x, y0: a.y, du0: z.du, dv0: z.dv };
+      }
+    };
+    const move = (e: TouchEvent) => {
+      const g = gesture.current;
+      const base = baseRef.current;
+      if (g?.kind === 'pinch' && e.touches.length === 2) {
+        e.preventDefault();
+        const a = local(e.touches[0]);
+        const b = local(e.touches[1]);
+        const m = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+        const k = Math.max(1, Math.min(10, (g.k0 * Math.hypot(a.x - b.x, a.y - b.y)) / g.d0));
+        const sc = base.scale * k;
+        // keep the spot under your fingers under your fingers
+        const uc = g.g0.u - (m.x - base.cx) / sc;
+        const vc = g.g0.v + (m.y - base.cy) / sc;
+        setZoom(k === 1 ? { k: 1, du: 0, dv: 0 } : { k, du: uc - base.uc, dv: vc - base.vc });
+      } else if (g?.kind === 'pan' && e.touches.length === 1) {
+        const a = local(e.touches[0]);
+        if (Math.hypot(a.x - g.x0, a.y - g.y0) > 6) {
+          e.preventDefault();
+          suppressTap.current = true;
+          const sc = base.scale * g.k0;
+          setZoom({ k: g.k0, du: g.du0 - (a.x - g.x0) / sc, dv: g.dv0 + (a.y - g.y0) / sc });
+        }
+      }
+    };
+    const end = (e: TouchEvent) => {
+      if (e.touches.length === 0) {
+        gesture.current = null;
+        setTimeout(() => (suppressTap.current = false), 50);
+      }
+    };
+    const noPageZoom = (e: Event) => e.preventDefault();
+    el.addEventListener('touchstart', start, { passive: true });
+    el.addEventListener('touchmove', move, { passive: false });
+    el.addEventListener('touchend', end);
+    el.addEventListener('touchcancel', end);
+    el.addEventListener('gesturestart', noPageZoom as EventListener);
+    return () => {
+      el.removeEventListener('touchstart', start);
+      el.removeEventListener('touchmove', move);
+      el.removeEventListener('touchend', end);
+      el.removeEventListener('touchcancel', end);
+      el.removeEventListener('gesturestart', noPageZoom as EventListener);
+    };
+  }, []);
+
   const imagery = p.imagery ?? ESRI;
   const tiles = useMemo(() => tileLayout(frame, size.w, size.h, window.devicePixelRatio || 1, imagery), [frame, size.w, size.h, imagery]);
+  // A coarser layer underneath fills any gaps (e.g. where the sharpest aerial survey ends)
+  const under = useMemo(() => (tiles.z > 14 ? tileLayout(frame, size.w, size.h, 1, imagery, tiles.z - 2) : null), [frame, size.w, size.h, imagery, tiles.z]);
   const P = (q: LatLon) => project(frame, q);
   const pts = (poly: LatLon[]) => poly.map((q) => { const s = P(q); return `${s.x.toFixed(1)},${s.y.toFixed(1)}`; }).join(' ');
   const d = (m: number) => fmtDist(m, units);
@@ -162,12 +254,12 @@ export function HoleView(p: Props) {
     if (!g || g.id !== e.pointerId) return;
     const at = pos(e);
     if (dist2(at, g) > 64) g.moved = true;
-    if (g.target && g.moved) p.onTarget(unproject(frame, at.x, at.y));
+    if (g.target && g.moved && !gesture.current) p.onTarget(unproject(frame, at.x, at.y));
   };
   const onUp = (e: React.PointerEvent) => {
     const g = drag.current;
     drag.current = null;
-    if (!g || g.id !== e.pointerId || g.moved) return;
+    if (!g || g.id !== e.pointerId || g.moved || suppressTap.current) return;
     const at = pos(e);
     const q = unproject(frame, at.x, at.y);
     if (p.pinMode) {
@@ -224,7 +316,15 @@ export function HoleView(p: Props) {
         onPointerMove={onMove}
         onPointerUp={onUp}
         onPointerCancel={() => (drag.current = null)}
+        style={{ touchAction: zoom.k > 1 ? 'none' : 'pan-y' }}
       >
+        {under && (
+          <g transform={under.matrix}>
+            {under.tiles.map((t) => (
+              <image key={t.key} href={t.href} x={t.x} y={t.y} width={256.6} height={256.6} preserveAspectRatio="none" />
+            ))}
+          </g>
+        )}
         <g transform={tiles.matrix}>
           {tiles.tiles.map((t) => (
             <image key={t.key} href={t.href} x={t.x} y={t.y} width={256.6} height={256.6} preserveAspectRatio="none" />
@@ -414,6 +514,19 @@ export function HoleView(p: Props) {
           </span>
         </div>
       )}
+      <div className="hv-zoom" style={{ bottom: pad.bottom + 10 }}>
+        <button className="hv-btn" onClick={() => zoomBy(1.6)} aria-label="Zoom in">
+          +
+        </button>
+        <button className="hv-btn" disabled={zoom.k <= 1} onClick={() => zoomBy(1 / 1.6)} aria-label="Zoom out">
+          −
+        </button>
+        {zoom.k > 1 && (
+          <button className="hv-btn small" onClick={() => setZoom({ k: 1, du: 0, dv: 0 })} aria-label="Reset zoom">
+            Fit
+          </button>
+        )}
+      </div>
       {p.advice && !slopeOn && (
         <button className={`hv-caddy ${p.showCaddy ? '' : 'off'}`} onClick={p.onCaddyTap}>
           <Sparkles />

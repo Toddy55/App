@@ -155,6 +155,8 @@ export interface Round {
   liveCode?: string;
   /** This phone's group within the live event (each group has its own scorer). */
   liveGroup?: string;
+  /** Cross-marking: this phone marks the same card as another group's scorer (that group's id). */
+  liveSameAs?: string;
   /** Not saved: when set, only these holes are counted (used for mid-round "if it finished now" tables). */
   scoreHoles?: number[];
   startedAt: number;

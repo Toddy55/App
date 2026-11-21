@@ -129,11 +129,11 @@ export const QLD_AERIAL: Imagery = {
 /** Most tiles we'll ask for at once (a phone screen at the sharpest zoom). */
 const MAX_TILES = 150;
 
-export function tileLayout(f: Frame, width: number, height: number, dpr = 1, source: Imagery = ESRI): TileLayout {
+export function tileLayout(f: Frame, width: number, height: number, dpr = 1, source: Imagery = ESRI, zCap = 99): TileLayout {
   const cosLat = Math.cos(rad(f.origin.lat));
   // Enough detail for the phone's real screen pixels (up to 3x on recent iPhones)
   const want = Math.log2(EARTH_MPP0 * cosLat * f.scale * Math.min(3, Math.max(1, dpr)));
-  let z = Math.max(12, Math.min(source.maxZoom, Math.ceil(want - 0.25)));
+  let z = Math.max(12, Math.min(source.maxZoom, zCap, Math.ceil(want - 0.25)));
   const corners = [
     [0, 0],
     [width, 0],
