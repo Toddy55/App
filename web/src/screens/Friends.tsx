@@ -24,7 +24,7 @@ export function Friends({ go }: { go: Go }) {
         watchMyCrew((names) => {
           if (stop) return;
           setFriends(store.friends());
-          setLinked(`${names.join(' and ')} linked up with you 🤝`);
+          if (names.length) setLinked(`${names.join(' and ')} linked up with you 🤝`);
         }),
       )
       .then((u) => (stop ? u() : (unsub = u)))

@@ -58,28 +58,44 @@ export async function watchMyCrew(onAdded: (names: string[]) => void): Promise<(
       const me = store.settings().me;
       const friends = store.friends();
       const added: string[] = [];
+      let updated = false;
+      // Newest details per mate win (they may have linked from Safari and again from the app)
+      const latest = new Map<string, CrewMate>();
       for (const d of Object.values(docs ?? {})) {
         try {
           const m = JSON.parse(d.data) as CrewMate;
           const name = String(m.name ?? '').trim().slice(0, 40);
           if (!name) continue;
           const key = personKey(name);
-          if (key === personKey(me.name) || friends.some((f) => personKey(f.name) === key)) continue;
-          const f: Player = {
-            id: uid(),
-            name,
-            gaHandicap: Number(m.ga) || 0,
-            ...(m.gaNo ? { gaNumber: String(m.gaNo) } : {}),
-            ...(m.src === 'manual' || m.src === 'ga' ? { hcpSource: m.src } : {}),
-          };
-          store.saveFriend(f);
-          friends.push(f);
-          added.push(name);
+          if (key === personKey(me.name)) continue;
+          const prev = latest.get(key);
+          if (!prev || (Number(m.at) || 0) > prev.at) latest.set(key, { ...m, name, at: Number(m.at) || 0 });
         } catch {
           /* skip */
         }
       }
-      if (added.length) onAdded(added);
+      for (const [key, m] of latest) {
+        const details = {
+          gaHandicap: Number(m.ga) || 0,
+          ...(m.gaNo ? { gaNumber: String(m.gaNo) } : {}),
+          ...(m.src === 'manual' || m.src === 'ga' ? { hcpSource: m.src } : {}),
+        };
+        const have = friends.find((f) => personKey(f.name) === key);
+        if (have) {
+          const changed = have.gaHandicap !== details.gaHandicap || (details.gaNumber && have.gaNumber !== details.gaNumber) || (details.hcpSource && have.hcpSource !== details.hcpSource);
+          if (changed) {
+            store.saveFriend({ ...have, ...details });
+            updated = true;
+          }
+          continue;
+        }
+        const f: Player = { id: uid(), name: m.name, ...details };
+        store.saveFriend(f);
+        friends.push(f);
+        added.push(m.name);
+      }
+      // Called when anyone was added or their details changed (names = the new ones)
+      if (added.length || updated) onAdded(added);
     },
     () => undefined,
   );

@@ -16,7 +16,7 @@ export function Home({ go }: { go: Go }) {
     let unsub: (() => void) | undefined;
     let stop = false;
     import('../live/crewChannel')
-      .then(({ watchMyCrew }) => watchMyCrew((names) => !stop && setLinked(`${names.join(' and ')} linked up with you 🤝`)))
+      .then(({ watchMyCrew }) => watchMyCrew((names) => !stop && names.length > 0 && setLinked(`${names.join(' and ')} linked up with you 🤝`)))
       .then((u) => (stop ? u() : (unsub = u)))
       .catch(() => undefined);
     return () => {

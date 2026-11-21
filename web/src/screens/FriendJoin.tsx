@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Users } from 'lucide-react';
 import { store, uid } from '../lib/storage';
 import { applyBundle, autoMap, decodeBundle, type Bundle } from '../lib/share';
@@ -16,12 +16,24 @@ export function FriendJoin({ go, data }: { go: Go; data: string }) {
   const [hcp, setHcp] = useState(settings.me);
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState<string | null>(null);
+  // If this phone already knows who you are, link up straight away: no form, no button
+  const knownName = settings.me.name && settings.me.name !== 'Me' ? settings.me.name : null;
+  const autoRan = useRef(false);
+  const [inviteLink] = useState(() => location.href);
 
   useEffect(() => {
     decodeBundle(data)
       .then(setBundle)
       .catch((e) => setErr(e instanceof Error ? e.message : 'That link looks broken or incomplete.'));
   }, [data]);
+
+  useEffect(() => {
+    if (bundle && knownName && !autoRan.current) {
+      autoRan.current = true;
+      link();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bundle]);
 
   const link = async () => {
     if (!bundle || !name.trim()) return;
@@ -56,9 +68,9 @@ export function FriendJoin({ go, data }: { go: Go; data: string }) {
       <div className="content">
         {err && <p className="error">{err}</p>}
         {!bundle && !err && <p className="muted">Opening the invite…</p>}
-        {bundle && !done && (
+        {bundle && !done && knownName && <p className="muted">Linking you up with {bundle.from}…</p>}
+        {bundle && !done && !knownName && (
           <>
-            <InstallFirst />
             <Card className="join-hero">
               <div className="eyebrow">
                 <Users /> {bundle.from} invited you
@@ -66,15 +78,23 @@ export function FriendJoin({ go, data }: { go: Go; data: string }) {
               <h2>Link up with {bundle.from}</h2>
               <p className="small">You'll be in each other's Friends, ready for rounds, comps, live scores and banter.</p>
             </Card>
-            <Card title="Your details">
-              <label className="field">
-                <span>Your name (the one your mates know you by)</span>
-                <input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Sam" autoComplete="name" />
-              </label>
-              <HandicapEditor player={hcp} onChange={setHcp} />
-              <button className="btn primary block" disabled={busy || !name.trim()} onClick={link}>
-                {busy ? 'Linking up…' : `Link up with ${bundle.from}`}
-              </button>
+            <Card title="What's your name?">
+              <form
+                className="row gap"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  link();
+                }}
+              >
+                <input className="grow" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Sam" autoComplete="name" autoFocus />
+                <button className="btn primary" disabled={busy || !name.trim()}>
+                  {busy ? '…' : 'Done'}
+                </button>
+              </form>
+              <details className="small">
+                <summary className="muted">Add your handicap now (optional, or later in Settings)</summary>
+                <HandicapEditor player={hcp} onChange={setHcp} />
+              </details>
             </Card>
           </>
         )}
@@ -82,6 +102,7 @@ export function FriendJoin({ go, data }: { go: Go; data: string }) {
           <Card className="join-hero">
             <h2>Sorted 🤝</h2>
             <p>{done}</p>
+            <InstallFirst after link={inviteLink} />
             <button className="btn primary block" onClick={() => go({ name: 'home' })}>
               Let's go
             </button>
