@@ -638,3 +638,18 @@ a.btn.block { display: flex; }
 .marking-note { background: var(--accent-soft); border-radius: 10px; padding: 8px 10px; margin: 0 0 8px; }
 .score-row.locked .score-val { opacity: .85; }
 .score-row.locked .icon-btn { opacity: .35; }
+
+/* ---------- Scorecard editor ---------- */
+.card-edit { width: 100%; border-collapse: collapse; font-size: .9rem; }
+.card-edit th { text-align: left; font-size: .7rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); padding: 4px; }
+.card-edit td { padding: 4px; border-top: 1px solid var(--line); vertical-align: middle; }
+.card-edit td.n { font-weight: 800; width: 34px; }
+.card-edit td.len { color: var(--muted); width: 52px; }
+.par-pick { display: flex; gap: 4px; align-items: center; }
+.par-pick button { width: 34px; height: 32px; border-radius: 8px; border: 1px solid var(--line); background: var(--card); color: var(--ink); font-weight: 800; }
+.par-pick button.on { background: var(--brand); color: #fff; border-color: var(--brand); }
+.si-in { width: 48px; text-align: center; padding: 6px 4px; }
+.si-in.dup { border-color: var(--err); }
+.est { font-size: .65rem; font-weight: 700; color: var(--warn); margin-left: 4px; }
+button.link { background: none; border: 0; padding: 0; color: var(--brand); text-decoration: underline; font: inherit; font-weight: 700; }
+.hv-est { font-size: .7rem; font-weight: 700; color: var(--gold); }

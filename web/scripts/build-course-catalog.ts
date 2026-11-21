@@ -138,6 +138,8 @@ async function main() {
           ...(h.green ? { g: pt(h.green.centre) } : {}),
           ...(h.green?.polygon ? { poly: h.green.polygon.filter((_, i, a) => a.length <= 24 || i % Math.ceil(a.length / 24) === 0).map(pt) } : {}),
           ...(h.path ? { path: h.path.map(pt) } : {}),
+          ...(h.parEst ? { pe: 1 as const } : {}),
+          ...(h.siEst ? { se: 1 as const } : {}),
         }))
       : undefined;
     const hz = built.hazards?.length
