@@ -12,6 +12,8 @@ import { FriendDetail, Friends } from './screens/Friends';
 import { CompDetail, CompEditor, Leaderboards } from './screens/Leaderboards';
 import { Import } from './screens/Import';
 import { LiveView } from './live/LiveView';
+import { Tracer } from './screens/Tracer';
+import { LiveTracer } from './screens/LiveTracer';
 
 function readHash(): Route {
   try {
@@ -68,5 +70,9 @@ export default function App() {
       return <Import key={key} go={go} data={route.data} />;
     case 'live':
       return <LiveView key={key} go={go} code={route.code} />;
+    case 'tracer':
+      return <Tracer key={key} go={go} />;
+    case 'livetracer':
+      return <LiveTracer key={key} go={go} />;
   }
 }

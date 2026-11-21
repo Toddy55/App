@@ -41,6 +41,11 @@ It runs in the browser and installs to your home screen (Share → Add to Home S
 - When everyone's finished, tap "Add the full-field round to my app". For scorers it replaces their own group's card, keeping their personal stats
 - Needs a free Firebase project, a one-off setup: see [LIVE_SCORING_SETUP.md](LIVE_SCORING_SETUP.md)
 
+**Shot tracer**
+- **Video tracer:** film a shot (or pick a video), tap where the ball starts, lands and peaks, and a TV-style tracer follows the ball in time with the video. Choose the colour and thickness, then save the clip or share it to the group chat
+- **Live tracer:** lean the phone on the bag behind the golfer, tap the ball, and hit. The app hears the strike, spots the ball leaving, follows it frame by frame and draws the tracer as it flies, finishing the arc once the ball is too small to see. The clip is saved for sharing, or for touching up in the video tracer
+- **GPS tracer:** shots marked during a round are drawn as curved flight lines on the satellite map with club and distance, plus a hole-by-hole animated **shot replay** after the round
+
 **Coaching**
 - Built-in coach (no internet or key needed): compares your putts, fairways, GIR, up-and-downs, penalties, bunker play, blow-up holes, par-5 scoring and back-nine fade against typical numbers for your handicap. It ranks the areas costing you the most shots, lists your costliest holes and why, gives a drill and an on-course tip for each, and builds a 60-minute practice plan
 - Optional AI coach: a deeper Claude write-up of the round, using your own Anthropic API key (Settings)

@@ -217,3 +217,32 @@ describe('course search', () => {
     }
   });
 });
+
+describe('shot tracer maths', async () => {
+  const { controlFromApex, bezier, flightProgress, tracePoints, shotLegs, arcLatLngs } = await import('./tracer');
+  it('passes through the apex halfway along the flight', () => {
+    const s = { x: 100, y: 900 }, a = { x: 500, y: 100 }, e = { x: 800, y: 700 };
+    const mid = bezier(s, controlFromApex(s, a, e), e, 0.5);
+    expect(mid.x).toBeCloseTo(500);
+    expect(mid.y).toBeCloseTo(100);
+    const pts = tracePoints(s, a, e, 1);
+    expect(pts[0]).toEqual(s);
+    expect(pts[pts.length - 1].x).toBeCloseTo(800);
+  });
+  it('ball races out then slows', () => {
+    expect(flightProgress(0.5, 1, 4)).toBe(0);
+    expect(flightProgress(2.5, 1, 4)).toBeGreaterThan(0.5); // more than half the way at half time
+    expect(flightProgress(5, 1, 4)).toBe(1);
+  });
+  it('turns marked shots into legs with distances', () => {
+    const tee = { lat: -35, lon: 149 };
+    const second = fromLocal(tee, 0, 230);
+    const green = fromLocal(tee, 0, 380);
+    const legs = shotLegs([{ ...tee, club: 'Driver' }, { ...second, club: '7i' }], green);
+    expect(legs.map((l) => [l.club, Math.round(l.distance)])).toEqual([['Driver', 230], ['7i', 150]]);
+    expect(shotLegs([{ ...tee, club: 'Driver' }, { ...second, club: '7i' }]).length).toBe(1); // no green, no last leg
+    const arc = arcLatLngs(tee, second);
+    expect(arc[0]).toEqual(tee);
+    expect(distanceM(arc[arc.length - 1], second)).toBeLessThan(0.01);
+  });
+});

@@ -291,7 +291,10 @@ export function Play({ go, roundId }: { go: Go; roundId: string }) {
                 Undo last shot
               </button>
             )}
-            <p className="muted small">Mark each shot before you hit it. Your club distances build up in My stats.</p>
+            <p className="muted small">Mark each shot before you hit it. Your club distances build up in My stats, and the shots are traced on the map.</p>
+            <button className="btn ghost small" onClick={() => go({ name: 'tracer' })}>
+              🎥 Film a shot with a tracer
+            </button>
           </Card>
 
           {/* Scores */}
