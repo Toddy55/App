@@ -16,7 +16,7 @@ const OVERPASS = [
 ];
 const NOMINATIM = 'https://nominatim.openstreetmap.org/search';
 
-interface OsmElement {
+export interface OsmElement {
   type: 'node' | 'way' | 'relation';
   id: number;
   lat?: number;

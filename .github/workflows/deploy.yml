@@ -5,6 +5,8 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:
+  schedule:
+    - cron: '17 3 1 * *' # monthly: refresh the built-in course list
 
 permissions:
   contents: read
@@ -29,6 +31,11 @@ jobs:
           cache: npm
           cache-dependency-path: web/package-lock.json
       - run: npm ci
+      # Download every South East Queensland golf course from OpenStreetMap into the app.
+      # If the map server is down, the build carries on with the list it already has.
+      - name: Build the course list
+        run: npx tsx scripts/build-course-catalog.ts
+        continue-on-error: true
       - run: npx vitest run
       - run: npm run build
         env:

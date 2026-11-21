@@ -1,7 +1,8 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { blankHoles, courseCompleteness, loadCourse, nearbyCourses, searchCourses, type CourseHit } from '../lib/courses';
+import { catalogToCourse, loadCatalog, searchCatalog, type Catalog, type CatalogCourse } from '../lib/courseCatalog';
+import { distanceM } from '../lib/geo';
 import { store, uid } from '../lib/storage';
-import { getPosition } from '../hooks';
 import { Card, Header, type Go } from '../components/ui';
 
 export function Courses({ go, pick }: { go: Go; pick?: boolean }) {
@@ -11,6 +12,45 @@ export function Courses({ go, pick }: { go: Go; pick?: boolean }) {
   const [error, setError] = useState<string | null>(null);
   const [, refresh] = useState(0);
   const saved = store.courses();
+  const [catalog, setCatalog] = useState<Catalog | null>(null);
+  const [nearby, setNearby] = useState<(CatalogCourse & { km: number })[] | null>(null);
+  useEffect(() => {
+    loadCatalog().then(setCatalog).catch(() => setCatalog(null));
+  }, []);
+  const matches = catalog && q.trim().length >= 2 ? searchCatalog(catalog, q) : [];
+
+  const chooseBuiltIn = (c: CatalogCourse) => {
+    const existing = saved.find((x) => x.osmRef === c.ref);
+    if (existing) return open(existing.id);
+    const course = catalogToCourse(c);
+    store.saveCourse(course);
+    open(course.id);
+  };
+
+  const findNear = async () => {
+    setError(null);
+    setBusy('Getting your location…');
+    try {
+      const at = await (await import('../hooks')).getPosition(false);
+      const list = (catalog?.courses ?? [])
+        .map((c) => ({ ...c, km: distanceM(at, { lat: c.at[0], lon: c.at[1] }) / 1000 }))
+        .filter((c) => c.km < 40)
+        .sort((a, b) => a.km - b.km)
+        .slice(0, 15);
+      if (list.length) {
+        setNearby(list);
+        setBusy(null);
+      } else {
+        // Outside the built-in region: ask the online course database
+        setNearby(null);
+        setBusy(null);
+        run('Finding courses near you…', () => nearbyCourses(at));
+      }
+    } catch (e) {
+      setBusy(null);
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  };
 
   // Each search gets a number; a newer search replaces an older one that's still waiting.
   const req = useRef(0);
@@ -57,37 +97,75 @@ export function Courses({ go, pick }: { go: Go; pick?: boolean }) {
       <Header title={pick ? 'Pick a course' : 'Courses'} onBack={() => go(pick ? { name: 'setup' } : { name: 'home' })} />
       <div className="content">
         <Card>
-          <form
-            className="row"
-            onSubmit={(e) => {
-              e.preventDefault();
-              if (q.trim().length >= 3) run('Searching…', () => searchCourses(q));
-            }}
-          >
-            <input className="grow" placeholder="Course or town, e.g. Nambour" value={q} onChange={(e) => setQ(e.target.value)} />
-            <button className="btn primary" disabled={q.trim().length < 3}>
-              Search
-            </button>
-          </form>
-          <div className="row gap">
-            <button
-              className="btn"
-              onClick={() =>
-                run('Getting your location…', async (progress) => {
-                  const at = await getPosition(false);
-                  progress('Finding courses near you…');
-                  return nearbyCourses(at);
-                })
-              }
-            >
+          <div className="typeahead">
+            <input
+              className="grow"
+              placeholder="Type a course or town, e.g. Nambour"
+              value={q}
+              onChange={(e) => {
+                setQ(e.target.value);
+                setHits(null);
+                setNearby(null);
+              }}
+              autoComplete="off"
+              autoCorrect="off"
+              aria-label="Course name"
+            />
+            {matches.length > 0 && (
+              <ul className="typeahead-list" role="listbox">
+                {matches.map((c) => (
+                  <li key={c.ref}>
+                    <button className="list-btn" onClick={() => chooseBuiltIn(c)}>
+                      <div>
+                        <strong>{c.name}</strong>
+                        <div className="muted small">
+                          {c.suburb ?? 'QLD'}
+                          {c.holes ? ` · ${c.holes.filter((h) => h.g).length} greens mapped` : ' · greens not mapped yet'}
+                        </div>
+                      </div>
+                      <span>›</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+          {catalog && q.trim().length >= 2 && matches.length === 0 && (
+            <p className="muted small">Not in the built-in South East Queensland list.</p>
+          )}
+          <div className="row gap wrap">
+            <button className="btn" onClick={findNear}>
               📍 Near me
             </button>
+            {q.trim().length >= 3 && (
+              <button className="btn ghost" onClick={() => run('Searching online…', () => searchCourses(q))}>
+                🌐 Search all of Australia
+              </button>
+            )}
             <button className="btn ghost" onClick={createBlank}>
               + Add manually
             </button>
           </div>
           {busy && <p className="muted">{busy}</p>}
           {error && <p className="error">{error}</p>}
+          {nearby && (
+            <ul className="list">
+              {nearby.map((c) => (
+                <li key={c.ref}>
+                  <button className="list-btn" onClick={() => chooseBuiltIn(c)}>
+                    <div>
+                      <strong>{c.name}</strong>
+                      <div className="muted small">
+                        {c.suburb ?? 'QLD'}
+                        {c.holes ? '' : ' · greens not mapped yet'}
+                      </div>
+                    </div>
+                    <span className="muted small">{c.km.toFixed(1)} km</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
           {hits && (
             <ul className="list">
               {hits.length === 0 && <li className="muted">No courses found. Try a shorter name or add it manually.</li>}
@@ -103,6 +181,11 @@ export function Courses({ go, pick }: { go: Go; pick?: boolean }) {
                 </li>
               ))}
             </ul>
+          )}
+          {catalog && (
+            <p className="muted small">
+              {catalog.courses.length} South East Queensland courses built in (updated {catalog.generated || 'soon'}).
+            </p>
           )}
         </Card>
 
