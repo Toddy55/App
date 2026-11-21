@@ -602,3 +602,15 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--brand-soft)
 .chip.picked { display: inline-flex; align-items: center; gap: 4px; padding-right: 4px; }
 .chip.picked button { background: none; border: 0; color: inherit; padding: 0 2px; display: grid; place-items: center; }
 .chip.picked svg { width: 14px; height: 14px; }
+
+/* ---------- Green slope map ---------- */
+.gs-heat { image-rendering: auto; }
+.gs-contour { fill: none; stroke: rgba(255, 255, 255, .55); stroke-width: .9; }
+.gs-arrow line, .gs-arrow path { stroke: #fff; stroke-width: 1.6; stroke-linecap: round; fill: none; filter: drop-shadow(0 0 1px rgba(0, 0, 0, .8)); }
+.gs-putt { fill: none; stroke: #fff; stroke-width: 3; stroke-dasharray: 2 6; stroke-linecap: round; filter: drop-shadow(0 0 2px rgba(0, 0, 0, .9)); }
+.hv-green.with-slope { fill: none; }
+.hv-putt { flex-direction: column; align-items: stretch; gap: 6px; }
+.hv-putt .aim { -webkit-line-clamp: 3; }
+.gs-legend { display: flex; align-items: center; gap: 8px; }
+.gs-legend i { flex: 1; height: 6px; border-radius: 3px; background: linear-gradient(90deg, #22c55e, #eadc32 33%, #f98c1e 50%, #dc2626 75%, #96143c); }
+.gs-legend small { font-size: .62rem; opacity: .8; white-space: nowrap; }

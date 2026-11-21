@@ -62,6 +62,13 @@ It runs in the browser and installs to your home screen (Share → Add to Home S
 - The caddy's club, aim line and landing zone sit on the picture, with its call along the bottom
 - **Green** zooms in on the green; **Pin** lets you tap where today's flag is; swipe between holes with the arrows by the hole number
 
+**Green slope maps (Queensland)**
+- Tap **Green** on the hole view: the green is coloured by slope (green flat, yellow 2%, orange 3%, red 4.5%+), with arrows showing which way it falls and contour lines every 10 cm
+- Tap where your ball is (or stand on the green) for a **putt read**: length, how much uphill or downhill, which way it breaks and roughly how many cups to aim outside the hole, with the curve drawn on the green
+- The caddy adds where to miss each approach from how the green falls around the pin (e.g. "falls back to front: stay below the hole")
+- Uses the Queensland Government's free LiDAR elevation model (0.5–1 m), so it works on Queensland courses. Each green is fetched once and kept on the phone. It's survey data, not a green-book: it won't show recent green rebuilds or tiny breaks, and the putt break is a rule-of-thumb estimate for medium-paced greens
+- Off when a comp's tournament rules are "AI caddy off" or "Distances only"
+
 **AI caddy**
 - On every hole: the club and the exact aim point (e.g. "7-iron, aim 6 m left of the pin, pin-high"), the plays-like distance, and the odds of finding water or sand
 - How it decides: it plays each sensible club and aim line a few hundred times with your distance, spread and usual miss (from your shot tracker, sim calibration and stats), plus wind, slope and temperature. Every landing spot is scored with the expected strokes to hole out (green, fairway, rough, bunker or water) and the option that saves the most shots wins. It lays up when going for it doesn't pay, and plays safer after a blow-up or when you're protecting a good card

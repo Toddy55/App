@@ -11,6 +11,8 @@ import { HoleView } from '../components/HoleView';
 import { LiveControl, pushFinal } from '../live/LiveControl';
 import { useLiveField } from '../live/useLiveField';
 import { aidsFor, AIDS_LABELS } from '../lib/comps';
+import { fetchGreenDem, type Dem } from '../lib/greenDem';
+import { approachNote, smooth } from '../lib/greenRead';
 import { Scorecard } from '../components/Scorecard';
 import { Card, Header, Segmented, Stepper, scoreClass, type Go } from '../components/ui';
 import { CaddyCard } from '../components/CaddyCard';
@@ -146,6 +148,23 @@ export function Play({ go, roundId }: { go: Go; roundId: string }) {
     };
   }, [compKey]);
   void rulesRev;
+  // Ground heights for this green (Queensland LiDAR) for the slope map and the caddy's green read
+  const holeGreen = round?.holes[idx]?.green;
+  const greenKey = holeGreen ? `${holeGreen.centre.lat},${holeGreen.centre.lon}` : '';
+  const [demState, setDemState] = useState<{ key: string; dem: Dem | null } | null>(null);
+  useEffect(() => {
+    if (!holeGreen) return;
+    let stop = false;
+    fetchGreenDem(holeGreen)
+      .then((d) => !stop && setDemState({ key: greenKey, dem: d }))
+      .catch(() => !stop && setDemState({ key: greenKey, dem: null }));
+    return () => {
+      stop = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [greenKey]);
+  const dem = demState?.key === greenKey ? demState.dem : null;
+  const demSmooth = useMemo(() => (dem ? smooth(dem) : null), [dem]);
 
   if (!round || !hole) {
     return (
@@ -226,6 +245,11 @@ export function Play({ go, roundId }: { go: Go; roundId: string }) {
       };
     }
     advice = caddyCache.value;
+    // Add how the green falls around the pin, and where to miss
+    if (advice && demSmooth && advice.toPin < 260) {
+      const note = approachNote(demSmooth, pin ?? hole.green.centre, caddyFrom);
+      if (note) advice = { ...advice, lines: [...advice.lines, `🟢 ${note}`] };
+    }
   }
   const holeHazards = course?.hazards;
   const shots = round.shots[hole.number] ?? [];
@@ -329,6 +353,7 @@ export function Play({ go, roundId }: { go: Go; roundId: string }) {
               units={units}
               playsLike={extrasAllowed ? pl?.distance : undefined}
               wind={extrasAllowed && wx ? { kmh: wx.windKmh, fromDeg: wx.windFromDeg } : undefined}
+              dem={rules.aids === 'full' ? dem : null}
               rulesNote={rules.aids !== 'full' ? `🏆 ${rules.comp?.name ?? 'Comp'} rules: ${AIDS_LABELS[rules.aids]}` : undefined}
               gpsWarning={geo.accuracy != null && geo.accuracy > 15 ? `GPS ±${Math.round(geo.accuracy)} m` : undefined}
             />
