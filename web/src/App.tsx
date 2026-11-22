@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { fixMeFriend } from './lib/storage';
+import { fixMeFriend, store } from './lib/storage';
 import { TabBar, TAB_SCREENS } from './components/TabBar';
 import type { Route } from './components/ui';
 import { Home } from './screens/Home';
@@ -63,6 +63,20 @@ export default function App() {
   useEffect(() => {
     fixMeFriend();
     import('./live/sync').then(({ turnOnSync }) => turnOnSync()).catch(() => undefined);
+    // Every saved course gets the club's tees (lengths, pars and ratings) where the list has them
+    import('./lib/clubTees')
+      .then(async ({ withClubTees }) => {
+        let any = false;
+        for (const c of store.courses()) {
+          const fresh = await withClubTees(c);
+          if (fresh) {
+            store.saveCourse(fresh);
+            any = true;
+          }
+        }
+        if (any) window.dispatchEvent(new Event('gtg:synced'));
+      })
+      .catch(() => undefined);
     const on = () => {
       // Another copy changed something: show it (unless you're mid-typing)
       const el = document.activeElement;

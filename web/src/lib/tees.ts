@@ -73,7 +73,10 @@ export function teeSpot(hole: Hole, length: number): { tee: LatLon; path?: LatLo
 
 /** The holes as played from a tee: tee spot moved, lengths adjusted. */
 export function holesFromTee(holes: Hole[], tee: TeeSet): Hole[] {
-  return holes.map((h) => {
+  return holes.map((card) => {
+    // Pars can differ by tee (women's often do)
+    const par = tee.pars?.[card.number];
+    const h: Hole = par && par !== card.par ? { ...card, par, parEst: undefined } : card;
     const len = teeLength(h, tee);
     if (!len) return h;
     // Mapped tee is the reference: only move it when this tee is a different length

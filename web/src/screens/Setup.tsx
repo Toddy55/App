@@ -79,6 +79,23 @@ export function Setup({ go, courseId, join }: { go: Go; courseId?: string; join?
   const [carry, setCarry] = useState(true);
   // Tee box: remembered per course
   const [teePick, setTeePick] = useState<string | null>(null);
+  // Men's or women's tees (when the club lists both): remembered
+  const [womenTees, setWomenTees] = useState(() => {
+    try {
+      return localStorage.getItem('gtg.teeWomen') === '1';
+    } catch {
+      return false;
+    }
+  });
+  const showWomen = (on: boolean) => {
+    setWomenTees(on);
+    setTeePick(null);
+    try {
+      localStorage.setItem('gtg.teeWomen', on ? '1' : '0');
+    } catch {
+      /* fine */
+    }
+  };
   const pickTee = (id: string) => {
     setTeePick(id);
     try {
@@ -147,7 +164,9 @@ export function Setup({ go, courseId, join }: { go: Go; courseId?: string; join?
       return null;
     }
   })();
-  const tee = tees.find((t) => t.id === (teePick ?? savedTee)) ?? tees[0];
+  const bothKinds = tees.some((t) => t.women) && tees.some((t) => !t.women);
+  const shown = bothKinds ? tees.filter((t) => !!t.women === womenTees) : tees;
+  const tee = shown.find((t) => t.id === (teePick ?? savedTee)) ?? shown[0];
   // The holes as you'll play them: tee spot moved and lengths adjusted for your tee
   const played = holesFromTee(holes, tee);
   const slope = tee.slopeRating ?? course.slopeRating;
@@ -286,11 +305,21 @@ export function Setup({ go, courseId, join }: { go: Go; courseId?: string; join?
           </Card>
         )}
         <Card title="Tee box">
+          {bothKinds && (
+            <Segmented
+              value={womenTees ? 'w' : 'm'}
+              onChange={(v) => showWomen(v === 'w')}
+              options={[
+                { value: 'm', label: "Men's tees" },
+                { value: 'w', label: "Women's tees" },
+              ]}
+            />
+          )}
           <div className="tee-chips">
-            {tees.map((t) => (
+            {shown.map((t) => (
               <button key={t.id} className={`chip tee-chip ${t.id === tee.id ? 'on' : ''}`} onClick={() => pickTee(t.id)}>
                 <i style={{ background: t.colour ?? '#94a3b8' }} />
-                {t.name}
+                {bothKinds ? t.name.replace(" (women)", "") : t.name}
                 <small>
                   {fmtDist(totalLength(holes, t), settings.units)}
                   {settings.units}
@@ -301,7 +330,7 @@ export function Setup({ go, courseId, join }: { go: Go; courseId?: string; join?
           <p className="muted small">
             {tee.estimated
               ? `${tee.name} tee lengths are estimated from the mapped tee until the club's tees are added (Courses → this course → Tees).`
-              : `Hole lengths off the ${tee.name} tees${tee.slopeRating ? `, slope ${tee.slopeRating}${tee.scratchRating ? ` / scratch ${tee.scratchRating}` : ''}` : ''}.`}{' '}
+              : `${tee.club ? "Club scorecard: hole lengths" : 'Hole lengths'}${tee.pars ? ' and pars' : ''} off the ${tee.name}${/tee/i.test(tee.name) ? '' : ' tees'}${tee.women ? " (women's ratings)" : ''}${tee.slopeRating ? `, slope ${tee.slopeRating}${tee.scratchRating ? ` / scratch ${tee.scratchRating}` : ''}` : ''}.`}{' '}
             Distances, the hole view and the caddie all play from here.
           </p>
         </Card>

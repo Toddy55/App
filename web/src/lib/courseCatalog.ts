@@ -145,5 +145,8 @@ export async function refreshCourse(course: Course): Promise<Course | null> {
     if (trees.length) hazards = [...course.hazards, ...trees];
   }
   if (hazards !== course.hazards) changed = true;
-  return changed ? { ...course, holes, hazards } : null;
+  const next = changed ? { ...course, holes, hazards } : course;
+  // The club's tees, lengths and ratings, where the list has them
+  const teed = await import('./clubTees').then(({ withClubTees }) => withClubTees(next)).catch(() => null);
+  return teed ?? (changed ? next : null);
 }
