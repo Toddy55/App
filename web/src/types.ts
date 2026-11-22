@@ -154,6 +154,8 @@ export interface Round {
   scores: Record<string, Record<number, number>>;
   stats: Record<number, HoleStats>;
   shots: Record<number, Shot[]>;
+  /** Mark shots this round (shot tracker, Siri marks). Off = scores only. Default on. */
+  trackShots?: boolean;
   /** Siri marks already added to this round (their ids). */
   siriMarks?: string[];
   pins: Record<number, LatLon>;

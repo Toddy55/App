@@ -21,6 +21,10 @@
   --warn: #b7791f;
   --err: #d64550;
   --birdie: #e5484d;
+  /* Scorecard: birdies green, bogeys red */
+  --sc-birdie: #22c55e;
+  --sc-bogey: #f05252;
+  --sc-double: #ff2d2d;
   --eagle: #f5a524;
   --bogey: #3b6fe0;
   --double: #1f3a8a;
@@ -208,10 +212,10 @@ h1, h2, h3 { margin: 0; }
 .score-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--line); gap: 8px; }
 .score-row:last-child { border-bottom: none; }
 .score-val { min-width: 48px; height: 48px; display: inline-flex; align-items: center; justify-content: center; font-size: 1.5rem; font-weight: 800; border-radius: 10px; background: var(--chip); cursor: pointer; }
-.score-val.birdie { background: var(--birdie); color: #fff; border-radius: 999px; }
+.score-val.birdie { background: var(--sc-birdie); color: #04210f; border-radius: 999px; }
 .score-val.eagle { background: var(--eagle); color: var(--gold-ink); border-radius: 999px; }
-.score-val.bogey { outline: 2px solid var(--bogey); }
-.score-val.double { outline: 3px double var(--double); }
+.score-val.bogey { outline: 2px solid var(--sc-bogey); }
+.score-val.double { outline: 3px double var(--sc-double); }
 
 /* Scorecard */
 .scorecard { display: flex; flex-direction: column; gap: 10px; }
@@ -221,14 +225,14 @@ h1, h2, h3 { margin: 0; }
 .scorecard thead th { background: var(--brand); color: var(--brand-ink); }
 .scorecard thead tr.sub th { background: var(--chip); color: var(--muted); font-weight: 500; font-size: .75rem; }
 .scorecard .sticky { position: sticky; left: 0; background: var(--card); text-align: left; z-index: 1; min-width: 70px; max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.scorecard thead .sticky { background: var(--brand); }
+.scorecard thead th, .scorecard thead .sticky { background: var(--brand-deep); color: #fff; }
 .scorecard thead tr.sub .sticky { background: var(--chip); }
 .scorecard td small { display: block; font-size: .65rem; color: var(--muted); }
 .scorecard td sup { position: absolute; top: 1px; right: 2px; font-size: .5rem; color: var(--muted); }
-.scorecard td.birdie .g { color: var(--birdie); font-weight: 800; }
+.scorecard td.birdie .g { color: var(--sc-birdie); font-weight: 800; }
 .scorecard td.eagle .g { color: var(--eagle); font-weight: 800; }
-.scorecard td.bogey .g { color: var(--bogey); }
-.scorecard td.double .g { color: var(--double); font-weight: 700; }
+.scorecard td.bogey .g { color: var(--sc-bogey); font-weight: 700; }
+.scorecard td.double .g { color: var(--sc-double); font-weight: 800; }
 .scorecard th.tap { cursor: pointer; text-decoration: underline; }
 .tot { font-weight: 700; }
 table.totals { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
@@ -763,3 +767,11 @@ body.replay-open .tabbar { display: none; }
 .replay-holes .chip { flex: none; min-width: 38px; }
 .replay-credit { margin: 0; font-size: .62rem; opacity: .6; text-align: center; }
 .live-friend.done { border-color: var(--line); } .done-dot { width: 22px; height: 22px; border-radius: 50%; background: var(--gold); color: var(--gold-ink); display: grid; place-items: center; font-weight: 900; font-size: .8rem; flex: none; }
+.linked-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.linked-name { font-size: 1.25rem; }
+.linked-badge { background: var(--gold); color: var(--gold-ink); border-radius: 999px; padding: 3px 10px; font-size: .75rem; font-weight: 800; }
+/* Tables sit on solid navy so the background photo never washes out the numbers */
+.screen table { background: #0b1a33; border-radius: 10px; }
+.scorecard .sticky, .screen table .sticky { background: #0b1a33; }
+.scorecard thead th, .scorecard thead .sticky { background: var(--brand-deep); color: #fff; }
+.scorecard thead tr.sub .sticky { background: #16264a; }

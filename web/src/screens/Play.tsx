@@ -94,7 +94,7 @@ export function Play({ go, roundId }: { go: Go; roundId: string }) {
   // "Hey Siri, mark shot": spots marked with the phone in the pocket drop into the right holes
   const [siriNote, setSiriNote] = useState<string | null>(null);
   const [replayOpen, setReplayOpen] = useState(false);
-  useSiriMarks(round, course?.holes ?? round?.holes ?? [], update, (added) => {
+  useSiriMarks(round?.trackShots === false ? undefined : round, course?.holes ?? round?.holes ?? [], update, (added) => {
     const holes = [...new Set(added.map((a) => a.hole))];
     setSiriNote(
       added.length === 1
@@ -552,7 +552,12 @@ export function Play({ go, roundId }: { go: Go; roundId: string }) {
           {hole.green && !geo.pos && <p className="muted small center">{geo.error ?? 'Getting your GPS position…'}</p>}
           {!wx && wxErr && <p className="muted small center">Wind unavailable: {wxErr}</p>}
 
-          {/* Shot tracking */}
+          {/* Shot tracking (if this round tracks shots) */}
+          {round.trackShots === false ? (
+            <button className="btn ghost small" onClick={() => update((r) => ({ ...r, trackShots: true }))}>
+              📍 Track shots after all
+            </button>
+          ) : (
           <Card title="Shot tracker">
             <div className="row gap">
               <select value={club} onChange={(e) => setClub(e.target.value)}>
@@ -614,7 +619,11 @@ export function Play({ go, roundId }: { go: Go; roundId: string }) {
             <button className="btn ghost small" onClick={() => go({ name: 'siri' })}>
               🎙️ Mark shots hands-free: "Hey Siri, mark shot"
             </button>
+            <button className="btn ghost small" onClick={() => update((r) => ({ ...r, trackShots: false }))}>
+              Stop tracking shots this round
+            </button>
           </Card>
+          )}
 
           {/* Scores */}
           <Card title="Scores">

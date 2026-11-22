@@ -12,6 +12,7 @@ export function Settings({ go }: { go: Go }) {
   const save = (n: S) => {
     setS(n);
     store.saveSettings(n);
+    window.dispatchEvent(new Event('gtg:me'));
   };
   const [clubsText, setClubsText] = useState(s.clubs.join(', '));
   const [look, setLook] = useState(readAppearance());
