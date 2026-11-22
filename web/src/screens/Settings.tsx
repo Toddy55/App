@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { Settings as S } from '../types';
 import { DEFAULT_CLUBS, store } from '../lib/storage';
 import { HandicapEditor } from '../components/HandicapEditor';
+import { NotifyToggle } from '../components/NotifyToggle';
 import { Card, Header, Segmented, type Go } from '../components/ui';
 import { HOME_BGS, readHomeBg, readOwnBg, saveHomeBg, saveOwnBg } from '../lib/homeBg';
 import { PALETTES, readAppearance, saveAppearance, type Mode, type Palette } from '../lib/appearance';
@@ -64,6 +65,7 @@ export function Settings({ go }: { go: Go }) {
               <span className="muted small"> Your mates see you're playing on their Home screen and can watch your scores and shot cam. No link needed.</span>
             </span>
           </label>
+          <NotifyToggle />
         </Card>
         <Card title="Look">
           <div className="field">

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { store } from '../lib/storage';
 import { liveAvailable } from '../live/config';
 import { setLiveFriends } from '../live/liveFriends';
+import { notify } from '../lib/notify';
 
 /**
  * Runs the whole time the app is open, on every screen: when a mate opens
@@ -21,6 +22,7 @@ export function MateWatcher({ go }: { go: (r: { name: 'friends' } | { name: 'liv
     if (!names.length) return;
     liveTap.current = null;
     setToast(`🤝 ${names.join(' and ')} linked up with you`);
+    notify(`🤝 ${names.join(' and ')} accepted your invite`, `${names.length > 1 ? "They're" : 'They are'} on your Friends list now. Tap to say g'day.`, { hash: '#' + encodeURIComponent(JSON.stringify({ name: 'friends' })), tag: 'linkup' });
     window.dispatchEvent(new Event('gtg:friends'));
   };
 
@@ -56,6 +58,7 @@ export function MateWatcher({ go }: { go: (r: { name: 'friends' } | { name: 'liv
               const newMates = added.filter((n) => !before.has(n.toLowerCase()));
               newMates.forEach((n) => before.add(n.toLowerCase()));
               setToast(`🏆 ${added.join(' and ')} joined ${c.name}`);
+              notify(`🏆 ${added.join(' and ')} joined ${c.name}`, 'Tap to see the comp table.', { hash: '#' + encodeURIComponent(JSON.stringify({ name: 'comp', id: c.id })), tag: 'comp-' + c.id });
               window.dispatchEvent(new Event('gtg:friends'));
             }
           });
@@ -93,6 +96,7 @@ export function MateWatcher({ go }: { go: (r: { name: 'friends' } | { name: 'liv
           // Don't pop up for rounds already on when the app opened; Home shows those
           if (!first && fresh.length) setToast(`🔴 ${fresh.map((n) => n.name).join(' and ')} just went live at ${fresh[0].course}. Tap to watch`);
           if (!first && fresh.length) liveTap.current = fresh[0].code;
+          if (!first && fresh.length) notify(`🔴 ${fresh.map((n) => n.name).join(' and ')} just went live`, `At ${fresh[0].course}. Tap to watch.`, { hash: '#live=' + fresh[0].code, tag: 'live-' + fresh[0].code });
           first = false;
         }),
       )
