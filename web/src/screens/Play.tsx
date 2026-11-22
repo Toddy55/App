@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { FairwayResult, HoleStats, LatLon, Round } from '../types';
 import { useSiriMarks } from '../live/siriChannel';
+import { RoundReplay } from '../components/RoundReplay';
+import { usePinShare, withPin } from '../live/pinShare';
 import { store } from '../lib/storage';
 import { distanceM, fmtDist, greenDistances } from '../lib/geo';
 import { fetchElevations, fetchWeather, playsLike, windEffect } from '../lib/weather';
@@ -70,11 +72,16 @@ export function Play({ go, roundId }: { go: Go; roundId: string }) {
     setSpotMark({ what, note: undefined });
     try {
       const { sampleFix } = await import('../lib/spotMark');
-      const fix = await sampleFix(4000, geo.pos ? { pos: geo.pos, acc: geo.accuracy ?? 8 } : undefined);
+      const other = what === 'ball' ? round?.pins[h.number] : round?.balls?.[h.number];
+      const fix = await sampleFix(5000, geo.pos ? { pos: geo.pos, acc: geo.accuracy ?? 8 } : undefined, other);
+      if (fix.stale) {
+        setSpotMark({ what: null, note: `The GPS hasn't caught up with you yet (it's still showing the ${what === 'ball' ? 'pin' : 'ball'}). Wait 10 seconds and tap again, or tap the map where your ${what === 'ball' ? 'ball' : 'pin'} is.` });
+        return;
+      }
       const note = fix.acc > 6 ? `GPS ±${Math.round(fix.acc)} m: a rough read` : `GPS ±${Math.round(fix.acc)} m`;
       update((r) =>
         what === 'pin'
-          ? { ...r, pins: { ...r.pins, [h.number]: fix.pos } }
+          ? withPin(r, h.number, fix.pos)
           : { ...r, balls: { ...(r.balls ?? {}), [h.number]: fix.pos } },
       );
       setMeasure(undefined);
@@ -86,7 +93,8 @@ export function Play({ go, roundId }: { go: Go; roundId: string }) {
 
   // "Hey Siri, mark shot": spots marked with the phone in the pocket drop into the right holes
   const [siriNote, setSiriNote] = useState<string | null>(null);
-  useSiriMarks(round, course?.holes ?? round?.holes ?? [], update, (added) => {
+  const [replayOpen, setReplayOpen] = useState(false);
+  useSiriMarks(round?.trackShots === false ? undefined : round, course?.holes ?? round?.holes ?? [], update, (added) => {
     const holes = [...new Set(added.map((a) => a.hole))];
     setSiriNote(
       added.length === 1
@@ -94,6 +102,8 @@ export function Play({ go, roundId }: { go: Go; roundId: string }) {
         : `🎙️ ${added.length} shots from Siri added on hole${holes.length > 1 ? 's' : ''} ${holes.join(', ')}`,
     );
   });
+  // Pins are shared across the field: whoever marks one, everyone gets it
+  usePinShare(round, settings.me.name, update, (by, h) => setSiriNote(`📍 ${by} marked the pin on hole ${h}`));
   useEffect(() => {
     if (!siriNote) return;
     const t = setTimeout(() => setSiriNote(null), 6000);
@@ -373,7 +383,7 @@ export function Play({ go, roundId }: { go: Go; roundId: string }) {
 
   const onMapTap = (p: LatLon) => {
     if (mapMode === 'pin') {
-      update((r) => ({ ...r, pins: { ...r.pins, [hole.number]: p } }));
+      update((r) => withPin(r, hole.number, p));
       setMapMode('measure');
     } else setMeasure(p);
   };
@@ -456,10 +466,10 @@ export function Play({ go, roundId }: { go: Go; roundId: string }) {
               pin={pin}
               target={measure}
               onTarget={setMeasure}
-              onPin={(p) => update((r) => ({ ...r, pins: { ...r.pins, [hole.number]: p } }))}
+              onPin={(p) => update((r) => withPin(r, hole.number, p))}
               pinMode={mapMode === 'pin'}
               onPinMode={(on) => setMapMode(on ? 'pin' : 'measure')}
-              onClearPin={() => update((r) => { const ps = { ...r.pins }; delete ps[hole.number]; return { ...r, pins: ps }; })}
+              onClearPin={() => update((r) => withPin(r, hole.number, undefined))}
               ball={round.balls?.[hole.number]}
               marking={spotMark}
               onMarkHere={markHere}
@@ -542,7 +552,12 @@ export function Play({ go, roundId }: { go: Go; roundId: string }) {
           {hole.green && !geo.pos && <p className="muted small center">{geo.error ?? 'Getting your GPS position…'}</p>}
           {!wx && wxErr && <p className="muted small center">Wind unavailable: {wxErr}</p>}
 
-          {/* Shot tracking */}
+          {/* Shot tracking (if this round tracks shots) */}
+          {round.trackShots === false ? (
+            <button className="btn ghost small" onClick={() => update((r) => ({ ...r, trackShots: true }))}>
+              📍 Track shots after all
+            </button>
+          ) : (
           <Card title="Shot tracker">
             <div className="row gap">
               <select value={club} onChange={(e) => setClub(e.target.value)}>
@@ -595,10 +610,20 @@ export function Play({ go, roundId }: { go: Go; roundId: string }) {
             <button className="btn ghost small" onClick={() => go({ name: 'tracer' })}>
               🎥 Film a shot with a tracer
             </button>
+            {Object.values(round.shots).some((x) => x.length) && (
+              <button className="btn ghost small" onClick={() => setReplayOpen(true)}>
+                📺 Replay my shots so far
+              </button>
+            )}
+            {replayOpen && <RoundReplay round={round} units={units} startHole={hole.number} onClose={() => setReplayOpen(false)} />}
             <button className="btn ghost small" onClick={() => go({ name: 'siri' })}>
               🎙️ Mark shots hands-free: "Hey Siri, mark shot"
             </button>
+            <button className="btn ghost small" onClick={() => update((r) => ({ ...r, trackShots: false }))}>
+              Stop tracking shots this round
+            </button>
           </Card>
+          )}
 
           {/* Scores */}
           <Card title="Scores">

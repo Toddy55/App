@@ -4,12 +4,14 @@ import { shotLegs } from '../lib/tracer';
 import { fmtDist } from '../lib/geo';
 import { HoleMap } from './HoleMap';
 import { Card } from './ui';
+import { RoundReplay } from './RoundReplay';
 
 /** After the round: watch each hole's shots trace across the satellite map. */
 export function ShotReplay({ round, units }: { round: Round; units: 'm' | 'yd' }) {
   const tracked = round.holes.filter((h) => (round.shots[h.number]?.length ?? 0) > 0);
   const [holeNo, setHoleNo] = useState(tracked[0]?.number);
   const [run, setRun] = useState(0);
+  const [full, setFull] = useState(false);
   if (!tracked.length || holeNo == null) return null;
   const hole = round.holes.find((h) => h.number === holeNo)!;
   const shots = round.shots[holeNo] ?? [];
@@ -18,6 +20,10 @@ export function ShotReplay({ round, units }: { round: Round; units: 'm' | 'yd' }
 
   return (
     <Card title="🎯 Shot replay">
+      <button className="btn primary block" onClick={() => setFull(true)}>
+        📺 Watch the round full screen
+      </button>
+      {full && <RoundReplay round={round} units={units} startHole={holeNo} onClose={() => setFull(false)} />}
       <div className="hole-chips">
         {tracked.map((h) => (
           <button

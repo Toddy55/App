@@ -74,6 +74,22 @@ export function Setup({ go, courseId, join }: { go: Go; courseId?: string; join?
   const [ambroseSize, setAmbroseSize] = useState<2 | 3 | 4>(4);
   const [skinsNet, setSkinsNet] = useState(false);
   const [carry, setCarry] = useState(true);
+  // Remembered between rounds: some like to track every shot, some just want the scores
+  const [trackShots, setTrackShots] = useState(() => {
+    try {
+      return localStorage.getItem('gtg.trackShots') !== '0';
+    } catch {
+      return true;
+    }
+  });
+  const setTrack = (on: boolean) => {
+    setTrackShots(on);
+    try {
+      localStorage.setItem('gtg.trackShots', on ? '1' : '0');
+    } catch {
+      /* fine */
+    }
+  };
   const [newName, setNewName] = useState('');
   const [newGa, setNewGa] = useState('');
   const friends = store.friends();
@@ -163,6 +179,7 @@ export function Setup({ go, courseId, join }: { go: Go; courseId?: string; join?
       stats: {},
       shots: {},
       pins: {},
+      trackShots,
       options: { allowance, skinsNet, skinsCarryOver: carry, ambroseSize: format === 'ambrose' ? ambroseSize : undefined },
       completed: false,
       compIds,
@@ -241,6 +258,15 @@ export function Setup({ go, courseId, join }: { go: Go; courseId?: string; join?
             </p>
           </Card>
         )}
+        <Card title="Shot tracking">
+          <label className="check">
+            <input type="checkbox" checked={trackShots} onChange={(e) => setTrack(e.target.checked)} />
+            <span>
+              <strong>Mark my shots this round</strong>
+              <span className="muted small"> Tap "Mark shot from here" (or say "Hey Siri, mark shot") before each shot for club distances, the replay and better caddie advice. Untick to just keep score.</span>
+            </span>
+          </label>
+        </Card>
         <Card title="Format">
           {!join && <div className="format-grid">
             {FORMATS.map((f) => (

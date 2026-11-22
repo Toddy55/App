@@ -9,7 +9,7 @@ import { InviteSheet } from '../components/InviteSheet';
 import { PasteInvite } from '../components/PasteInvite';
 import { isIOS, isStandalone } from '../lib/install';
 import { LiveFriendsCard } from '../components/LiveFriendsCard';
-import { HandicapEditor, handicapLabel, parseHcp, STALE_MS } from '../components/HandicapEditor';
+import { gaHandicapUrl, HandicapEditor, handicapLabel, parseHcp, STALE_MS } from '../components/HandicapEditor';
 
 export function Friends({ go }: { go: Go }) {
   const [friends, setFriends] = useState<Player[]>(store.friends());
@@ -194,13 +194,34 @@ export function FriendDetail({ go, id }: { go: Go; id: string }) {
     <div className="screen">
       <Header title={f.name} onBack={() => go({ name: 'friends' })} />
       <div className="content">
-        <Card>
-          <label className="field">
-            <span>Name</span>
-            <input value={f.name} onChange={(e) => save({ ...f, name: e.target.value })} />
-          </label>
-          <HandicapEditor player={f} onChange={save} />
-        </Card>
+        {f.crew ? (
+          // Linked up: their details are theirs to change, on their own phone
+          <Card>
+            <div className="linked-head">
+              <strong className="linked-name">{f.name}</strong>
+              <span className="linked-badge">🔗 Linked</span>
+            </div>
+            <p className="small">
+              <strong>{handicapLabel(f)}</strong>
+              {f.gaNumber ? ` · GA no. ${f.gaNumber}` : ''}
+            </p>
+            {f.gaNumber && f.hcpSource !== 'manual' && (
+              <a className="btn block" href={gaHandicapUrl(f.gaNumber)} target="_blank" rel="noreferrer">
+                Check it on Golf Australia
+              </a>
+            )}
+            <p className="muted small">{f.name} looks after their own name and handicap on their phone. When they change it, it updates here by itself, so everyone's playing off the right number.</p>
+          </Card>
+        ) : (
+          <Card>
+            <label className="field">
+              <span>Name</span>
+              <input value={f.name} onChange={(e) => save({ ...f, name: e.target.value })} />
+            </label>
+            <HandicapEditor player={f} onChange={save} />
+            <p className="muted small">Added by you. Once {f.name || 'they'} link up with your invite, they look after these details themselves.</p>
+          </Card>
+        )}
         <div className="row gap">
           <button className="btn primary grow" onClick={() => { planRoundWith([f.id]); go({ name: 'setup' }); }}>
             ⛳ Play a round with {f.name}

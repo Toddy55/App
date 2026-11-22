@@ -9,6 +9,7 @@ import { computeResult, FORMAT_LABELS } from '../lib/scoring';
 import { store } from '../lib/storage';
 import { Scorecard } from '../components/Scorecard';
 import { ShotCam } from '../components/ShotCam';
+import { RoundReplay } from '../components/RoundReplay';
 import { StandingsTable } from '../screens/Leaderboards';
 import { Card, Header, type Go } from '../components/ui';
 import type { GroupDoc } from './live';
@@ -26,6 +27,7 @@ export function LiveView({ go, code }: { go: Go; code: string }) {
   const [groups, setGroups] = useState<Group[] | null | undefined>(undefined);
   const [err, setErr] = useState<string | null>(null);
   const [flash, setFlash] = useState(false);
+  const [replay, setReplay] = useState<string | null>(null);
   const [, tick] = useState(0);
 
   useEffect(() => {
@@ -164,6 +166,17 @@ export function LiveView({ go, code }: { go: Go; code: string }) {
               </ul>
               <p className="muted small">Updated {ago < 1 ? 'just now' : `${ago} min ago`}</p>
             </Card>
+
+            {groups
+              .filter((g) => Object.values(g.bundle.rounds[0]?.shots ?? {}).some((x) => x.length))
+              .map((g) => (
+                <button key={g.id} className="btn primary block replay-open-btn" onClick={() => setReplay(g.id)}>
+                  📺 Watch {g.doc.scorer}'s shots{g.doc.status === 'final' ? ' (round replay)' : ' so far'}
+                </button>
+              ))}
+            {replay && groups.find((g) => g.id === replay) && (
+              <RoundReplay round={groups.find((g) => g.id === replay)!.bundle.rounds[0]} who={groups.find((g) => g.id === replay)!.doc.scorer} units={store.settings().units} onClose={() => setReplay(null)} />
+            )}
 
             <ShotCam code={code} />
 

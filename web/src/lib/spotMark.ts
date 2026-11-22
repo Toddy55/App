@@ -25,23 +25,38 @@ export function averageFix(samples: { pos: LatLon; acc: number }[]): { pos: LatL
   return { pos: { lat: lat / w, lon: lon / w }, acc };
 }
 
-export function sampleFix(ms = 4000, latest?: { pos: LatLon; acc: number }): Promise<{ pos: LatLon; acc: number }> {
+export function sampleFix(ms = 5000, latest?: { pos: LatLon; acc: number }, awayFrom?: LatLon): Promise<{ pos: LatLon; acc: number; stale?: boolean }> {
   return new Promise((ok, bad) => {
     if (!('geolocation' in navigator)) return bad(new Error('GPS not available on this phone'));
+    const start = Date.now();
     const samples: { pos: LatLon; acc: number }[] = [];
-    const add = (p: GeolocationPosition) => samples.push({ pos: { lat: p.coords.latitude, lon: p.coords.longitude }, acc: p.coords.accuracy || 5 });
+    // Phones hand back the last fix straight away (often from where you were standing before):
+    // only keep readings taken after the tap
+    const add = (p: GeolocationPosition) => {
+      if (p.timestamp < start - 300) return;
+      samples.push({ pos: { lat: p.coords.latitude, lon: p.coords.longitude }, acc: p.coords.accuracy || 5 });
+    };
     const opts = { enableHighAccuracy: true, maximumAge: 0, timeout: ms + 4000 };
     const id = navigator.geolocation.watchPosition(add, () => undefined, opts);
     navigator.geolocation.getCurrentPosition(add, () => undefined, opts);
     setTimeout(() => {
       navigator.geolocation.clearWatch(id);
-      // No fresh readings in time: fall back to the app's latest fix
-      if (!samples.length && latest) samples.push(latest);
-      const fix = averageFix(samples);
-      if (fix) ok(fix);
-      else bad(new Error('No GPS fix yet. Give it a few seconds and try again.'));
+      // Later readings have caught up with where you're standing now: trust them more
+      const recent = samples.length >= 4 ? samples.slice(Math.floor(samples.length / 3)) : samples;
+      let fix = averageFix(recent);
+      if (!fix && latest) fix = averageFix([latest]);
+      if (!fix) return bad(new Error('No GPS fix yet. Give it a few seconds and try again.'));
+      // Still sitting on the last spot you marked? The GPS hasn't caught up with you yet
+      const stale = !!awayFrom && Math.hypot(...Object.values(toLocalM(awayFrom, fix.pos))) < Math.max(2.5, fix.acc * 0.6);
+      ok({ ...fix, stale });
     }, ms);
   });
+}
+
+function toLocalM(a: LatLon, b: LatLon) {
+  const R = 6371008.8;
+  const k = Math.PI / 180;
+  return { x: (b.lon - a.lon) * k * R * Math.cos(a.lat * k), y: (b.lat - a.lat) * k * R };
 }
 
 /** Read the putt out loud (in an Aussie voice if the phone has one). */
@@ -50,6 +65,7 @@ export function speak(text: string) {
     const synth = window.speechSynthesis;
     if (!synth) return;
     const words = text
+      .replace(/\s*\([^)]*\)/g, '')
       .replace(/(\d+(?:\.\d)?) m putt/g, '$1 metre putt')
       .replace(/(\d+) cm/g, '$1 centimetres')
       .replace(/(\d)½/g, '$1 and a half')

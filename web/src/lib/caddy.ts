@@ -24,7 +24,7 @@ export interface ClubModel {
   roll: number;
   sdLong: number;
   sdLat: number;
-  source: 'tracked' | 'typical';
+  source: 'tracked' | 'typical' | 'mine';
 }
 
 /** Typical totals (m) for a 15-handicap club golfer. */
@@ -58,7 +58,12 @@ export function buildBag(settings: Settings, rounds: Round[], handicap: number, 
     let total = t[1] * skill * Math.pow(speedFactor, 1.2);
     let source: ClubModel['source'] = 'typical';
     const tr = tracked.get(club);
-    if (tr && tr.n >= 3) {
+    const mine = settings.myDistances?.[club];
+    if (mine && mine > 20) {
+      // Your own number comes first; lots of tracked shots nudge it
+      total = (mine * 8 + (tr && tr.n >= 3 ? tr.avg * tr.n : 0)) / (8 + (tr && tr.n >= 3 ? tr.n : 0));
+      source = 'mine';
+    } else if (tr && tr.n >= 3) {
       // trust the golfer's own numbers more the more shots we have
       total = (tr.avg * tr.n + total * 3) / (tr.n + 3);
       source = 'tracked';
@@ -406,7 +411,7 @@ export function advise(opts: {
     .filter((t) => t.pct >= 3);
 
   const lines: string[] = [];
-  lines.push(`${best.club.club} goes about ${fmt(best.club.total)}${best.club.source === 'tracked' ? ' (from your tracked shots)' : ''}; here it flies ${fmt(best.carryReal)}.`);
+  lines.push(`${best.club.club} goes about ${fmt(best.club.total)}${best.club.source === 'tracked' ? ' (from your tracked shots)' : best.club.source === 'mine' ? ' (your distance)' : ''}; here it flies ${fmt(best.carryReal)}.`);
   if (eff && eff.label !== 'Calm') {
     const parts: string[] = [];
     if (Math.abs(eff.head) >= 3) parts.push(`${Math.round(Math.abs(eff.head))} km/h ${eff.head > 0 ? 'into you' : 'behind you'}`);

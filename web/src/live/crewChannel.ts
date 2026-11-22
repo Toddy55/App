@@ -101,8 +101,9 @@ export async function watchMyCrew(onAdded: (names: string[]) => void): Promise<(
           if (m.kind) continue; // not a link-up (e.g. this phone's own live note)
           const name = String(m.name ?? '').trim().slice(0, 40);
           if (!name) continue;
-          const key = personKey(name);
-          if (key === personKey(me.name)) continue;
+          if (personKey(name) === personKey(me.name)) continue;
+          // One entry per mate: by their phone's crew code (so a new name updates them), else by name
+          const key = typeof m.crew === 'string' && m.crew ? `c:${m.crew}` : personKey(name);
           const prev = latest.get(key);
           if (!prev || (Number(m.at) || 0) > prev.at) latest.set(key, { ...m, name, at: Number(m.at) || 0 });
         } catch {
@@ -116,11 +117,18 @@ export async function watchMyCrew(onAdded: (names: string[]) => void): Promise<(
           ...(m.gaNo ? { gaNumber: String(m.gaNo) } : {}),
           ...(m.src === 'manual' || m.src === 'ga' ? { hcpSource: m.src } : {}),
         };
-        const have = friends.find((f) => personKey(f.name) === key);
+        void key;
+        const have = (details.crew ? friends.find((f) => f.crew === details.crew) : undefined) ?? friends.find((f) => personKey(f.name) === personKey(m.name));
         if (have) {
-          const changed = (details.crew && have.crew !== details.crew) || have.gaHandicap !== details.gaHandicap || (details.gaNumber && have.gaNumber !== details.gaNumber) || (details.hcpSource && have.hcpSource !== details.hcpSource);
+          // Their details are theirs: whatever their phone says wins
+          const changed =
+            have.name !== m.name ||
+            (details.crew && have.crew !== details.crew) ||
+            have.gaHandicap !== details.gaHandicap ||
+            (details.gaNumber ?? undefined) !== (have.gaNumber ?? undefined) ||
+            (details.hcpSource && have.hcpSource !== details.hcpSource);
           if (changed) {
-            store.saveFriend({ ...have, ...details });
+            store.saveFriend({ ...have, ...details, name: m.name, gaNumber: details.gaNumber });
             updated = true;
           }
           continue;
@@ -153,7 +161,9 @@ export async function watchFriendsLive(crews: string[], onLive: (live: LiveNote[
   if (!liveAvailable() || !crews.length) return () => undefined;
   const { watchPrefix } = await import('./live');
   const current = new Map<string, LiveNote>();
-  const emit = () => onLive([...current.values()].filter((n) => !n.final && Date.now() - n.at < 6 * 3600 * 1000).sort((a, b) => b.at - a.at));
+  // Live rounds (last 6 hours), plus rounds finished in the last 12 so mates can still watch the replay
+  const emit = () =>
+    onLive([...current.values()].filter((n) => (n.final ? Date.now() - n.at < 12 * 3600 * 1000 : Date.now() - n.at < 6 * 3600 * 1000)).sort((a, b) => Number(a.final) - Number(b.final) || b.at - a.at));
   const unsubs = await Promise.all(
     crews.map((c) =>
       watchPrefix(
@@ -279,4 +289,22 @@ export function takeMovedFriends(b: { crew?: string; people: { name: string; ga:
   }
   if (b.crew) addExtraCrewCode(b.crew);
   return added;
+}
+
+/** Send your current name and handicap to every linked mate (their phones update you by themselves). */
+export async function shareMyDetails(): Promise<number> {
+  if (!liveAvailable()) return 0;
+  const me = store.settings().me;
+  if (!me.name || me.name === 'Me') return 0;
+  const codes = [...new Set(store.friends().map((f) => f.crew).filter((c): c is string => !!c))];
+  let sent = 0;
+  for (const c of codes) {
+    try {
+      await announceLinkUp(c, me);
+      sent++;
+    } catch {
+      /* try again next time */
+    }
+  }
+  return sent;
 }
