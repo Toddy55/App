@@ -132,7 +132,29 @@ export function Friends({ go }: { go: Go }) {
 }
 
 /** In Safari on iPhone: link this copy with the Home Screen app so they share everything from now on. */
+/** Linked already? Another copy of the app (e.g. the Home Screen one) has joined this one's sync. */
+function linkedElsewhere(): boolean {
+  try {
+    return localStorage.getItem('gtg.linkCardHidden') === '1' || JSON.parse(localStorage.getItem('gtg.extraCrews') || '[]').length > 0;
+  } catch {
+    return false;
+  }
+}
+
 export function MoveToApp() {
+  const [hidden, setHidden] = useState(linkedElsewhere);
+  // The other copy can link up while this page is open: hide as soon as it does
+  useEffect(() => {
+    const on = () => setHidden(linkedElsewhere());
+    window.addEventListener('gtg:friends', on);
+    window.addEventListener('gtg:synced', on);
+    const t = setInterval(on, 4000);
+    return () => {
+      window.removeEventListener('gtg:friends', on);
+      window.removeEventListener('gtg:synced', on);
+      clearInterval(t);
+    };
+  }, []);
   const [done, setDone] = useState(false);
   // Built up front: Safari only lets a tap copy straight away
   const [url, setUrl] = useState<string | null>(null);
@@ -148,6 +170,7 @@ export function MoveToApp() {
     }
     setDone(true);
   };
+  if (hidden) return null;
   return (
     <Card title="Use the app on your Home Screen?">
       <p className="small">
@@ -159,6 +182,19 @@ export function MoveToApp() {
       <p className="muted small">
         Then open Shotmate from your Home Screen → <strong>Friends</strong> → <strong>Paste an invite</strong>. That's it: anything added in either one shows up in both. No need to re-pin the app; it updates itself.
       </p>
+      <button
+        className="btn ghost small"
+        onClick={() => {
+          try {
+            localStorage.setItem('gtg.linkCardHidden', '1');
+          } catch {
+            /* fine */
+          }
+          setHidden(true);
+        }}
+      >
+        Already linked, or just using Safari? Hide this
+      </button>
     </Card>
   );
 }
