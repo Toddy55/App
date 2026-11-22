@@ -5,6 +5,8 @@ import { store, uid } from '../lib/storage';
 import { ambroseTeamHandicap, dailyHandicap, DEFAULT_ALLOWANCE, playingHandicap } from '../lib/handicap';
 import { FORMAT_BLURB, FORMAT_LABELS } from '../lib/scoring';
 import { GameInfo } from '../components/GameInfo';
+import { holesFromTee, teesFor, totalLength } from '../lib/tees';
+import { fmtDist } from '../lib/geo';
 import { aidsFor, AIDS_BLURB, AIDS_LABELS, suggestedComps } from '../lib/comps';
 import { newGroupId } from '../live/payload';
 import { Card, Header, Segmented, type Go } from '../components/ui';
@@ -75,6 +77,16 @@ export function Setup({ go, courseId, join }: { go: Go; courseId?: string; join?
   const [ambroseSize, setAmbroseSize] = useState<2 | 3 | 4>(4);
   const [skinsNet, setSkinsNet] = useState(false);
   const [carry, setCarry] = useState(true);
+  // Tee box: remembered per course
+  const [teePick, setTeePick] = useState<string | null>(null);
+  const pickTee = (id: string) => {
+    setTeePick(id);
+    try {
+      if (cid) localStorage.setItem(`gtg.tee.${cid}`, id);
+    } catch {
+      /* fine */
+    }
+  };
   // Remembered between rounds: some like to track every shot, some just want the scores
   const [trackShots, setTrackShots] = useState(() => {
     try {
@@ -127,6 +139,19 @@ export function Setup({ go, courseId, join }: { go: Go; courseId?: string; join?
       : which === 'front'
         ? course.holes.filter((h) => h.number <= 9)
         : course.holes.filter((h) => h.number > 9);
+  const tees = teesFor(course);
+  const savedTee = (() => {
+    try {
+      return localStorage.getItem(`gtg.tee.${course.id}`);
+    } catch {
+      return null;
+    }
+  })();
+  const tee = tees.find((t) => t.id === (teePick ?? savedTee)) ?? tees[0];
+  // The holes as you'll play them: tee spot moved and lengths adjusted for your tee
+  const played = holesFromTee(holes, tee);
+  const slope = tee.slopeRating ?? course.slopeRating;
+  const scratch = tee.scratchRating ?? course.scratchRating;
   const par18 = course.holes.reduce((s, h) => s + h.par, 0) * (course.holes.length <= 9 ? 2 : 1);
   const nine = holes.length <= 9;
 
@@ -147,7 +172,7 @@ export function Setup({ go, courseId, join }: { go: Go; courseId?: string; join?
 
   const start = () => {
     const rp: RoundPlayer[] = players.map((p) => {
-      const dh = dailyHandicap(p.ga, par18, course.slopeRating, course.scratchRating, holes.length);
+      const dh = dailyHandicap(p.ga, par18, slope, scratch, holes.length);
       return { id: p.id, name: p.name, gaHandicap: p.ga, dailyHandicap: dh, playingHandicap: playingHandicap(dh, allowance) };
     });
     let teams: Team[] | undefined;
@@ -172,7 +197,8 @@ export function Setup({ go, courseId, join }: { go: Go; courseId?: string; join?
       courseName: course.name,
       date: new Date().toISOString(),
       format,
-      holes,
+      holes: played,
+      teeName: tee.name,
       players: rp,
       teams,
       meId,
@@ -211,8 +237,8 @@ export function Setup({ go, courseId, join }: { go: Go; courseId?: string; join?
               <strong>{course.name}</strong>
               <div className="muted small">
                 Par {holes.reduce((s, h) => s + h.par, 0)}
-                {course.slopeRating ? ` · slope ${course.slopeRating}` : ''}
-                {course.scratchRating ? ` · scratch ${course.scratchRating}` : ' · no ratings set (Daily Handicap = GA Handicap)'}
+                {slope ? ` · slope ${slope}` : ''}
+                {scratch ? ` · scratch ${scratch}` : ' · no ratings set (Daily Handicap = GA Handicap)'}
               </div>
             </div>
             <button className="btn small" onClick={() => go({ name: 'courses', pick: true })}>
@@ -259,6 +285,26 @@ export function Setup({ go, courseId, join }: { go: Go; courseId?: string; join?
             </p>
           </Card>
         )}
+        <Card title="Tee box">
+          <div className="tee-chips">
+            {tees.map((t) => (
+              <button key={t.id} className={`chip tee-chip ${t.id === tee.id ? 'on' : ''}`} onClick={() => pickTee(t.id)}>
+                <i style={{ background: t.colour ?? '#94a3b8' }} />
+                {t.name}
+                <small>
+                  {fmtDist(totalLength(holes, t), settings.units)}
+                  {settings.units}
+                </small>
+              </button>
+            ))}
+          </div>
+          <p className="muted small">
+            {tee.estimated
+              ? `${tee.name} tee lengths are estimated from the mapped tee until the club's tees are added (Courses → this course → Tees).`
+              : `Hole lengths off the ${tee.name} tees${tee.slopeRating ? `, slope ${tee.slopeRating}${tee.scratchRating ? ` / scratch ${tee.scratchRating}` : ''}` : ''}.`}{' '}
+            Distances, the hole view and the caddie all play from here.
+          </p>
+        </Card>
         <Card title="Shot tracking">
           <label className="check">
             <input type="checkbox" checked={trackShots} onChange={(e) => setTrack(e.target.checked)} />
@@ -314,7 +360,7 @@ export function Setup({ go, courseId, join }: { go: Go; courseId?: string; join?
           {teamsNeeded && <p className="muted small">Teams are made in order: {teamSize === 2 ? 'players 1 & 2 v 3 & 4' : `groups of ${teamSize}`}.</p>}
           <ul className="list">
             {players.map((p, i) => {
-              const dh = dailyHandicap(p.ga, par18, course.slopeRating, course.scratchRating, holes.length);
+              const dh = dailyHandicap(p.ga, par18, slope, scratch, holes.length);
               return (
                 <li key={p.id} className="row between">
                   <div>
@@ -367,7 +413,7 @@ export function Setup({ go, courseId, join }: { go: Go; courseId?: string; join?
               Team handicaps:{' '}
               {Array.from({ length: Math.ceil(players.length / ambroseSize) }, (_, t) => {
                 const members = players.slice(t * ambroseSize, (t + 1) * ambroseSize);
-                return `T${t + 1} ${ambroseTeamHandicap(members.map((m) => dailyHandicap(m.ga, par18, course.slopeRating, course.scratchRating, holes.length)))}`;
+                return `T${t + 1} ${ambroseTeamHandicap(members.map((m) => dailyHandicap(m.ga, par18, slope, scratch, holes.length)))}`;
               }).join(' · ')}
             </p>
           )}

@@ -5,6 +5,7 @@ import { blankHoles, courseCompleteness } from '../lib/courses';
 import { distanceM, fmtDist } from '../lib/geo';
 import { getPosition } from '../hooks';
 import { HoleMap } from '../components/HoleMap';
+import { TeesEditor } from '../components/TeesEditor';
 import { Card, Header, Segmented, Stepper, type Go } from '../components/ui';
 
 export function CourseEditor({ go, id }: { go: Go; id: string }) {
@@ -97,6 +98,7 @@ export function CourseEditor({ go, id }: { go: Go; id: string }) {
           </div>
         </Card>
 
+        <TeesEditor course={course} save={save} units={units} />
         <Card title="Scorecard">
           {!course.cardEdited && course.holes.some((h) => h.parEst || h.siEst) && (
             <p className="warn small">
