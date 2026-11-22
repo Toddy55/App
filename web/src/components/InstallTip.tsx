@@ -24,7 +24,7 @@ export function InstallTip() {
   return (
     <section className="card install-tip">
       <div className="row between">
-        <strong>📲 Put Fairway Coach on your home screen</strong>
+        <strong>📲 Put Shotmate on your home screen</strong>
         <button className="icon-btn small" aria-label="Hide" onClick={hide}>
           ✕
         </button>

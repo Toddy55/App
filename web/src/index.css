@@ -813,3 +813,5 @@ body.replay-open .tabbar { display: none; }
 
 .replay-ticker.done .rt-dist { font-size: 1.3rem; white-space: nowrap; }
 .inline-ico { width: 14px; height: 14px; vertical-align: -2px; }
+.rebrand-head { display: flex; gap: 12px; align-items: center; }
+.rebrand-mark { width: 48px; height: 48px; border-radius: 14px; background: linear-gradient(135deg, #08162e, #13315c); display: grid; place-items: center; flex: none; border: 1px solid rgba(255, 255, 255, .15); }

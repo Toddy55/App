@@ -1,4 +1,4 @@
-# Fairway Coach
+# Shotmate
 
 A phone-first golf app for Australian golfers. It scores every common format, gives GPS distances to the front, centre, back and pin, shows live wind with a "plays like" number, and coaches you on what to fix after every round.
 

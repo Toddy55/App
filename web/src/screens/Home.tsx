@@ -7,6 +7,7 @@ import { InstallTip } from '../components/InstallTip';
 import { PasteInvite } from '../components/PasteInvite';
 import { LiveFriendsCard } from '../components/LiveFriendsCard';
 import { MoveToApp } from './Friends';
+import { RebrandNote } from '../components/RebrandNote';
 import { isIOS, isStandalone } from '../lib/install';
 import { HomeBgCredit } from '../components/HomeBackdrop';
 import { ChartColumn, ChevronRight, Flag, Map as MapIcon, Settings as SettingsIcon, Trophy, Users, Video } from 'lucide-react';
@@ -32,7 +33,7 @@ export function Home({ go }: { go: Go }) {
   return (
     <div className="screen home-screen">
       <Header
-        title="Fairway Coach"
+        title="Shotmate"
         right={
           <button className="icon-btn" onClick={() => go({ name: 'settings' })} aria-label="Settings">
             <SettingsIcon />
@@ -40,6 +41,7 @@ export function Home({ go }: { go: Go }) {
         }
       />
       <div className="content">
+        <RebrandNote />
         <LiveFriendsCard go={go} />
         {isIOS() && !isStandalone() && (rounds.length > 0 || store.friends().length > 0) && <MoveToApp />}
         <section className="hero">

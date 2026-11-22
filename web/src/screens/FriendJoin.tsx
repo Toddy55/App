@@ -68,7 +68,7 @@ export function FriendJoin({ go, data, to }: { go: Go; data: string; to?: string
       setSendBack(!told);
       setDone(
         told
-          ? `You're now mates with ${bundle.from} on Fairway Coach, and you'll show up in ${bundle.from}'s Friends.`
+          ? `You're now mates with ${bundle.from} on Shotmate, and you'll show up in ${bundle.from}'s Friends.`
           : bundle.crew && liveAvailable()
             ? `${bundle.from} is in your Friends now. We couldn't reach ${bundle.from}'s phone just yet (signal?), so we'll keep trying. To be sure, send ${bundle.from} your link too:`
             : `${bundle.from} is in your Friends now. This invite is an older one, so send ${bundle.from} your link back and you'll land on their list too:`,
@@ -127,7 +127,7 @@ export function FriendJoin({ go, data, to }: { go: Go; data: string; to?: string
                 onClick={async () => {
                   const { myFriendInviteUrl } = await import('../live/crewChannel');
                   const { shareLink } = await import('../lib/share');
-                  await shareLink('Fairway Coach', `It's ${store.settings().me.name}. Tap to add me to your Friends on Fairway Coach:`, await myFriendInviteUrl());
+                  await shareLink('Shotmate', `It's ${store.settings().me.name}. Tap to add me to your Friends on Shotmate:`, await myFriendInviteUrl());
                 }}
               >
                 🔗 Send {bundle.from} my link
