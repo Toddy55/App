@@ -825,3 +825,19 @@ body.replay-open .tabbar { display: none; }
 .replay-bottom { position: absolute; left: 12px; right: 12px; bottom: calc(148px + env(safe-area-inset-bottom)); display: flex; flex-direction: column; align-items: center; gap: 8px; pointer-events: none; }
 .replay-tagline { stroke: var(--gold); stroke-width: 1.2; opacity: .8; }
 .games-head { margin-top: 6px; }
+
+/* ---------- ⓘ how-to-play ---------- */
+.format-wrap { position: relative; display: flex; }
+.format-wrap .format { flex: 1; }
+.info-dot { position: absolute; top: 6px; right: 6px; width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid rgba(255, 255, 255, .55); background: rgba(5, 10, 20, .35); color: #fff; font: italic 700 .72rem Georgia, 'Times New Roman', serif; display: grid; place-items: center; padding: 0; cursor: pointer; z-index: 1; }
+.format.on + .info-dot { border-color: var(--gold-ink); color: var(--gold-ink); background: rgba(255, 255, 255, .35); }
+.info-sheet-bg { position: fixed; inset: 0; z-index: 4000; background: rgba(0, 0, 0, .55); display: flex; align-items: flex-end; justify-content: center; animation: fade-in .2s ease-out; }
+.info-sheet { width: 100%; max-width: 560px; max-height: 85vh; overflow-y: auto; background-color: #0b1a33; background-image: var(--brand-grad); color: #fff; border-radius: 22px 22px 0 0; padding: 18px 18px calc(18px + env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: 8px; border-top: 1px solid rgba(255, 255, 255, .15); animation: sheet-up .25s ease-out; }
+.info-sheet-head { display: flex; justify-content: space-between; align-items: center; font-size: 1.15rem; }
+.info-sheet h4 { margin: 6px 0 0; font-size: .78rem; letter-spacing: .08em; text-transform: uppercase; color: var(--gold); }
+.info-sheet ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; font-size: .92rem; line-height: 1.4; }
+.info-eg { background: rgba(255, 255, 255, .08); border-radius: 12px; padding: 8px 12px; font-size: .88rem; margin: 4px 0 0; }
+@keyframes sheet-up { from { transform: translateY(30px); opacity: .4; } to { transform: none; opacity: 1; } }
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+.format-wrap .format { padding-left: 26px; padding-right: 26px; }
+.info-sheet .btn.primary { background: var(--gold); color: var(--gold-ink); border-color: var(--gold); }

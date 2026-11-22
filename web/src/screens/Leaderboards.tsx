@@ -7,6 +7,7 @@ import { Card, Header, Segmented, type Go } from '../components/ui';
 import { liveAvailable } from '../live/config';
 import { CompLive } from '../components/CompLive';
 import { InviteSheet } from '../components/InviteSheet';
+import { GameInfo } from '../components/GameInfo';
 import type { LiveRoundNote } from '../live/compChannel';
 import { lastSeen, type ChatMsg } from '../live/chat';
 
@@ -409,17 +410,23 @@ export function CompEditor({ go, id }: { go: Go; id?: string }) {
             {(Object.keys(SCORING_LABELS) as Competition['scoring'][])
               .filter((k) => !(GAME_SCORINGS as readonly string[]).includes(k))
               .map((k) => (
-                <button key={k} className={`format ${c.scoring === k ? 'on' : ''}`} onClick={() => set({ scoring: k })}>
-                  {SCORING_LABELS[k]}
-                </button>
+                <div key={k} className="format-wrap">
+                  <button className={`format ${c.scoring === k ? 'on' : ''}`} onClick={() => set({ scoring: k })}>
+                    {SCORING_LABELS[k]}
+                  </button>
+                  <GameInfo id={k} />
+                </div>
               ))}
           </div>
           <span className="eyebrow games-head">Mates' games · 2 to 4 players</span>
           <div className="format-grid">
             {GAME_SCORINGS.map((k) => (
-              <button key={k} className={`format ${c.scoring === k ? 'on' : ''}`} onClick={() => set({ scoring: k, minPlayers: Math.max(2, c.minPlayers) })}>
-                {SCORING_LABELS[k]}
-              </button>
+              <div key={k} className="format-wrap">
+                <button className={`format ${c.scoring === k ? 'on' : ''}`} onClick={() => set({ scoring: k, minPlayers: Math.max(2, c.minPlayers) })}>
+                  {SCORING_LABELS[k]}
+                </button>
+                <GameInfo id={k} />
+              </div>
             ))}
           </div>
           <p className="muted small">{SCORING_BLURB[c.scoring]}</p>
