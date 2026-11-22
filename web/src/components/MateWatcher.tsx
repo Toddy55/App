@@ -41,6 +41,19 @@ export function MateWatcher({ go }: { go: (r: { name: 'friends' } | { name: 'liv
     };
   }, []);
 
+  // Link-ups this phone couldn't send earlier (no signal): keep trying
+  useEffect(() => {
+    if (!liveAvailable()) return;
+    const retry = () => import('../live/crewChannel').then(({ retryPendingLinkUps }) => retryPendingLinkUps()).catch(() => 0);
+    retry();
+    window.addEventListener('online', retry);
+    const t = setInterval(retry, 60_000);
+    return () => {
+      window.removeEventListener('online', retry);
+      clearInterval(t);
+    };
+  }, []);
+
   // Your comps: mates who join from an invite
   useEffect(() => {
     if (!liveAvailable() || !compKey) return;

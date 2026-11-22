@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
-import type { Player } from '../types';
+import type { Format, Player } from '../types';
+import { planRoundWith } from './Setup';
 import { store, uid } from '../lib/storage';
 import { headToHead } from '../lib/comps';
 import { computeResult, FORMAT_LABELS } from '../lib/scoring';
 import { Card, Header, type Go } from '../components/ui';
 import { InviteSheet } from '../components/InviteSheet';
-import { encodeBundle, friendUrl, makeBundle, personKey } from '../lib/share';
 import { PasteInvite } from '../components/PasteInvite';
+import { isStandalone } from '../lib/install';
 import { LiveFriendsCard } from '../components/LiveFriendsCard';
 import { HandicapEditor, handicapLabel, parseHcp, STALE_MS } from '../components/HandicapEditor';
 
@@ -22,17 +23,19 @@ export function Friends({ go }: { go: Go }) {
     return () => window.removeEventListener('gtg:friends', on);
   }, []);
   const startInvite = async () => {
-    const { myCrewCode } = await import('../live/crewChannel');
-    const s = store.settings();
-    // Just you: your name and handicap, plus your crew code so you hear when they link up
-    const b = {
-      ...makeBundle({ me: s.me, friends: [], rounds: [], comps: [] }),
-      people: [{ key: personKey(s.me.name), name: s.me.name, ga: s.me.gaHandicap, ...(s.me.gaNumber ? { gaNo: s.me.gaNumber } : {}), ...(s.me.hcpSource ? { src: s.me.hcpSource } : {}) }],
-      crew: myCrewCode(),
-    };
-    setInviting(friendUrl(await encodeBundle(b)));
+    const { myFriendInviteUrl } = await import('../live/crewChannel');
+    setInviting(await myFriendInviteUrl());
   };
   const rounds = store.rounds();
+  const [picked, setPicked] = useState<string[]>([]);
+  const names = (ids: string[]) => {
+    const n = ids.map((id) => friends.find((f) => f.id === id)?.name ?? '').filter(Boolean);
+    return n.length > 1 ? `${n.slice(0, -1).join(', ')} & ${n[n.length - 1]}` : n[0] ?? '';
+  };
+  const teeOff = (format?: Format) => {
+    planRoundWith(picked, format);
+    go({ name: 'setup' });
+  };
 
   const add = () => {
     if (!name.trim()) return;
@@ -46,6 +49,53 @@ export function Friends({ go }: { go: Go }) {
     <div className="screen">
       <Header title="Friends" onBack={() => go({ name: 'home' })} />
       <div className="content">
+        <LiveFriendsCard go={go} />
+        <Card title={`Your crew (${friends.length})`}>
+          {friends.length === 0 && <p className="muted">No mates yet. Send an invite above, or add them here or when you set up a round.</p>}
+          {friends.length > 0 && <p className="muted small">Tap ⛳ next to your mates to line them up, then tee off. Tap a name to see their details.</p>}
+          {picked.length > 0 && (
+            <div className="tee-off-bar">
+              <button className="btn primary block" onClick={() => teeOff()}>
+                ⛳ Tee off with {names(picked)}
+              </button>
+              {picked.length === 1 && (
+                <button className="btn block" onClick={() => teeOff('matchplay')}>
+                  🥊 Match play v {names(picked)}
+                </button>
+              )}
+            </div>
+          )}
+          <ul className="list">
+            {[...friends]
+              .sort((a, b) => Number(isNew(b)) - Number(isNew(a)) || a.name.localeCompare(b.name))
+              .map((f) => {
+                const h = headToHead(rounds, 'me', f.id);
+                const on = picked.includes(f.id);
+                return (
+                  <li key={f.id} className={`friend-row ${on ? 'on' : ''}`}>
+                    <button className="list-btn" onClick={() => go({ name: 'friend', id: f.id })}>
+                      <div>
+                        <strong>{f.name}</strong>
+                        {isNew(f) && <span className="new-badge">🆕 just linked up</span>}
+                        <div className="muted small">
+                          {handicapLabel(f)}
+                          {f.hcpSource !== 'manual' && f.gaNumber && (!f.hcpCheckedAt || Date.now() - f.hcpCheckedAt > STALE_MS) ? ' · ⏰ check' : ''}
+                          {h.rounds ? ` · you're ${h.wins}-${h.losses}-${h.halves} in ${h.rounds} round${h.rounds > 1 ? 's' : ''}` : ''}
+                        </div>
+                      </div>
+                    </button>
+                    <button
+                      className={`pick-btn ${on ? 'on' : ''}`}
+                      aria-label={on ? `Take ${f.name} out of the round` : `Add ${f.name} to a round`}
+                      onClick={() => setPicked(on ? picked.filter((x) => x !== f.id) : [...picked, f.id].slice(0, 7))}
+                    >
+                      {on ? '✓' : '⛳'}
+                    </button>
+                  </li>
+                );
+              })}
+          </ul>
+        </Card>
         <Card title="Add a mate">
           <form className="row gap" onSubmit={(e) => { e.preventDefault(); add(); }}>
             <input className="grow" placeholder="Name (as they'll set it in their app)" value={name} onChange={(e) => setName(e.target.value)} />
@@ -54,8 +104,13 @@ export function Friends({ go }: { go: Go }) {
           </form>
           <p className="muted small">Use the same name your mate uses in their own app, so shared rounds match up automatically. Tap a mate to add their GA number (or mark them as having no GA handicap).</p>
         </Card>
-        <LiveFriendsCard go={go} />
         {inviting ? (
+          <>
+          {/iPhone|iPad|iPod/.test(navigator.userAgent) && !isStandalone() && (
+            <p className="warn small">
+              ⚠️ You're in Safari. On iPhone, Safari and the Fairway Coach app on your Home Screen keep separate lists, so mates who accept this invite land in Safari's list. If you use the Home Screen app, send invites from there.
+            </p>
+          )}
           <InviteSheet
             title="Get on Fairway Coach"
             intro={`${store.settings().me.name} wants you on Fairway Coach, the app for our scores, comps, live leaderboards and banter ⛳🍻 Tap the link to link up:`}
@@ -63,38 +118,21 @@ export function Friends({ go }: { go: Go }) {
             onClose={() => setInviting(null)}
             personal
           />
+          </>
         ) : (
           <button className="btn primary block" onClick={startInvite}>
             📲 Invite mates to the app
           </button>
         )}
         <PasteInvite />
-        <Card title={`Your crew (${friends.length})`}>
-          {friends.length === 0 && <p className="muted">No mates yet. Add them here or when you set up a round.</p>}
-          <ul className="list">
-            {[...friends].sort((a, b) => a.name.localeCompare(b.name)).map((f) => {
-              const h = headToHead(rounds, 'me', f.id);
-              return (
-                <li key={f.id}>
-                  <button className="list-btn" onClick={() => go({ name: 'friend', id: f.id })}>
-                    <div>
-                      <strong>{f.name}</strong>
-                      <div className="muted small">
-                        {handicapLabel(f)}
-                        {f.hcpSource !== 'manual' && f.gaNumber && (!f.hcpCheckedAt || Date.now() - f.hcpCheckedAt > STALE_MS) ? ' · ⏰ check' : ''}
-                        {h.rounds ? ` · you're ${h.wins}-${h.losses}-${h.halves} in ${h.rounds} round${h.rounds > 1 ? 's' : ''}` : ''}
-                      </div>
-                    </div>
-                    <span>›</span>
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        </Card>
       </div>
     </div>
   );
+}
+
+/** Linked up in the last two days. */
+function isNew(f: Player) {
+  return !!f.linkedAt && Date.now() - f.linkedAt < 2 * 24 * 3600 * 1000;
 }
 
 export function FriendDetail({ go, id }: { go: Go; id: string }) {
@@ -129,6 +167,14 @@ export function FriendDetail({ go, id }: { go: Go; id: string }) {
           </label>
           <HandicapEditor player={f} onChange={save} />
         </Card>
+        <div className="row gap">
+          <button className="btn primary grow" onClick={() => { planRoundWith([f.id]); go({ name: 'setup' }); }}>
+            ⛳ Play a round with {f.name}
+          </button>
+          <button className="btn grow" onClick={() => { planRoundWith([f.id], 'matchplay'); go({ name: 'setup' }); }}>
+            🥊 Match play
+          </button>
+        </div>
         <Card title={`Head to head: ${me.name} v ${f.name}`}>
           {h.rounds === 0 ? (
             <p className="muted">No completed individual rounds together yet.</p>

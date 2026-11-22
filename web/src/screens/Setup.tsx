@@ -16,6 +16,24 @@ interface P {
 
 const FORMATS: Format[] = ['stableford', 'stroke', 'par', 'ambrose', 'fourball', 'matchplay', 'skins'];
 
+const WITH_KEY = 'gtg.setupWith';
+/** Line up mates (and a format) for the next round setup, e.g. from the Friends list. Survives a trip to pick a course. */
+export function planRoundWith(ids: string[], format?: Format) {
+  try {
+    sessionStorage.setItem(WITH_KEY, JSON.stringify({ ids, format, at: Date.now() }));
+  } catch {
+    /* private mode */
+  }
+}
+function readPlan(): { ids: string[]; format?: Format } | null {
+  try {
+    const v = JSON.parse(sessionStorage.getItem(WITH_KEY) || 'null');
+    return v && Array.isArray(v.ids) && Date.now() - (v.at ?? 0) < 3600_000 ? v : null;
+  } catch {
+    return null;
+  }
+}
+
 export function Setup({ go, courseId, join }: { go: Go; courseId?: string; join?: { code: string; format?: Format; holes?: number[]; compIds?: string[] } }) {
   const settings = store.settings();
   const [rev, setRev] = useState(0);
@@ -40,12 +58,19 @@ export function Setup({ go, courseId, join }: { go: Go; courseId?: string; join?
       stop = true;
     };
   }, [cid]);
-  const [format, setFormat] = useState<Format>(join?.format ?? 'stableford');
+  const [plan] = useState(() => (join ? null : readPlan()));
+  const [format, setFormat] = useState<Format>(join?.format ?? plan?.format ?? 'stableford');
   const [which, setWhich] = useState<'18' | 'front' | 'back'>(() =>
     !join?.holes || join.holes.length > 9 ? '18' : join.holes[0] === 1 ? 'front' : 'back',
   );
-  const [players, setPlayers] = useState<P[]>([{ id: 'me', name: settings.me.name, ga: settings.me.gaHandicap }]);
-  const [allowance, setAllowance] = useState<number>(DEFAULT_ALLOWANCE[join?.format ?? 'stableford']);
+  const [players, setPlayers] = useState<P[]>(() => [
+    { id: 'me', name: settings.me.name, ga: settings.me.gaHandicap },
+    ...(plan?.ids ?? []).flatMap((id) => {
+      const f = store.friends().find((x) => x.id === id);
+      return f ? [{ id: f.id, name: f.name, ga: f.gaHandicap }] : [];
+    }),
+  ]);
+  const [allowance, setAllowance] = useState<number>(DEFAULT_ALLOWANCE[join?.format ?? plan?.format ?? 'stableford']);
   const [ambroseSize, setAmbroseSize] = useState<2 | 3 | 4>(4);
   const [skinsNet, setSkinsNet] = useState(false);
   const [carry, setCarry] = useState(true);
@@ -146,6 +171,11 @@ export function Setup({ go, courseId, join }: { go: Go; courseId?: string; join?
       startedAt: Date.now(),
     };
     store.saveRound(round);
+    try {
+      sessionStorage.removeItem(WITH_KEY);
+    } catch {
+      /* fine */
+    }
     // remember playing partners for next time
     const known = store.friends();
     for (const p of players) if (p.id !== 'me' && !known.some((k) => k.id === p.id)) known.push({ id: p.id, name: p.name, gaHandicap: p.ga });

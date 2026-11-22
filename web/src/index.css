@@ -702,3 +702,12 @@ button.link { background: none; border: 0; padding: 0; color: var(--brand); text
 .notify-on { display: flex; gap: 6px; align-items: flex-start; } .notify-on svg { width: 16px; height: 16px; flex: none; margin-top: 2px; }
 .btn.block { white-space: normal; text-align: center; }
 .card .segmented button.on { color: var(--gold-ink); box-shadow: none; }
+.friend-row { display: flex; align-items: center; gap: 8px; }
+.friend-row .list-btn { flex: 1; min-width: 0; }
+.pick-btn { flex: none; width: 44px; height: 44px; border-radius: 14px; border: 1px solid var(--line); background: var(--chip); color: var(--ink); font-size: 1.1rem; cursor: pointer; }
+.pick-btn.on { background: var(--gold); color: var(--gold-ink); border-color: var(--gold); font-weight: 800; }
+.new-badge { margin-left: 8px; font-size: .68rem; font-weight: 700; color: var(--gold-ink); background: var(--gold); border-radius: 999px; padding: 2px 8px; vertical-align: 2px; }
+.tee-off-bar { display: flex; flex-direction: column; gap: 8px; }
+.card .btn.primary { background: var(--gold); color: var(--gold-ink); border-color: var(--gold); }
+.row .grow { flex: 1; }
+.card .format.on { background: var(--gold); color: var(--gold-ink); border-color: var(--gold); }
