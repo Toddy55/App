@@ -28,11 +28,10 @@ export function applyAppearance(a = readAppearance()) {
   const root = document.documentElement;
   if (a.palette === 'midnight') delete root.dataset.palette;
   else root.dataset.palette = a.palette;
-  if (a.mode === 'auto') delete root.dataset.theme;
-  else root.dataset.theme = a.mode;
-  const dark = a.mode === 'dark' || (a.mode === 'auto' && window.matchMedia?.('(prefers-color-scheme: dark)').matches);
+  // The app always wears its deep brand colours now (no white screens or boxes)
+  root.dataset.theme = 'dark';
   const p = PALETTES.find((x) => x.id === a.palette)!;
-  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', dark ? '#0a0f1c' : p.deep);
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', p.deep);
 }
 
 export function saveAppearance(a: { palette: Palette; mode: Mode }) {
