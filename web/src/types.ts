@@ -118,6 +118,8 @@ export interface Shot {
   lon: number;
   club?: string;
   t: number;
+  /** Marked by "Hey Siri, mark shot" (phone in the pocket). */
+  voice?: boolean;
 }
 
 export interface WeatherSnapshot {
@@ -152,6 +154,8 @@ export interface Round {
   scores: Record<string, Record<number, number>>;
   stats: Record<number, HoleStats>;
   shots: Record<number, Shot[]>;
+  /** Siri marks already added to this round (their ids). */
+  siriMarks?: string[];
   pins: Record<number, LatLon>;
   options: RoundOptions;
   weather?: WeatherSnapshot;

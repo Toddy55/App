@@ -16,6 +16,7 @@ import { JoinComp } from './screens/JoinComp';
 import { Chat } from './screens/Chat';
 import { FriendJoin } from './screens/FriendJoin';
 import { MateWatcher } from './components/MateWatcher';
+import { SiriSetup } from './screens/SiriSetup';
 import { HomeBackdrop } from './components/HomeBackdrop';
 import { LiveView } from './live/LiveView';
 import { Tracer } from './screens/Tracer';
@@ -76,6 +77,8 @@ function renderScreen(route: Route, key: string, go: (r: Route) => void): ReactN
       return <Courses key={key} go={go} pick={route.pick} />;
     case 'course':
       return <CourseEditor key={key} go={go} id={route.id} />;
+    case 'siri':
+      return <SiriSetup key={key} go={go} />;
     case 'setup':
       return <Setup key={key} go={go} courseId={route.courseId} join={route.liveCode ? { code: route.liveCode, format: route.format, holes: route.holes, compIds: route.compIds } : undefined} />;
     case 'play':
