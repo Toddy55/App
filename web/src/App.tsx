@@ -18,6 +18,7 @@ import { FriendJoin } from './screens/FriendJoin';
 import { MateWatcher } from './components/MateWatcher';
 import { SiriSetup } from './screens/SiriSetup';
 import { MoveFriends } from './screens/MoveFriends';
+import { SyncJoin } from './screens/SyncJoin';
 import { HomeBackdrop } from './components/HomeBackdrop';
 import { LiveView } from './live/LiveView';
 import { Tracer } from './screens/Tracer';
@@ -26,6 +27,7 @@ import { LiveTracer } from './screens/LiveTracer';
 function readHash(): Route {
   try {
     if (location.hash.startsWith('#import=')) return { name: 'import', data: location.hash.slice(8) };
+    if (location.hash.startsWith('#sync=')) return { name: 'syncJoin', key: location.hash.slice(6).split(/[&#]/)[0] };
     if (location.hash.startsWith('#move=')) return { name: 'move', data: location.hash.slice(6) };
     if (location.hash.startsWith('#live=')) return { name: 'live', code: location.hash.slice(6).toUpperCase() };
     if (location.hash.startsWith('#join=')) {
@@ -55,7 +57,22 @@ export default function App() {
     location.hash = encodeURIComponent(JSON.stringify(r));
     window.scrollTo(0, 0);
   };
-  const key = JSON.stringify(route);
+  // Your data in every copy of the app (Safari, Home Screen app, other phones): on by itself
+  const [rev, setRev] = useState(0);
+  useEffect(() => {
+    import('./live/sync').then(({ turnOnSync }) => turnOnSync()).catch(() => undefined);
+    const on = () => {
+      // Another copy changed something: show it (unless you're mid-typing)
+      const el = document.activeElement;
+      if (el && /INPUT|TEXTAREA|SELECT/.test(el.tagName)) return;
+      setRev((n) => n + 1);
+    };
+    window.addEventListener('gtg:synced', on);
+    return () => window.removeEventListener('gtg:synced', on);
+  }, []);
+  // Only screens that just show data refresh (not ones you're filling in or playing on)
+  const refreshes = ['home', 'friends', 'friend', 'leaderboards', 'comp', 'stats', 'summary', 'courses'].includes(route.name);
+  const key = JSON.stringify(route) + (refreshes ? `#${rev}` : '');
   const withNav = TAB_SCREENS.includes(route.name);
   useEffect(() => {
     document.body.classList.toggle('has-nav', withNav);
@@ -79,6 +96,8 @@ function renderScreen(route: Route, key: string, go: (r: Route) => void): ReactN
       return <Courses key={key} go={go} pick={route.pick} />;
     case 'course':
       return <CourseEditor key={key} go={go} id={route.id} />;
+    case 'syncJoin':
+      return <SyncJoin key={key} go={go} syncKey={route.key} />;
     case 'move':
       return <MoveFriends key={key} go={go} data={route.data} />;
     case 'siri':

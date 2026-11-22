@@ -126,3 +126,24 @@ export async function watchMarks(key: string, onMarks: (marks: Record<string, { 
     () => undefined,
   );
 }
+
+// ---- Sync (your data across copies of the app) ----
+
+/** Write one value at a path under sync/. */
+export async function syncSet(path: string, value: unknown): Promise<void> {
+  const { db } = await init();
+  await set(ref(db, `sync/${path}`), value);
+}
+
+/** Read everything under a path once. */
+export async function syncGet<T>(path: string): Promise<T | null> {
+  const { db } = await init();
+  const snap = await get(ref(db, `sync/${path}`));
+  return snap.exists() ? (snap.val() as T) : null;
+}
+
+/** Keep watching a path under sync/. */
+export async function syncWatch<T>(path: string, on: (v: T | null) => void): Promise<() => void> {
+  const { db } = await init();
+  return onValue(ref(db, `sync/${path}`), (snap) => on(snap.exists() ? (snap.val() as T) : null), () => undefined);
+}
