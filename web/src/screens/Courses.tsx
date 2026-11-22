@@ -19,10 +19,12 @@ export function Courses({ go, pick }: { go: Go; pick?: boolean }) {
   }, []);
   const matches = catalog && q.trim().length >= 2 ? searchCatalog(catalog, q) : [];
 
-  const chooseBuiltIn = (c: CatalogCourse) => {
+  const chooseBuiltIn = async (c: CatalogCourse) => {
     const existing = saved.find((x) => x.osmRef === c.ref);
     if (existing) return open(existing.id);
-    const course = catalogToCourse(c);
+    let course = catalogToCourse(c);
+    // With the club's tees, where the list has them
+    course = (await import('../lib/clubTees').then(({ withClubTees }) => withClubTees(course)).catch(() => null)) ?? course;
     store.saveCourse(course);
     open(course.id);
   };

@@ -46,6 +46,12 @@ export interface TeeSet {
   slopeRating?: number;
   /** One of the standard sets worked out from the mapped tee (no scorecard numbers yet). */
   estimated?: boolean;
+  /** Each hole's par from this tee, where it differs from the card (women's pars often do). */
+  pars?: Record<number, number>;
+  /** Women's ratings. */
+  women?: boolean;
+  /** From the club's scorecard in the built-in list (not entered by hand). */
+  club?: boolean;
 }
 
 export interface Course {

@@ -8,7 +8,9 @@ import { Card } from './ui';
 export function TeesEditor({ course, save, units }: { course: Course; save: (c: Course) => void; units: 'm' | 'yd' }) {
   const tees = course.tees ?? [];
   const [open, setOpen] = useState<string | null>(tees[0]?.id ?? null);
-  const setTees = (t: TeeSet[]) => save({ ...course, tees: t });
+  // Once you change anything, they're yours: the built-in list stops updating them
+  const setTees = (t: TeeSet[]) => save({ ...course, tees: t.map(({ club: _club, ...x }) => x) });
+  const fromClub = tees.some((t) => t.club);
   const patch = (id: string, p: Partial<TeeSet>) => setTees(tees.map((t) => (t.id === id ? { ...t, ...p } : t)));
   const add = (c: { name: string; colour: string }) => {
     const id = `${c.name.toLowerCase()}-${Date.now().toString(36).slice(-4)}`;
@@ -22,7 +24,7 @@ export function TeesEditor({ course, save, units }: { course: Course; save: (c: 
   return (
     <Card title="Tees">
       <p className="muted small">
-        Add the club's tee boxes off the scorecard. Pick your tee when you set up a round, and every distance, the hole view and the caddie play from it. {tees.length === 0 && 'Until then, Back, Middle and Forward are estimated from the mapped tee.'}
+        {fromClub ? "These are the club's tees off its scorecard, filled in for you. Fix any number and it stays as you set it. " : "Add the club's tee boxes off the scorecard. "}Pick your tee when you set up a round, and every distance, the hole view and the caddie play from it. {tees.length === 0 && 'Until then, Back, Middle and Forward are estimated from the mapped tee.'}
       </p>
       {tees.map((t) => {
         const total = course.holes.reduce((s, h) => s + (t.lengths?.[h.number] ?? h.lengthM ?? 0), 0);
