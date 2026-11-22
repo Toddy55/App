@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronLeft, ChevronRight, Pause, Play, X } from 'lucide-react';
 import type { LatLon, Round } from '../types';
-import { bearingDeg, fmtDist } from '../lib/geo';
+import { bearingDeg, distanceM, fmtDist } from '../lib/geo';
 import { ESRI, QLD_AERIAL, makeFrame, project, tileLayout } from '../lib/holeFrame';
 import { inQueensland } from '../lib/greenDem';
 import { shotLegs } from '../lib/tracer';
@@ -42,6 +42,19 @@ function ReplayInner({ round, units, who, onClose, startHole }: { round: Round; 
   const legs = useMemo(() => shotLegs(shots, flag), [shots, flag]);
   const total = legs.length * (LEG_S + GAP_S);
 
+  // The clock for this hole's replay: drives the live distance counter
+  const [clock, setClock] = useState(0);
+  useEffect(() => {
+    const start = performance.now();
+    setClock(0);
+    const id = setInterval(() => {
+      const t = (performance.now() - start) / 1000;
+      setClock(t);
+      if (t > total + 1) clearInterval(id);
+    }, 50);
+    return () => clearInterval(id);
+  }, [i, run, total]);
+
   // Playing the whole round: move on once this hole's shots have landed
   useEffect(() => {
     if (!auto) return;
@@ -59,7 +72,7 @@ function ReplayInner({ round, units, who, onClose, startHole }: { round: Round; 
     const origin = hole.tee ?? shots[0];
     const end = hole.green?.centre ?? flag ?? shots[shots.length - 1];
     const upDeg = bearingDeg(origin, end);
-    const pad = { top: 96, right: 24, bottom: 170, left: 24 };
+    const pad = { top: 100, right: 24, bottom: 300, left: 24 };
     const frame = makeFrame({ origin, upDeg, fit: [origin, end, ...shots, ...(flag ? [flag] : [])], width: size.w, height: size.h, pad, minSpanM: 80 });
     const dpr = Math.min(3, window.devicePixelRatio || 1);
     const qld = inQueensland(origin);
@@ -156,6 +169,56 @@ function ReplayInner({ round, units, who, onClose, startHole }: { round: Round; 
           <X />
         </button>
       </div>
+
+      {legs.length > 0 && (() => {
+        // Which shot is flying now, and how far it's gone
+        const k = Math.min(legs.length - 1, Math.floor(clock / (LEG_S + GAP_S)));
+        const p = Math.max(0, Math.min(1, (clock - k * (LEG_S + GAP_S)) / LEG_S));
+        const eased = 1 - Math.pow(1 - p, 2.2);
+        const l = legs[k];
+        const landed = p >= 1;
+        const left = flag ? distanceM(l.to, flag) : null;
+        const done = clock > total;
+        const totalM = legs.reduce((a, x) => a + x.distance, 0);
+        return (
+          <>
+            <div className={`replay-ticker ${landed ? 'landed' : ''} ${done ? 'done' : ''}`}>
+              {done ? (
+                <>
+                  <span className="rt-club">Hole {hole.number} done</span>
+                  <span className="rt-dist">
+                    {shots.length} shot{shots.length === 1 ? '' : 's'}
+                    {gross != null ? ` · made ${gross}` : ''}
+                  </span>
+                  <span className="rt-left">{fmtDist(totalM, units)}{units} hit in total</span>
+                </>
+              ) : (
+                <>
+                  <span className="rt-club">
+                    Shot {k + 1}
+                    {l.club ? ` · ${l.club}` : ''}
+                  </span>
+                  <span className="rt-dist">
+                    {fmtDist(l.distance * eased, units)}
+                    <small>{units}</small>
+                  </span>
+                  <span className="rt-left">{landed && left != null ? (left < 1.5 ? 'In the hole 🎉' : `${fmtDist(left, units)}${units} to the pin`) : '\u00a0'}</span>
+                </>
+              )}
+            </div>
+            <div className="replay-shots">
+              {legs.map((x, j) => {
+                const shown = clock >= j * (LEG_S + GAP_S) + LEG_S;
+                return (
+                  <span key={j} className={`rs-chip ${shown ? 'on' : ''}`}>
+                    <b>{j + 1}</b> {x.club ?? 'Shot'} <strong>{fmtDist(x.distance, units)}{units}</strong>
+                  </span>
+                );
+              })}
+            </div>
+          </>
+        );
+      })()}
 
       <div className="replay-foot">
         <div className="replay-controls">

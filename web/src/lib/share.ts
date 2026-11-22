@@ -44,7 +44,7 @@ function remapRound(r: Round, map: (id: string) => string): Round {
   };
 }
 
-export function makeBundle(opts: { me: Player; friends: Player[]; rounds: Round[]; comps: Competition[]; keepShotsOf?: string }): Bundle {
+export function makeBundle(opts: { me: Player; friends: Player[]; rounds: Round[]; comps: Competition[]; keepShotsOf?: string | 'all' }): Bundle {
   const people = new Map<string, Person>();
   const nameOf = (id: string) => (id === 'me' ? opts.me.name : opts.friends.find((f) => f.id === id)?.name);
   const toKey = (id: string, fallbackName?: string, ga = 0) => {
@@ -62,8 +62,8 @@ export function makeBundle(opts: { me: Player; friends: Player[]; rounds: Round[
     const lookup = (id: string) => toKey(id, r.players.find((p) => p.id === id)?.name);
     // Shots, stats, AI write-ups and pins are personal; leave them on the sender's phone.
     // ...except your live round's shots and pins, so mates can watch the replay
-    const keep = opts.keepShotsOf === r.id;
-    const { aiReport: _a, liveCode: _l, balls: _b, siriMarks: _s, ...rest } = remapRound({ ...r, shots: keep ? r.shots : {}, pins: keep ? r.pins : {}, stats: {} }, lookup);
+    const keep = opts.keepShotsOf === 'all' || opts.keepShotsOf === r.id;
+    const { aiReport: _a, liveCode: _l, balls: _b, siriMarks: _s, ...rest } = remapRound({ ...r, shots: keep ? r.shots : {}, pins: keep ? r.pins : {}, stats: opts.keepShotsOf === 'all' ? r.stats ?? {} : {} }, lookup);
     void _b;
     void _s;
     void _l;

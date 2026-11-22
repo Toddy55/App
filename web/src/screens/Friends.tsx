@@ -50,7 +50,7 @@ export function Friends({ go }: { go: Go }) {
       <Header title="Friends" onBack={() => go({ name: 'home' })} />
       <div className="content">
         <LiveFriendsCard go={go} />
-        {isIOS() && !isStandalone() && friends.length > 0 && <MoveToApp />}
+        {isIOS() && !isStandalone() && (friends.length > 0 || store.rounds().length > 0) && <MoveToApp />}
         <Card title={`Your crew (${friends.length})`}>
           {friends.length === 0 && <p className="muted">No mates yet. Send an invite above, or add them here or when you set up a round.</p>}
           {friends.length > 0 && <p className="muted small">Tap ⛳ next to your mates to line them up, then tee off. Tap a name to see their details.</p>}
@@ -132,7 +132,7 @@ export function Friends({ go }: { go: Go }) {
 }
 
 /** In Safari on iPhone: copy these friends across to the Home Screen app (they keep separate lists). */
-function MoveToApp() {
+export function MoveToApp() {
   const [done, setDone] = useState<'copied' | 'shared' | null>(null);
   // Built up front: Safari only lets a tap copy straight away
   const [url, setUrl] = useState<string | null>(null);
@@ -152,13 +152,13 @@ function MoveToApp() {
   return (
     <Card title="Use the app on your Home Screen?">
       <p className="small">
-        You're in Safari. On iPhone, Safari and the Fairway Coach app on your Home Screen keep <strong>separate friend lists</strong>. Move these mates across in two taps:
+        You're in Safari. On iPhone, Safari and the Fairway Coach app on your Home Screen keep <strong>separate data</strong>: friends, rounds and comps don't sync between them. Move everything across in two taps:
       </p>
       <button className="btn primary block" disabled={!url} onClick={copy}>
-        📲 {done ? 'Copied ✓ Now open the app' : 'Copy my friends for the app'}
+        📲 {done ? 'Copied ✓ Now open the app' : 'Copy my friends and rounds for the app'}
       </button>
       <p className="muted small">
-        Then open Fairway Coach from your Home Screen → <strong>Friends</strong> → <strong>Paste an invite</strong>. Mates who accept invites you sent from Safari will show up in the app from then on too.
+        Then open Fairway Coach from your Home Screen → <strong>Friends</strong> → <strong>Paste an invite</strong>. Your rounds come across with their scores and shots. Mates who accept invites you sent from Safari will show up in the app from then on too. No need to re-pin the app: it updates itself.
       </p>
     </Card>
   );
