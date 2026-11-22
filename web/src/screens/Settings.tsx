@@ -3,6 +3,7 @@ import type { Settings as S } from '../types';
 import { DEFAULT_CLUBS, store } from '../lib/storage';
 import { HandicapEditor } from '../components/HandicapEditor';
 import { Card, Header, Segmented, type Go } from '../components/ui';
+import { HOME_BGS, readHomeBg, readOwnBg, saveHomeBg, saveOwnBg } from '../lib/homeBg';
 import { PALETTES, readAppearance, saveAppearance, type Mode, type Palette } from '../lib/appearance';
 
 export function Settings({ go }: { go: Go }) {
@@ -22,6 +23,26 @@ export function Settings({ go }: { go: Go }) {
     const n = { ...look, mode };
     setLook(n);
     saveAppearance(n);
+  };
+
+  const [bg, setBg] = useState(readHomeBg);
+  const [bgErr, setBgErr] = useState<string | null>(null);
+  const pickBg = (id: string) => {
+    setBgErr(null);
+    setBg(id);
+    saveHomeBg(id);
+  };
+  const [ownBg, setOwnBg] = useState(readOwnBg);
+  const uploadBg = async (f: File | undefined) => {
+    if (!f) return;
+    setBgErr(null);
+    try {
+      await saveOwnBg(f);
+      setOwnBg(readOwnBg());
+      setBg('own');
+    } catch (e) {
+      setBgErr(e instanceof Error ? e.message : String(e));
+    }
   };
 
   return (
@@ -59,6 +80,29 @@ export function Settings({ go }: { go: Go }) {
           <div className="field">
             <span>Mode</span>
             <Segmented value={look.mode} onChange={setMode} options={[{ value: 'auto', label: 'Auto' }, { value: 'light', label: 'Light' }, { value: 'dark', label: 'Dark' }]} />
+          </div>
+          <div className="field">
+            <span>Home screen photo</span>
+            <div className="bg-grid">
+              {HOME_BGS.map((b) => (
+                <button key={b.id} className={`bg-pick ${bg === b.id ? 'on' : ''}`} style={{ backgroundImage: `url("${import.meta.env.BASE_URL}bg/${b.file}")` }} onClick={() => pickBg(b.id)}>
+                  <span>{b.label}</span>
+                </button>
+              ))}
+              <label className={`bg-pick ${ownBg ? '' : 'plain'} ${bg === 'own' ? 'on' : ''}`} style={ownBg ? { backgroundImage: `url("${ownBg}")` } : undefined}>
+                <input type="file" accept="image/*" onChange={(e) => uploadBg(e.target.files?.[0])} />
+                <span>{ownBg ? 'My photo (tap to change)' : '📷 Use my own photo'}</span>
+              </label>
+              <button className={`bg-pick plain ${bg === 'none' ? 'on' : ''}`} onClick={() => pickBg('none')}>
+                <span>No photo</span>
+              </button>
+            </div>
+            {ownBg && bg !== 'own' && (
+              <button className="btn small" onClick={() => pickBg('own')}>
+                Use my photo
+              </button>
+            )}
+            {bgErr && <p className="error">{bgErr}</p>}
           </div>
         </Card>
         <Card title="Distances">
