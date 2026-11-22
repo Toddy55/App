@@ -25,7 +25,7 @@ export interface Hole {
   siEst?: boolean;
 }
 
-export type HazardKind = 'bunker' | 'water' | 'fairway';
+export type HazardKind = 'bunker' | 'water' | 'fairway' | 'trees';
 
 /** Bunkers, water and fairways, used by the caddy for course management. */
 export interface Hazard {

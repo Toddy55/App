@@ -1,6 +1,7 @@
 import type { Hazard, Hole, LatLon, Round, Settings } from '../types';
 import { bearingDeg, distanceM, fromLocal, pointInPolygon, toLocal } from './geo';
 import { clubDistances } from './analysis';
+import { chipOutSpot, treePlay, type TreePlay } from './trees';
 import { playsLike, windEffect } from './weather';
 import { stablefordPoints, strokesByHole } from './handicap';
 
@@ -124,7 +125,7 @@ export function tendencies(rounds: Round[], current?: Round): Tendencies {
 
 // ---------- expected strokes from anywhere ----------
 
-export type Lie = 'green' | 'fairway' | 'rough' | 'bunker' | 'water';
+export type Lie = 'green' | 'fairway' | 'rough' | 'bunker' | 'water' | 'trees';
 
 function interp(table: [number, number][], x: number): number {
   if (x <= table[0][0]) return table[0][1];
@@ -158,6 +159,9 @@ export function expectedStrokes(lie: Lie, dist: number, handicap: number): numbe
       return interp(ROUGH, dist) + h * (0.025 + dist * 0.00007);
     case 'bunker':
       return interp(SAND, dist) + h * (0.035 + dist * 0.00007);
+    case 'trees':
+      // In the trees: usually a chip out or a low punch, about half a shot worse than the rough
+      return 0.55 + interp(ROUGH, dist) + h * (0.03 + dist * 0.00008);
     case 'water':
       // penalty stroke, then play on from the rough near where it went in
       return 1 + interp(ROUGH, dist) + h * (0.025 + dist * 0.00007);
@@ -196,6 +200,7 @@ export function lieAt(geo: HoleGeo, p: LatLon): Lie {
   if (g.polygon ? pointInPolygon(p, g.polygon) : distanceM(p, g.centre) < 13) return 'green';
   for (const z of geo.hazards) if (z.kind === 'water' && pointInPolygon(p, z.poly)) return 'water';
   for (const z of geo.hazards) if (z.kind === 'bunker' && pointInPolygon(p, z.poly)) return 'bunker';
+  for (const z of geo.hazards) if (z.kind === 'trees' && pointInPolygon(p, z.poly)) return 'trees';
   if (geo.hasFairways) return geo.hazards.some((z) => z.kind === 'fairway' && pointInPolygon(p, z.poly)) ? 'fairway' : 'rough';
   // No fairway outlines: assume a 30 m wide fairway along the line of play
   const line = geo.hole.path ?? (geo.hole.tee ? [geo.hole.tee, g.centre] : null);
@@ -288,7 +293,7 @@ function evaluate(
     const e = 1 + expectedStrokes(lie, d, handicap);
     sum += e;
     sum2 += e * e;
-    if (lie === 'water' || lie === 'bunker') trouble[lie] = (trouble[lie] ?? 0) + 1;
+    if (lie === 'water' || lie === 'bunker' || lie === 'trees') trouble[lie] = (trouble[lie] ?? 0) + 1;
     cx += x;
     cy += y;
   }
@@ -346,8 +351,10 @@ export interface Advice {
   headline: string;
   aimText: string;
   lines: string[];
-  trouble: { kind: 'water' | 'bunker'; pct: number }[];
+  trouble: { kind: 'water' | 'bunker' | 'trees'; pct: number }[];
   playsLike: number;
+  /** Trees in the way of the shot, and how to play it. */
+  trees?: TreePlay;
 }
 
 export function advise(opts: {
@@ -368,6 +375,7 @@ export function advise(opts: {
   let bag = opts.bag;
   const toPin = distanceM(from, geo.pin);
   if (toPin < 25) return null; // short game: no club advice needed
+  const trees = geo.hazards.filter((z) => z.kind === 'trees').map((z) => z.poly);
   const brg = bearingDeg(from, geo.pin);
   const eff = cond.windKmh != null && cond.windFromDeg != null ? windEffect(cond.windFromDeg, cond.windKmh, brg) : undefined;
   const plPin = playsLike(toPin, eff, cond.elevDiff ?? 0, cond.tempC);
@@ -394,12 +402,21 @@ export function advise(opts: {
     for (const lat of laterals) {
       const o = evaluate(geo, from, c, lat, cond, tend, handicap, seed++);
       o.score = o.ev + mood.caution * o.sd;
+      // Trees in the way: a shot you'd have to shape costs a bit, one you can't get past costs a lot
+      if (trees.length) {
+        const tp = treePlay(from, o.landing.centre, trees);
+        // A gentle shape round them is the usual play; a low punch loses more control
+        if (tp.kind === 'shape') o.score += 0.06 + tp.bend;
+        else if (tp.kind === 'punch') o.score += 0.3;
+        else if (tp.kind === 'chip') o.score += 1.2;
+      }
       if (!best || o.score < best.score) best = o;
       const pc = perClub.get(c.club);
       if (!pc || o.score < pc.score) perClub.set(c.club, o);
     }
   }
   if (!best) return null;
+  const play: TreePlay = trees.length ? treePlay(from, best.landing.centre, trees) : { kind: 'clear' };
   // the best alternative with a different club, to explain the choice
   const alt = [...perClub.values()].filter((o) => o.club.club !== best!.club.club).sort((a, b) => a.score - b.score)[0];
 
@@ -421,7 +438,7 @@ export function advise(opts: {
     aimText = `Aim ${sideTxt}, leaving about ${fmt(distanceM(best.landing.centre, geo.pin))} in`;
   }
 
-  const trouble = (['water', 'bunker'] as const)
+  const trouble = (['water', 'bunker', 'trees'] as const)
     .map((k) => ({ kind: k, pct: Math.round((best!.trouble[k] ?? 0) * 100) }))
     .filter((t) => t.pct >= 3);
 
@@ -473,13 +490,50 @@ export function advise(opts: {
     }
   }
 
+  // Trees: shape it round them, keep it low, or take your medicine
+  let headline = best.club.partial ? `${best.club.club} · ${best.club.partial >= 0.85 ? 'smooth' : best.club.partial >= 0.7 ? '¾' : best.club.partial >= 0.5 ? '½' : 'pitch'} swing` : best.club.club;
+  let finalBest = best;
+  let treeAdvice: TreePlay | undefined = play.kind === 'clear' ? undefined : play;
+  if (play.kind === 'shape') {
+    const rtl = play.dir === 'rtl';
+    const big = play.bend >= 0.11;
+    headline += rtl ? ' · draw' : ' · fade';
+    lines.unshift(
+      `🌳 Trees in the way about ${fmt(play.blockedAt)} out. ${big ? 'Bend it' : 'Shape it'} ${rtl ? 'right to left (a draw for a right-hander)' : 'left to right (a fade for a right-hander)'}: start it ${rtl ? 'right' : 'left'} of the trees and let it come back${big ? '. That needs a decent curve: if you can\'t shape it on demand, chip out' : ''}.`,
+    );
+  } else if (play.kind === 'punch') {
+    headline += ' · punch';
+    lines.unshift(`🌳 Branches just in front (about ${fmt(play.blockedAt)} out). Keep it low: ball back in your stance, hands ahead, short follow-through. Take a club or two more than normal, as it'll run.`);
+  } else if (play.kind === 'chip') {
+    const spot = chipOutSpot(from, geo.pin, trees, (p) => {
+      const l = lieAt(geo, p);
+      return l !== 'water' && l !== 'bunker' && l !== 'trees';
+    });
+    if (spot) {
+      const club = spot.dist > 55 ? '8i or 9i' : '7i or 8i';
+      headline = 'Chip out';
+      aimText = `Chip it out ${fmt(spot.dist)} back to the ${lieAt(geo, spot.to) === 'fairway' ? 'fairway' : 'short grass'}, leaving about ${fmt(spot.leaves)} in`;
+      // The full-club details don't apply any more: just the escape
+      lines.length = 0;
+      lines.push(`🌳 No way through the trees from here, even with a draw or fade. Take your medicine: a low punch with a ${club}, about ${fmt(spot.dist)}, back into play. One shot lost beats three.`);
+      lines.push('Ball back in your stance, hands ahead, short follow-through: keep it under the branches.');
+      finalBest = { ...best, aim: spot.to, landing: { ...best.landing, centre: spot.to, bearing: bearingDeg(from, spot.to), sdLong: Math.max(4, spot.dist * 0.15), sdLat: Math.max(3, spot.dist * 0.12) } };
+      treeAdvice = { kind: 'chip', to: spot.to, blockedAt: play.blockedAt };
+    } else {
+      lines.unshift(`🌳 Trees in the way about ${fmt(play.blockedAt)} out, and no clear gap. Find the biggest opening back to the short grass and keep it low.`);
+    }
+  }
+  const treePct = Math.round((finalBest.trouble.trees ?? 0) * 100);
+  if (treePct >= 5 && play.kind !== 'chip') lines.push(`Trees: ${treePct}% chance of ending up in them on this line.`);
+
   return {
     mode,
     from,
     toPin,
-    best,
+    best: finalBest,
     alt,
-    headline: best.club.partial ? `${best.club.club} · ${best.club.partial >= 0.85 ? 'smooth' : best.club.partial >= 0.7 ? '¾' : best.club.partial >= 0.5 ? '½' : 'pitch'} swing` : best.club.club,
+    trees: treeAdvice,
+    headline,
     aimText,
     lines,
     trouble,
