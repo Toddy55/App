@@ -74,3 +74,22 @@ describe('the SEQ course list', () => {
     ]);
   });
 });
+
+describe('club tees on a saved course', () => {
+  const base = { id: 'c', name: 'Caloundra Golf Club', osmRef: 'way/25518660', source: 'osm' as const, updatedAt: 1, holes: [{ number: 1, par: 4, si: 1, lengthM: 300 }] };
+  it("replaces an empty tee tapped in by hand (just 'White') with the club's tees", async () => {
+    const { withClubTees } = await import('./clubTees');
+    const out = await withClubTees({ ...base, tees: [{ id: 'white-x', name: 'White', colour: '#fff', lengths: {} }] });
+    expect(out!.tees!.length).toBeGreaterThan(3);
+    expect(out!.tees!.every((t) => t.club)).toBe(true);
+    expect(out!.tees!.find((t) => t.name === 'White')!.slopeRating).toBe(120);
+  });
+  it('keeps a hand-entered tee with real numbers, ahead of the club tees, and drops the club one of the same name', async () => {
+    const { withClubTees } = await import('./clubTees');
+    const mine = { id: 'white-x', name: 'White', lengths: { 1: 333 }, slopeRating: 119 };
+    const out = await withClubTees({ ...base, tees: [mine] });
+    expect(out!.tees![0]).toEqual(mine);
+    expect(out!.tees!.filter((t) => t.name === 'White')).toHaveLength(1);
+    expect(out!.tees!.length).toBeGreaterThan(3);
+  });
+});

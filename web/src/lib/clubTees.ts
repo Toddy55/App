@@ -182,12 +182,12 @@ export function toTeeSets(ct: CourseTees, holeNumbers: number[]): TeeSet[] {
 }
 
 /**
- * Add the club's tees to a saved course (if it has none entered, or only the
- * club's from an earlier list). Returns null if there's nothing to change.
+ * Add the club's tees to a saved course. Tees entered by hand with real numbers
+ * are kept (and win over a club tee of the same name); empty ones are replaced.
+ * Returns null if there's nothing to change.
  */
 export async function withClubTees(course: Course): Promise<Course | null> {
   if (!course.osmRef) return null;
-  if (course.tees?.some((t) => !t.club)) return null; // entered by hand: leave them
   let file: TeesFile;
   try {
     file = await loadClubTees();
@@ -196,8 +196,13 @@ export async function withClubTees(course: Course): Promise<Course | null> {
   }
   const ct = file.courses[course.osmRef];
   if (!ct) return null;
-  const tees = toTeeSets(ct, course.holes.map((h) => h.number));
-  if (!tees.length) return null;
+  const club = toTeeSets(ct, course.holes.map((h) => h.number));
+  if (!club.length) return null;
+  // Tees added by hand stay if they hold anything (a length or a rating) and come first;
+  // an empty one (e.g. "White" tapped in to try it out) gives way to the club's
+  const hand = (course.tees ?? []).filter((t) => !t.club && (t.slopeRating || t.scratchRating || Object.keys(t.lengths ?? {}).length));
+  const named = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
+  const tees = [...hand, ...club.filter((c) => !hand.some((h) => named(h.name, c.name)))];
   // Pars the map had to guess: the club's scorecard (men's tees) knows
   const card = tees.find((t) => !t.women) ?? tees[0];
   const holes = course.cardEdited
