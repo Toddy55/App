@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { parseHcp } from '../components/HandicapEditor';
 import type { Format, Round, RoundPlayer, Team } from '../types';
 import { store, uid } from '../lib/storage';
 import { ambroseTeamHandicap, dailyHandicap, DEFAULT_ALLOWANCE, playingHandicap } from '../lib/handicap';
@@ -317,7 +318,7 @@ export function Setup({ go, courseId, join }: { go: Go; courseId?: string; join?
                 onSubmit={(e) => {
                   e.preventDefault();
                   if (!newName.trim()) return;
-                  addPlayer({ id: uid(), name: newName.trim(), ga: Number(newGa) || 0 });
+                  addPlayer({ id: uid(), name: newName.trim(), ga: parseHcp(newGa) ?? 0 });
                   setNewName('');
                   setNewGa('');
                 }}
