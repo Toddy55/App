@@ -841,3 +841,17 @@ body.replay-open .tabbar { display: none; }
 @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
 .format-wrap .format { padding-left: 26px; padding-right: 26px; }
 .info-sheet .btn.primary { background: var(--gold); color: var(--gold-ink); border-color: var(--gold); }
+.tee-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.tee-chip { display: inline-flex; align-items: center; gap: 8px; padding: 8px 12px; }
+.tee-chip i { width: 14px; height: 14px; border-radius: 50%; border: 1.5px solid rgba(255, 255, 255, .7); display: inline-block; }
+.tee-chip small { opacity: .75; font-weight: 600; }
+.tee-chip.on small { opacity: .9; }
+.tee-edit { border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.tee-edit-head { width: 100%; display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: none; border: none; color: inherit; font: inherit; cursor: pointer; text-align: left; }
+.tee-edit-head strong { flex: 1; }
+.tee-edit-head i { width: 16px; height: 16px; border-radius: 50%; border: 1.5px solid rgba(255, 255, 255, .7); }
+.tee-edit-body { padding: 4px 12px 12px; display: flex; flex-direction: column; gap: 8px; }
+.tee-lengths { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
+.tee-lengths label { display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: .7rem; color: var(--muted); }
+.tee-lengths input { min-height: 36px; padding: 4px; text-align: center; font-size: .85rem; }
+.tee-ratings { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }

@@ -33,6 +33,21 @@ export interface Hazard {
   poly: LatLon[];
 }
 
+/** A set of tee boxes on a course, e.g. Blue, White, Red. */
+export interface TeeSet {
+  id: string;
+  name: string;
+  /** Marker colour, for the chip. */
+  colour?: string;
+  /** Each hole's length from this tee, metres (off the club scorecard). Missing holes use the mapped length. */
+  lengths?: Record<number, number>;
+  /** Golf Australia ratings for this tee. */
+  scratchRating?: number;
+  slopeRating?: number;
+  /** One of the standard sets worked out from the mapped tee (no scorecard numbers yet). */
+  estimated?: boolean;
+}
+
 export interface Course {
   id: string;
   name: string;
@@ -49,6 +64,8 @@ export interface Course {
   osmRef?: string;
   /** The scorecard (pars and stroke indexes) has been checked or edited by hand: don't overwrite it. */
   cardEdited?: boolean;
+  /** The course's tee boxes (if entered). */
+  tees?: TeeSet[];
   updatedAt: number;
 }
 
@@ -154,6 +171,8 @@ export interface Round {
   scores: Record<string, Record<number, number>>;
   stats: Record<number, HoleStats>;
   shots: Record<number, Shot[]>;
+  /** The tee box played from (name), e.g. "White". */
+  teeName?: string;
   /** Mark shots this round (shot tracker, Siri marks). Off = scores only. Default on. */
   trackShots?: boolean;
   /** Siri marks already added to this round (their ids). */
