@@ -6,6 +6,7 @@ import { computeResult, FORMAT_LABELS } from '../lib/scoring';
 import { Scorecard } from '../components/Scorecard';
 import { Markdown } from '../components/Markdown';
 import { ShotReplay } from '../components/ShotReplay';
+import { ShotPatterns } from '../components/ShotPatterns';
 import { Card, Header, type Go } from '../components/ui';
 import { encodeBundle, makeBundle, shareLink, shareUrl } from '../lib/share';
 
@@ -203,6 +204,7 @@ export function Summary({ go, roundId }: { go: Go; roundId: string }) {
         </Card>
 
         <ShotReplay round={round} units={settings.units} />
+        <ShotPatterns rounds={[round]} />
 
         <Card title="Scorecard">
           <Scorecard round={round} />

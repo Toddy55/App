@@ -775,3 +775,25 @@ body.replay-open .tabbar { display: none; }
 .scorecard .sticky, .screen table .sticky { background: #0b1a33; }
 .scorecard thead th, .scorecard thead .sticky { background: var(--brand-deep); color: #fff; }
 .scorecard thead tr.sub .sticky { background: #16264a; }
+
+/* ---------- Shot patterns ---------- */
+.pattern-chart { width: 100%; max-width: 420px; align-self: center; background: #0b1a33; border-radius: 14px; }
+.pc-fairway { fill: rgba(60, 170, 90, .16); }
+.pc-line { stroke: rgba(255, 255, 255, .5); stroke-dasharray: 4 5; }
+.pc-axis { stroke: rgba(255, 255, 255, .15); }
+.pc-ring { fill: none; stroke: rgba(255, 255, 255, .18); }
+.pc-label { fill: rgba(255, 255, 255, .55); font-size: 10px; font-weight: 700; letter-spacing: .04em; }
+.pc-label.end { text-anchor: end; }
+.pc-label.mid { text-anchor: middle; }
+.pc-trace { fill: none; stroke-width: 2; opacity: .55; }
+.pc-dot { stroke: #0b1a33; stroke-width: 1.5; }
+.pc-hole { fill: #fff; font-size: 9px; font-weight: 700; opacity: .75; }
+.pc-avg { fill: none; stroke: #fff; stroke-width: 2; stroke-dasharray: 3 3; }
+.pc-tee { fill: #fff; }
+.pc-flag line { stroke: #fff; stroke-width: 2; }
+.pc-flag path { fill: #ff3b30; }
+.pc-flag circle { fill: #000; stroke: #fff; stroke-width: 1.5; }
+.pattern-key { display: flex; flex-wrap: wrap; gap: 6px 12px; font-size: .78rem; }
+.pattern-key i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; vertical-align: -1px; }
+.pattern-notes { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; font-size: .86rem; }
+.pc-holed { fill: var(--gold); font-size: 12px; }

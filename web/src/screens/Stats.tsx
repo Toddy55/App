@@ -1,4 +1,5 @@
 import { store } from '../lib/storage';
+import { ShotPatterns } from '../components/ShotPatterns';
 import { clubDistances, toPar, trends } from '../lib/analysis';
 import { fmtDist } from '../lib/geo';
 import { Card, Header, type Go } from '../components/ui';
@@ -71,6 +72,7 @@ export function Stats({ go }: { go: Go }) {
             </Card>
           </>
         )}
+        <ShotPatterns rounds={rounds} title="📊 Shot patterns (all rounds)" />
         <Card title="Club distances (from shot tracker)">
           {clubs.length === 0 ? (
             <p className="muted">Use "Mark shot from here" during a round and your average distance per club shows up here.</p>
