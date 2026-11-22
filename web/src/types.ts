@@ -157,6 +157,8 @@ export interface Round {
   /** Siri marks already added to this round (their ids). */
   siriMarks?: string[];
   pins: Record<number, LatLon>;
+  /** Where your ball is on the green, marked by standing on it (per hole). */
+  balls?: Record<number, LatLon>;
   options: RoundOptions;
   weather?: WeatherSnapshot;
   completed: boolean;

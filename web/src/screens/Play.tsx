@@ -62,6 +62,28 @@ export function Play({ go, roundId }: { go: Go; roundId: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [round?.courseId, courseRev],
   );
+  // Stand at the pin, then at your ball: GPS-averaged marks for the putt read
+  const [spotMark, setSpotMark] = useState<{ what: 'pin' | 'ball' | null; note?: string }>({ what: null });
+  const markHere = async (what: 'pin' | 'ball') => {
+    const h = round?.holes[idx];
+    if (!h) return;
+    setSpotMark({ what, note: undefined });
+    try {
+      const { sampleFix } = await import('../lib/spotMark');
+      const fix = await sampleFix(4000, geo.pos ? { pos: geo.pos, acc: geo.accuracy ?? 8 } : undefined);
+      const note = fix.acc > 6 ? `GPS ±${Math.round(fix.acc)} m: a rough read` : `GPS ±${Math.round(fix.acc)} m`;
+      update((r) =>
+        what === 'pin'
+          ? { ...r, pins: { ...r.pins, [h.number]: fix.pos } }
+          : { ...r, balls: { ...(r.balls ?? {}), [h.number]: fix.pos } },
+      );
+      setMeasure(undefined);
+      setSpotMark({ what: null, note: what === 'pin' ? `Pin marked (${note}). Now walk to your ball.` : note });
+    } catch (e) {
+      setSpotMark({ what: null, note: e instanceof Error ? e.message : String(e) });
+    }
+  };
+
   // "Hey Siri, mark shot": spots marked with the phone in the pocket drop into the right holes
   const [siriNote, setSiriNote] = useState<string | null>(null);
   useSiriMarks(round, course?.holes ?? round?.holes ?? [], update, (added) => {
@@ -438,6 +460,9 @@ export function Play({ go, roundId }: { go: Go; roundId: string }) {
               pinMode={mapMode === 'pin'}
               onPinMode={(on) => setMapMode(on ? 'pin' : 'measure')}
               onClearPin={() => update((r) => { const ps = { ...r.pins }; delete ps[hole.number]; return { ...r, pins: ps }; })}
+              ball={round.balls?.[hole.number]}
+              marking={spotMark}
+              onMarkHere={markHere}
               shots={shots}
               advice={advice}
               showCaddy={caddyOnMap}
