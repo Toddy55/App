@@ -686,3 +686,11 @@ button.link { background: none; border: 0; padding: 0; color: var(--brand); text
 .bg-pick.plain { display: flex; align-items: center; justify-content: center; color: var(--muted); }
 .bg-pick.plain span { color: var(--ink, inherit); background: none; text-shadow: none; }
 .bg-pick input { display: none; }
+
+/* ---------- Tab bar in the brand colours, matching the top bar ---------- */
+.tabbar { background: var(--brand-grad); border-top-color: rgba(255, 255, 255, .1); box-shadow: 0 -6px 24px rgba(0, 0, 0, .25); }
+.tabbar button { color: rgba(255, 255, 255, .62); }
+.tabbar button.on { color: var(--gold); }
+.tabbar button.on svg { filter: none; }
+.tabbar .tab-play span { color: rgba(255, 255, 255, .62); }
+.tabbar .tab-play .play-dot, .tabbar .tab-play span.play-dot { background: var(--gold); color: var(--gold-ink); border-color: var(--brand-deep, #08162e); }
