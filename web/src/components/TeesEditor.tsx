@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { scorecardLinks, type LinkCourse } from '../lib/clubTees';
 import type { Course, TeeSet } from '../types';
 import { fmtDist } from '../lib/geo';
 import { TEE_COLOURS } from '../lib/tees';
@@ -19,6 +20,17 @@ export function TeesEditor({ course, save, units }: { course: Course; save: (c: 
   };
   const toUnits = (m: number) => Math.round(units === 'yd' ? m * 1.0936 : m);
   const fromUnits = (v: number) => Math.round(units === 'yd' ? v / 1.0936 : v);
+  // A page with the club's scorecard, to copy tees from (or check them against)
+  const [links, setLinks] = useState<LinkCourse[]>([]);
+  useEffect(() => {
+    let stop = false;
+    scorecardLinks(course)
+      .then((l) => !stop && setLinks(l))
+      .catch(() => undefined);
+    return () => {
+      stop = true;
+    };
+  }, [course.name, course.suburb]);
   const unused = TEE_COLOURS.filter((c) => !tees.some((t) => t.name === c.name));
 
   return (
@@ -26,6 +38,11 @@ export function TeesEditor({ course, save, units }: { course: Course; save: (c: 
       <p className="muted small">
         {fromClub ? "These are the club's tees off its scorecard, filled in for you. Fix any number and it stays as you set it. " : "Add the club's tee boxes off the scorecard. "}Pick your tee when you set up a round, and every distance, the hole view and the caddie play from it. {tees.length === 0 && 'Until then, Back, Middle and Forward are estimated from the mapped tee.'}
       </p>
+      {links.map((l) => (
+        <a key={l.id} className="btn block" href={l.url} target="_blank" rel="noreferrer">
+          📋 {links.length > 1 && l.name.includes('–') ? `${l.name.split('–')[1].trim()} course` : 'Club'} scorecard on {l.site} ↗
+        </a>
+      ))}
       {tees.map((t) => {
         const total = course.holes.reduce((s, h) => s + (t.lengths?.[h.number] ?? h.lengthM ?? 0), 0);
         const isOpen = open === t.id;

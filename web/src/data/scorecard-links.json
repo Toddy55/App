@@ -1,0 +1,635 @@
+{
+"v": 1,
+"compiled": "2026-11-22",
+"courses": [
+{
+"id": "royal-queensland-gc",
+"name": "Royal Queensland GC",
+"region": "Brisbane",
+"suburb": "Eagle Farm",
+"url": "https://www.golfpass.com/courses/18905-royal-queensland-golf-club/scorecard-and-layout",
+"site": "GolfPass",
+"note": "Tournament card also at https://app.europeantour.com/dpworld-tour/bmw-australian-pga-championship-2025/course"
+},
+{
+"id": "the-brisbane-golf-club",
+"name": "The Brisbane Golf Club",
+"region": "Brisbane",
+"suburb": "Yeerongpilly",
+"url": "https://hole19golf.com/courses/the-brisbane-golf-club",
+"site": "Hole19",
+"note": "Club hands out printed cards at the golf shop"
+},
+{
+"id": "indooroopilly-gc-east",
+"name": "Indooroopilly GC – East",
+"region": "Brisbane",
+"suburb": "Indooroopilly",
+"url": "https://www.golfpass.com/courses/19199-indooroopilly-golf-club-east/scorecard-and-layout",
+"site": "GolfPass",
+"note": "36 holes, several nine combos"
+},
+{
+"id": "indooroopilly-gc-west",
+"name": "Indooroopilly GC – West",
+"region": "Brisbane",
+"suburb": "Indooroopilly",
+"url": "https://www.golfpass.com/courses/18653-indooroopilly-golf-club-west/scorecard-and-layout",
+"site": "GolfPass"
+},
+{
+"id": "keperra-country-gc-old",
+"name": "Keperra Country GC – Old",
+"region": "Brisbane",
+"suburb": "Keperra",
+"url": "https://www.hole19golf.com/courses/keperra-country-golf-club-old",
+"site": "Hole19",
+"note": "27 holes"
+},
+{
+"id": "keperra-country-gc-north",
+"name": "Keperra Country GC – North",
+"region": "Brisbane",
+"suburb": "Keperra",
+"url": "https://www.hole19golf.com/courses/keperra-country-golf-club-north",
+"site": "Hole19"
+},
+{
+"id": "keperra-country-gc-west",
+"name": "Keperra Country GC – West",
+"region": "Brisbane",
+"suburb": "Keperra",
+"url": "https://www.hole19golf.com/courses/keperra-country-golf-club-west",
+"site": "Hole19"
+},
+{
+"id": "pacific-gc-championship",
+"name": "Pacific GC – Championship",
+"region": "Brisbane",
+"suburb": "Carindale",
+"url": "https://www.hole19golf.com/courses/pacific-golf-club-championship",
+"site": "Hole19"
+},
+{
+"id": "pacific-gc-par-3",
+"name": "Pacific GC – Par 3",
+"region": "Brisbane",
+"suburb": "Carindale",
+"url": "https://www.hole19golf.com/courses/pacific-golf-club-par-3",
+"site": "Hole19",
+"note": "9-hole par 3"
+},
+{
+"id": "nudgee-gc-kurrai",
+"name": "Nudgee GC – Kurrai",
+"region": "Brisbane",
+"suburb": "Nudgee",
+"url": "https://www.hole19golf.com/courses/nudgee-golf-club-kurrai",
+"site": "Hole19",
+"note": "Courses redeveloped 2023"
+},
+{
+"id": "nudgee-gc-bulka",
+"name": "Nudgee GC – Bulka",
+"region": "Brisbane",
+"suburb": "Nudgee",
+"url": "https://hole19golf.com/courses/nudgee-golf-club-bulka",
+"site": "Hole19"
+},
+{
+"id": "virginia-gc",
+"name": "Virginia GC",
+"region": "Brisbane",
+"suburb": "Virginia",
+"url": "https://www.hole19golf.com/courses/virginia-golf-club",
+"site": "Hole19",
+"note": "27 holes"
+},
+{
+"id": "oxley-gc",
+"name": "Oxley GC",
+"region": "Brisbane",
+"suburb": "Oxley",
+"url": "https://www.hole19golf.com/courses/oxley-golf-club",
+"site": "Hole19"
+},
+{
+"id": "st-lucia-golf-links",
+"name": "St Lucia Golf Links",
+"region": "Brisbane",
+"suburb": "St Lucia",
+"url": "https://www.hole19golf.com/courses/st-lucia-golf-links",
+"site": "Hole19",
+"note": "Public"
+},
+{
+"id": "mcleod-country-gc",
+"name": "McLeod Country GC",
+"region": "Brisbane",
+"suburb": "Mount Ommaney",
+"url": "https://www.golfingrecord.com/golf-scorecard/39d2cb45-1d21-e42c-1d78-e6d4823b9b52",
+"site": "GolfingRecord"
+},
+{
+"id": "brisbane-river-gc",
+"name": "Brisbane River GC",
+"region": "Brisbane",
+"suburb": "Karana Downs",
+"url": "https://www.hole19golf.com/courses/brisbane-river-golf-club",
+"site": "Hole19",
+"note": "Par 66"
+},
+{
+"id": "jindalee-gc",
+"name": "Jindalee GC",
+"region": "Brisbane",
+"suburb": "Jindalee",
+"url": "https://www.hole19golf.com/courses/jindalee-golf-club",
+"site": "Hole19",
+"note": "9 holes"
+},
+{
+"id": "corinda-golf-course",
+"name": "Corinda Golf Course",
+"region": "Brisbane",
+"suburb": "Oxley",
+"url": "https://hole19golf.com/courses/corinda-golf-course",
+"site": "Hole19",
+"note": "Public"
+},
+{
+"id": "corinda-pitch-putt",
+"name": "Corinda Pitch & Putt",
+"region": "Brisbane",
+"suburb": "Corinda",
+"url": "https://www.hole19golf.com/courses/corinda-golf-course-pitch-putt",
+"site": "Hole19",
+"note": "18 par 3s"
+},
+{
+"id": "victoria-park-golf-complex",
+"name": "Victoria Park Golf Complex",
+"region": "Brisbane",
+"suburb": "Herston",
+"url": "https://www.hole19golf.com/courses/victoria-park-golf-complex",
+"site": "Hole19",
+"note": "Check what's still open there"
+},
+{
+"id": "ashgrove-gc",
+"name": "Ashgrove GC",
+"region": "Brisbane",
+"suburb": "The Gap",
+"url": "https://www.hole19golf.com/courses/ashgrove-golf-club",
+"site": "Hole19"
+},
+{
+"id": "wynnum-gc",
+"name": "Wynnum GC",
+"region": "Brisbane",
+"suburb": "Wynnum",
+"url": "https://www.hole19golf.com/courses/wynnum-golf-club",
+"site": "Hole19"
+},
+{
+"id": "sandgate-gc",
+"name": "Sandgate GC",
+"region": "Brisbane",
+"suburb": "Shorncliffe",
+"note": "No direct link found"
+},
+{
+"id": "minnippi-gc",
+"name": "Minnippi GC",
+"region": "Brisbane",
+"suburb": "Cannon Hill",
+"note": "No direct link found"
+},
+{
+"id": "howeston-golf-course",
+"name": "Howeston Golf Course",
+"region": "Brisbane (Redlands)",
+"suburb": "Birkdale",
+"url": "https://www.hole19golf.com/courses/howeston-golf-course",
+"site": "Hole19"
+},
+{
+"id": "redland-bay-gc",
+"name": "Redland Bay GC",
+"region": "Brisbane (Redlands)",
+"suburb": "Redland Bay",
+"url": "https://www.hole19golf.com/courses/redland-bay-golf-club",
+"site": "Hole19"
+},
+{
+"id": "gailes-gc",
+"name": "Gailes GC",
+"region": "Ipswich",
+"suburb": "Wacol",
+"url": "https://www.golfpass.com/courses/18609-gailes-golf-club/scorecard-and-layout",
+"site": "GolfPass"
+},
+{
+"id": "brookwater-golf-country-club",
+"name": "Brookwater Golf & Country Club",
+"region": "Ipswich",
+"suburb": "Brookwater",
+"url": "https://www.golfpass.com/courses/18499-brookwater-golf-club/scorecard-and-layout",
+"site": "GolfPass"
+},
+{
+"id": "ipswich-gc",
+"name": "Ipswich GC",
+"region": "Ipswich",
+"suburb": "Leichhardt",
+"url": "https://www.hole19golf.com/courses/ipswich-golf-club",
+"site": "Hole19"
+},
+{
+"id": "wolston-park-gc",
+"name": "Wolston Park GC",
+"region": "Ipswich",
+"suburb": "Wacol",
+"note": "No direct link found"
+},
+{
+"id": "meadowbrook-gc",
+"name": "Meadowbrook GC",
+"region": "Logan",
+"suburb": "Meadowbrook",
+"url": "https://www.hole19golf.com/courses/meadowbrook-golf-club",
+"site": "Hole19",
+"note": "27 holes (formerly Logan City GC)"
+},
+{
+"id": "carbrook-gc",
+"name": "Carbrook GC",
+"region": "Logan",
+"suburb": "Carbrook",
+"url": "https://www.hole19golf.com/courses/carbrook-golf-club",
+"site": "Hole19"
+},
+{
+"id": "riverlakes-gc",
+"name": "Riverlakes GC",
+"region": "Logan",
+"suburb": "Cornubia",
+"url": "https://www.hole19golf.com/courses/riverlakes-golf-club",
+"site": "Hole19"
+},
+{
+"id": "windaroo-lakes-gc",
+"name": "Windaroo Lakes GC",
+"region": "Logan",
+"suburb": "Windaroo",
+"url": "https://hole19golf.com/courses/windaroo-lakes-golf-club",
+"site": "Hole19"
+},
+{
+"id": "mount-warren-park-gc",
+"name": "Mount Warren Park GC",
+"region": "Logan",
+"suburb": "Mount Warren Park",
+"url": "https://hole19golf.com/courses/mount-warren-park-golf-club",
+"site": "Hole19"
+},
+{
+"id": "village-links",
+"name": "Village Links",
+"region": "Logan",
+"suburb": "Logan Village",
+"note": "No direct link found"
+},
+{
+"id": "wantima-country-club",
+"name": "Wantima Country Club",
+"region": "Moreton Bay",
+"suburb": "Warner",
+"url": "https://www.golfpass.com/courses/19021-wantima-country-club/",
+"site": "GolfPass"
+},
+{
+"id": "north-lakes-resort-gc",
+"name": "North Lakes Resort GC",
+"region": "Moreton Bay",
+"suburb": "North Lakes",
+"url": "https://www.hole19golf.com/courses/north-lakes-resort-golf-club",
+"site": "Hole19"
+},
+{
+"id": "redcliffe-gc",
+"name": "Redcliffe GC",
+"region": "Moreton Bay",
+"suburb": "Clontarf",
+"url": "https://www.hole19golf.com/courses/redcliffe-golf-club",
+"site": "Hole19"
+},
+{
+"id": "pine-rivers-gc",
+"name": "Pine Rivers GC",
+"region": "Moreton Bay",
+"suburb": "Kurwongbah",
+"url": "https://www.hole19golf.com/courses/pine-rivers-golf-club",
+"site": "Hole19"
+},
+{
+"id": "north-pine-gc",
+"name": "North Pine GC",
+"region": "Moreton Bay",
+"suburb": "Joyner",
+"url": "https://www.hole19golf.com/courses/north-pine-golf-club",
+"site": "Hole19",
+"note": "9 holes"
+},
+{
+"id": "caboolture-gc",
+"name": "Caboolture GC",
+"region": "Moreton Bay",
+"suburb": "Caboolture",
+"url": "https://www.hole19golf.com/courses/caboolture-golf-club",
+"site": "Hole19"
+},
+{
+"id": "bribie-island-gc",
+"name": "Bribie Island GC",
+"region": "Moreton Bay",
+"suburb": "Woorim",
+"url": "https://www.hole19golf.com/courses/bribie-island-golf-club",
+"site": "Hole19"
+},
+{
+"id": "pacific-harbour-golf-country-club",
+"name": "Pacific Harbour Golf & Country Club",
+"region": "Moreton Bay",
+"suburb": "Banksia Beach",
+"url": "https://www.hole19golf.com/courses/pacific-harbour-golf-country-club",
+"site": "Hole19"
+},
+{
+"id": "woodford-gc",
+"name": "Woodford GC",
+"region": "Moreton Bay",
+"suburb": "Woodford",
+"note": "No direct link found"
+},
+{
+"id": "racv-royal-pines-resort",
+"name": "RACV Royal Pines Resort",
+"region": "Gold Coast",
+"suburb": "Ashmore/Benowa",
+"url": "https://www.hole19golf.com/courses/racv-royal-pines-resort",
+"site": "Hole19",
+"note": "27 holes"
+},
+{
+"id": "sanctuary-cove-the-pines",
+"name": "Sanctuary Cove – The Pines",
+"region": "Gold Coast",
+"suburb": "Hope Island",
+"url": "https://www.hole19golf.com/courses/sanctuary-cove-golf-country-club-the-pines",
+"site": "Hole19",
+"note": "Members/resort guests"
+},
+{
+"id": "sanctuary-cove-the-palms",
+"name": "Sanctuary Cove – The Palms",
+"region": "Gold Coast",
+"suburb": "Hope Island",
+"url": "https://www.hole19golf.com/courses/sanctuary-cove-golf-country-club-palms",
+"site": "Hole19"
+},
+{
+"id": "links-hope-island",
+"name": "Links Hope Island",
+"region": "Gold Coast",
+"suburb": "Hope Island",
+"url": "https://www.hole19golf.com/courses/links-hope-island",
+"site": "Hole19"
+},
+{
+"id": "the-glades-gc",
+"name": "The Glades GC",
+"region": "Gold Coast",
+"suburb": "Robina",
+"url": "https://www.hole19golf.com/courses/the-glades-golf-club",
+"site": "Hole19"
+},
+{
+"id": "palmer-gold-coast",
+"name": "Palmer Gold Coast",
+"region": "Gold Coast",
+"suburb": "Robina",
+"url": "https://www.golfpass.com/courses/19385-palmer-gold-coast/scorecard-and-layout",
+"site": "GolfPass",
+"note": "Formerly Robina Woods"
+},
+{
+"id": "lakelands-gc",
+"name": "Lakelands GC",
+"region": "Gold Coast",
+"suburb": "Merrimac",
+"url": "https://www.hole19golf.com/courses/lakelands-golf-club",
+"site": "Hole19"
+},
+{
+"id": "the-grand-gc",
+"name": "The Grand GC",
+"region": "Gold Coast",
+"suburb": "Advancetown",
+"url": "https://www.hole19golf.com/courses/the-grand-golf-club-advancetown-au",
+"site": "Hole19",
+"note": "Private"
+},
+{
+"id": "emerald-lakes-gc",
+"name": "Emerald Lakes GC",
+"region": "Gold Coast",
+"suburb": "Carrara",
+"url": "https://www.golfpass.com/courses/19292-emerald-lakes-golf-club/",
+"site": "GolfPass"
+},
+{
+"id": "surfers-paradise-gc",
+"name": "Surfers Paradise GC",
+"region": "Gold Coast",
+"suburb": "Clear Island Waters",
+"url": "https://www.hole19golf.com/courses/surfers-paradise-golf-club",
+"site": "Hole19"
+},
+{
+"id": "southport-gc",
+"name": "Southport GC",
+"region": "Gold Coast",
+"suburb": "Southport",
+"url": "https://www.hole19golf.com/courses/southport-golf-club-southport-au",
+"site": "Hole19"
+},
+{
+"id": "gold-coast-burleigh-gc",
+"name": "Gold Coast Burleigh GC",
+"region": "Gold Coast",
+"suburb": "Burleigh",
+"url": "https://www.golfpass.com/courses/19303-gold-coast-burleigh-golf-club/scorecard-and-layout",
+"site": "GolfPass"
+},
+{
+"id": "gold-coast-country-club",
+"name": "Gold Coast Country Club",
+"region": "Gold Coast",
+"suburb": "Helensvale",
+"url": "https://www.golfpass.com/courses/19309-gold-coast-country-club/scorecard-and-layout",
+"site": "GolfPass"
+},
+{
+"id": "helensvale-gc",
+"name": "Helensvale GC",
+"region": "Gold Coast",
+"suburb": "Helensvale",
+"url": "https://www.hole19golf.com/courses/helensvale-golf-club",
+"site": "Hole19"
+},
+{
+"id": "parkwood-golf-course",
+"name": "Parkwood Golf Course",
+"region": "Gold Coast",
+"suburb": "Parkwood",
+"url": "https://www.golfpass.com/courses/19384-parkwood-village-golf-club/",
+"site": "GolfPass"
+},
+{
+"id": "gainsborough-greens-gc",
+"name": "Gainsborough Greens GC",
+"region": "Gold Coast",
+"suburb": "Pimpama",
+"url": "https://www.golfadvisor.com/courses/19297-gainsborough-greens-golf-club",
+"site": "GolfAdvisor",
+"note": "Tee lengths only"
+},
+{
+"id": "palm-meadows-golf-course",
+"name": "Palm Meadows Golf Course",
+"region": "Gold Coast",
+"suburb": "Carrara",
+"url": "https://www.hole19golf.com/courses/palm-meadows-golf-course",
+"site": "Hole19",
+"note": "Check it's still operating"
+},
+{
+"id": "pelican-waters-gc",
+"name": "Pelican Waters GC",
+"region": "Sunshine Coast",
+"suburb": "Pelican Waters",
+"url": "https://www.hole19golf.com/courses/pelican-waters-golf-resort-and-spa",
+"site": "Hole19"
+},
+{
+"id": "caloundra-gc",
+"name": "Caloundra GC",
+"region": "Sunshine Coast",
+"suburb": "Caloundra",
+"url": "https://www.hole19golf.com/courses/caloundra-golf-club",
+"site": "Hole19"
+},
+{
+"id": "headland-gc",
+"name": "Headland GC",
+"region": "Sunshine Coast",
+"suburb": "Buderim",
+"url": "https://www.hole19golf.com/courses/headland-golf-club",
+"site": "Hole19"
+},
+{
+"id": "twin-waters-gc",
+"name": "Twin Waters GC",
+"region": "Sunshine Coast",
+"suburb": "Twin Waters",
+"url": "https://www.hole19golf.com/courses/twin-waters-golf-club",
+"site": "Hole19"
+},
+{
+"id": "maroochy-river-gc",
+"name": "Maroochy River GC",
+"region": "Sunshine Coast",
+"suburb": "Bli Bli",
+"url": "https://www.hole19golf.com/courses/maroochy-river-golf-club",
+"site": "Hole19"
+},
+{
+"id": "mount-coolum-gc",
+"name": "Mount Coolum GC",
+"region": "Sunshine Coast",
+"suburb": "Mount Coolum",
+"url": "https://www.hole19golf.com/courses/mount-coolum-golf-club",
+"site": "Hole19"
+},
+{
+"id": "peregian-springs-gc",
+"name": "Peregian Springs GC",
+"region": "Sunshine Coast",
+"suburb": "Peregian Springs",
+"url": "https://www.hole19golf.com/courses/peregian-springs-golf-club",
+"site": "Hole19"
+},
+{
+"id": "noosa-springs-golf-spa-resort",
+"name": "Noosa Springs Golf & Spa Resort",
+"region": "Sunshine Coast",
+"suburb": "Noosa Heads",
+"url": "https://www.hole19golf.com/courses/noosa-springs-golf-spa-resort",
+"site": "Hole19"
+},
+{
+"id": "noosa-gc",
+"name": "Noosa GC",
+"region": "Sunshine Coast",
+"suburb": "Tewantin",
+"note": "No direct link found"
+},
+{
+"id": "cooroy-gc",
+"name": "Cooroy GC",
+"region": "Sunshine Coast",
+"suburb": "Cooroy",
+"url": "https://18birdies.com/golf-courses/club/723c9f70-86ac-11e4-8c28-020000005b00/cooroy-golf-club",
+"site": "18Birdies"
+},
+{
+"id": "nambour-gc",
+"name": "Nambour GC",
+"region": "Sunshine Coast",
+"suburb": "Parklands",
+"url": "https://www.hole19golf.com/courses/nambour-golf-club",
+"site": "Hole19"
+},
+{
+"id": "beerwah-gc",
+"name": "Beerwah GC",
+"region": "Sunshine Coast",
+"suburb": "Beerwah",
+"url": "https://www.hole19golf.com/courses/beerwah-golf-club",
+"site": "Hole19"
+},
+{
+"id": "maleny-gc",
+"name": "Maleny GC",
+"region": "Sunshine Coast",
+"suburb": "North Maleny",
+"url": "https://www.golfpass.com/courses/35451-maleny-golf-club/",
+"site": "GolfPass"
+},
+{
+"id": "palmer-coolum-resort",
+"name": "Palmer Coolum Resort",
+"region": "Sunshine Coast",
+"suburb": "Yaroomba",
+"note": "Check it's open for play"
+},
+{
+"id": "the-green-at-tanawha",
+"name": "The Green at Tanawha",
+"region": "Sunshine Coast",
+"suburb": "Tanawha",
+"note": "No direct link found"
+}
+]
+}

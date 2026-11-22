@@ -96,14 +96,8 @@ export function Setup({ go, courseId, join }: { go: Go; courseId?: string; join?
       /* fine */
     }
   };
-  const pickTee = (id: string) => {
-    setTeePick(id);
-    try {
-      if (cid) localStorage.setItem(`gtg.tee.${cid}`, id);
-    } catch {
-      /* fine */
-    }
-  };
+  // Picked fresh every round (not remembered): you might be off the whites today and the blues next week
+  const pickTee = (id: string) => setTeePick(id);
   // Remembered between rounds: some like to track every shot, some just want the scores
   const [trackShots, setTrackShots] = useState(() => {
     try {
@@ -157,20 +151,14 @@ export function Setup({ go, courseId, join }: { go: Go; courseId?: string; join?
         ? course.holes.filter((h) => h.number <= 9)
         : course.holes.filter((h) => h.number > 9);
   const tees = teesFor(course);
-  const savedTee = (() => {
-    try {
-      return localStorage.getItem(`gtg.tee.${course.id}`);
-    } catch {
-      return null;
-    }
-  })();
   const bothKinds = tees.some((t) => t.women) && tees.some((t) => !t.women);
   const shown = bothKinds ? tees.filter((t) => !!t.women === womenTees) : tees;
-  const tee = shown.find((t) => t.id === (teePick ?? savedTee)) ?? shown[0];
+  // Only one to choose from: that's it
+  const tee = shown.find((t) => t.id === teePick) ?? (shown.length === 1 ? shown[0] : undefined);
   // The holes as you'll play them: tee spot moved and lengths adjusted for your tee
-  const played = holesFromTee(holes, tee);
-  const slope = tee.slopeRating ?? course.slopeRating;
-  const scratch = tee.scratchRating ?? course.scratchRating;
+  const played = tee ? holesFromTee(holes, tee) : holes;
+  const slope = tee?.slopeRating ?? course.slopeRating;
+  const scratch = tee?.scratchRating ?? course.scratchRating;
   const par18 = course.holes.reduce((s, h) => s + h.par, 0) * (course.holes.length <= 9 ? 2 : 1);
   const nine = holes.length <= 9;
 
@@ -188,6 +176,7 @@ export function Setup({ go, courseId, join }: { go: Go; courseId?: string; join?
   if (format === 'fourball' && players.length !== 4 && players.length !== 2) problems.push('4BBB needs 2 or 4 players.');
   if (format === 'ambrose' && players.length % ambroseSize !== 0) problems.push(`${ambroseSize}-person Ambrose needs players in groups of ${ambroseSize}. You have ${players.length}.`);
   if (format === 'skins' && players.length < 2) problems.push('Skins needs at least 2 players.');
+  if (!tee) problems.push("Pick the tee box you're playing off today.");
 
   const start = () => {
     const rp: RoundPlayer[] = players.map((p) => {
@@ -217,7 +206,7 @@ export function Setup({ go, courseId, join }: { go: Go; courseId?: string; join?
       date: new Date().toISOString(),
       format,
       holes: played,
-      teeName: tee.name,
+      teeName: tee?.name,
       players: rp,
       teams,
       meId,
@@ -317,7 +306,7 @@ export function Setup({ go, courseId, join }: { go: Go; courseId?: string; join?
           )}
           <div className="tee-chips">
             {shown.map((t) => (
-              <button key={t.id} className={`chip tee-chip ${t.id === tee.id ? 'on' : ''}`} onClick={() => pickTee(t.id)}>
+              <button key={t.id} className={`chip tee-chip ${t.id === tee?.id ? 'on' : ''}`} onClick={() => pickTee(t.id)}>
                 <i style={{ background: t.colour ?? '#94a3b8' }} />
                 {bothKinds ? t.name.replace(" (women)", "") : t.name}
                 <small>
@@ -328,7 +317,9 @@ export function Setup({ go, courseId, join }: { go: Go; courseId?: string; join?
             ))}
           </div>
           <p className="muted small">
-            {tee.estimated
+            {!tee
+              ? "Which tees are you off today? Tap one. "
+              : tee.estimated
               ? `${tee.name} tee lengths are estimated from the mapped tee until the club's tees are added (Courses → this course → Tees).`
               : `${tee.club ? "Club scorecard: hole lengths" : 'Hole lengths'}${tee.pars ? ' and pars' : ''} off the ${tee.name}${/tee/i.test(tee.name) ? '' : ' tees'}${tee.women ? " (women's ratings)" : ''}${tee.slopeRating ? `, slope ${tee.slopeRating}${tee.scratchRating ? ` / scratch ${tee.scratchRating}` : ''}` : ''}.`}{' '}
             Distances, the hole view and the caddie all play from here.

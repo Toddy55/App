@@ -25,6 +25,23 @@ export interface CourseTees {
   name: string;
   tees: ClubTee[];
 }
+/** A course from Toddy's SEQ list (src/data/scorecard-links.json). */
+export interface LinkCourse {
+  id: string;
+  name: string;
+  region: string;
+  suburb: string;
+  /** A page showing the club's scorecard (Hole19, GolfPass…), when one was found. */
+  url?: string;
+  site?: string;
+  note?: string;
+}
+/** A course OpenStreetMap doesn't have, added from the list with the API's location. */
+export interface ExtraCourse {
+  name: string;
+  suburb?: string;
+  at: [number, number];
+}
 export interface TeesFile {
   v: 1;
   generated: string;
@@ -32,6 +49,75 @@ export interface TeesFile {
   courses: Record<string, CourseTees>;
   /** Looked up and not found (so they're not asked for again every run). */
   missed?: Record<string, string>;
+  /** Courses added from the SEQ list (ref "list/<id>"): their tees are in `courses` too. */
+  extra?: Record<string, ExtraCourse>;
+}
+
+const STOP = new Set(['golf', 'club', 'course', 'country', 'the', 'gc', 'inc', 'and', 'resort', 'links', 'qld', 'spa', 'international']);
+export const words = (s: string) =>
+  s
+    .toLowerCase()
+    .replace(/[’']/g, '')
+    .replace(/&/g, ' and ')
+    .replace(/[^a-z0-9 ]/g, ' ')
+    .split(/\s+/)
+    .filter((w) => w && !STOP.has(w));
+
+/** Words in common between two names, as a share of the shorter. */
+export function likeness(a: string, b: string): number {
+  const x = new Set(words(a));
+  const y = new Set(words(b));
+  if (!x.size || !y.size) return 0;
+  let n = 0;
+  for (const w of x) if (y.has(w)) n++;
+  return n / Math.min(x.size, y.size);
+}
+
+const sameSuburb = (a?: string, b?: string) => !!a && !!b && words(a).join(' ') === words(b).join(' ');
+/** Words lots of course names share: on their own they don't make two names the same course. */
+const COMMON = new Set(
+  'lakes lake park river north south east west mount mt island islands springs waters water gold coast heads valley greens hills hill palms pines royal city bay creek beach harbour sunshine brisbane queensland national village glades grand old new'.split(' '),
+);
+
+/** Every word of the shorter name is in the longer one, and at least one of them isn't a common word. */
+function sameName(a: string, b: string): 'yes' | 'common' | 'no' {
+  const x = words(a);
+  const y = words(b);
+  if (!x.length || !y.length) return 'no';
+  const [short, long] = x.length <= y.length ? [x, new Set(y)] : [y, new Set(x)];
+  if (!short.every((w) => long.has(w))) return 'no';
+  return short.some((w) => !COMMON.has(w)) ? 'yes' : 'common';
+}
+
+/**
+ * Is this list entry that course? "Keperra Country GC – Old" is Keperra Golf
+ * Course; "Sanctuary Cove – The Palms" is the map's "Palms Course" if the suburb
+ * agrees. "Gold Coast Country Club" is not Gold Coast Burleigh.
+ */
+export function sameCourse(l: { name: string; suburb?: string }, c: { name: string; suburb?: string }): boolean {
+  const club = l.name.split('–')[0];
+  const verdicts = [sameName(club, c.name), sameName(l.name, c.name)];
+  if (verdicts.includes('yes')) return true;
+  return verdicts.includes('common') && sameSuburb(l.suburb, c.suburb);
+}
+
+let linksCache: Promise<LinkCourse[]> | null = null;
+/** Share of words two names have in common (of all the words in either). */
+function overlap(a: string, b: string): number {
+  const x = new Set(words(a));
+  const y = new Set(words(b));
+  const both = [...x].filter((w) => y.has(w)).length;
+  return both / (new Set([...x, ...y]).size || 1);
+}
+
+/** The club's scorecard pages for a course (more than one at a 27/36-hole club). Closest name wins: "Noosa GC" for Noosa Golf Club, not Noosa Springs. */
+export async function scorecardLinks(course: { name: string; suburb?: string }): Promise<LinkCourse[]> {
+  linksCache ??= import('../data/scorecard-links.json').then((m) => ((m.default ?? m) as unknown as { courses: LinkCourse[] }).courses);
+  const all = (await linksCache).filter((l) => sameCourse(l, course));
+  const score = (l: LinkCourse) => Math.max(overlap(l.name, course.name), overlap(l.name.split('–')[0], course.name));
+  const best = Math.max(0, ...all.map(score));
+  // The closest course first; then only if it has a scorecard page
+  return all.filter((l) => score(l) === best && l.url);
 }
 
 let cache: Promise<TeesFile> | null = null;
@@ -96,12 +182,12 @@ export function toTeeSets(ct: CourseTees, holeNumbers: number[]): TeeSet[] {
 }
 
 /**
- * Add the club's tees to a saved course (if it has none entered, or only the
- * club's from an earlier list). Returns null if there's nothing to change.
+ * Add the club's tees to a saved course. Tees entered by hand with real numbers
+ * are kept (and win over a club tee of the same name); empty ones are replaced.
+ * Returns null if there's nothing to change.
  */
 export async function withClubTees(course: Course): Promise<Course | null> {
   if (!course.osmRef) return null;
-  if (course.tees?.some((t) => !t.club)) return null; // entered by hand: leave them
   let file: TeesFile;
   try {
     file = await loadClubTees();
@@ -110,8 +196,13 @@ export async function withClubTees(course: Course): Promise<Course | null> {
   }
   const ct = file.courses[course.osmRef];
   if (!ct) return null;
-  const tees = toTeeSets(ct, course.holes.map((h) => h.number));
-  if (!tees.length) return null;
+  const club = toTeeSets(ct, course.holes.map((h) => h.number));
+  if (!club.length) return null;
+  // Tees added by hand stay if they hold anything (a length or a rating) and come first;
+  // an empty one (e.g. "White" tapped in to try it out) gives way to the club's
+  const hand = (course.tees ?? []).filter((t) => !t.club && (t.slopeRating || t.scratchRating || Object.keys(t.lengths ?? {}).length));
+  const named = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
+  const tees = [...hand, ...club.filter((c) => !hand.some((h) => named(h.name, c.name)))];
   // Pars the map had to guess: the club's scorecard (men's tees) knows
   const card = tees.find((t) => !t.women) ?? tees[0];
   const holes = course.cardEdited
