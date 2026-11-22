@@ -12,7 +12,7 @@ export async function livePayload(round: Round, currentHole: number): Promise<Om
   const all = store.rounds();
   const compRounds = new Map<string, Round>();
   for (const c of comps) for (const r of eligibleRounds(c, all)) if (r.id !== round.id) compRounds.set(r.id, r);
-  const bundle = makeBundle({ me: settings.me, friends: store.friends(), rounds: [round, ...compRounds.values()], comps });
+  const bundle = makeBundle({ me: settings.me, friends: store.friends(), rounds: [round, ...compRounds.values()], comps, keepShotsOf: round.id });
   return {
     data: await encodeBundle(bundle),
     status: round.completed ? 'final' : 'live',

@@ -243,7 +243,9 @@ function puttText(d: number, riseCm: number, breakCm: number) {
   else parts.push('about level');
   const b = Math.abs(breakCm);
   const cups = b / 10.8;
-  if (b < 4) parts.push('straight');
+  // GPS (±3 m) and LiDAR can't call a few centimetres either way: don't pretend to
+  if (b < 5) parts.push('straight');
+  else if (b < 12) parts.push(`just a touch ${breakCm > 0 ? 'right to left' : 'left to right'}, play it inside the ${breakCm > 0 ? 'right' : 'left'} edge (too subtle for the map to be sure: back your own read)`);
   else if (cups > 4) parts.push(`big break ${breakCm > 0 ? 'right to left' : 'left to right'}, more than 4 cups: trust your eyes on this one`);
   else {
     const dir = breakCm > 0 ? 'right to left' : 'left to right';

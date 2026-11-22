@@ -106,6 +106,37 @@ export function Settings({ go }: { go: Go }) {
           <button className="btn ghost small" onClick={() => { setClubsText(DEFAULT_CLUBS.join(', ')); save({ ...s, clubs: DEFAULT_CLUBS }); }}>
             Reset to default
           </button>
+          <details className="my-distances" open={!!s.myDistances && Object.keys(s.myDistances).length > 0}>
+            <summary>
+              <strong>My distances</strong> <span className="muted small">(so the caddie uses your numbers)</span>
+            </summary>
+            <p className="muted small">How far you normally hit each club in total, carry plus roll, on a calm day. Leave a club blank and the caddie uses your tracked shots, or typical numbers for your handicap.</p>
+            <div className="dist-grid">
+              {s.clubs
+                .filter((c) => !/putt/i.test(c))
+                .map((c) => {
+                  const m = s.myDistances?.[c];
+                  const shown = m ? Math.round(s.units === 'yd' ? m * 1.0936 : m) : '';
+                  return (
+                    <label key={c} className="dist-row">
+                      <span>{c}</span>
+                      <input
+                        inputMode="numeric"
+                        placeholder={s.units}
+                        defaultValue={shown}
+                        onBlur={(e) => {
+                          const v = Number(e.target.value.replace(/[^\d.]/g, ''));
+                          const next = { ...(s.myDistances ?? {}) };
+                          if (v > 0) next[c] = Math.round((s.units === 'yd' ? v / 1.0936 : v) * 10) / 10;
+                          else delete next[c];
+                          save({ ...s, myDistances: next });
+                        }}
+                      />
+                    </label>
+                  );
+                })}
+            </div>
+          </details>
         </Card>
         <Card title="AI coach">
           <label className="field">

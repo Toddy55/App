@@ -157,6 +157,10 @@ export interface Round {
   /** Siri marks already added to this round (their ids). */
   siriMarks?: string[];
   pins: Record<number, LatLon>;
+  /** When each pin was marked (newest wins across the field). */
+  pinsAt?: Record<number, number>;
+  /** Who marked it, when it came from another phone. */
+  pinsBy?: Record<number, string>;
   /** Where your ball is on the green, marked by standing on it (per hole). */
   balls?: Record<number, LatLon>;
   options: RoundOptions;
@@ -186,6 +190,8 @@ export interface Settings {
   shareLive?: boolean;
   anthropicKey?: string;
   clubs: string[];
+  /** Your own stock distance per club (total, metres), e.g. checked with a rangefinder. */
+  myDistances?: Record<string, number>;
 }
 
 export type CompScoring = 'league' | 'stableford_total' | 'stableford_avg' | 'net_avg';

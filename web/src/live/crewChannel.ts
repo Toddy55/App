@@ -153,7 +153,9 @@ export async function watchFriendsLive(crews: string[], onLive: (live: LiveNote[
   if (!liveAvailable() || !crews.length) return () => undefined;
   const { watchPrefix } = await import('./live');
   const current = new Map<string, LiveNote>();
-  const emit = () => onLive([...current.values()].filter((n) => !n.final && Date.now() - n.at < 6 * 3600 * 1000).sort((a, b) => b.at - a.at));
+  // Live rounds (last 6 hours), plus rounds finished in the last 12 so mates can still watch the replay
+  const emit = () =>
+    onLive([...current.values()].filter((n) => (n.final ? Date.now() - n.at < 12 * 3600 * 1000 : Date.now() - n.at < 6 * 3600 * 1000)).sort((a, b) => Number(a.final) - Number(b.final) || b.at - a.at));
   const unsubs = await Promise.all(
     crews.map((c) =>
       watchPrefix(

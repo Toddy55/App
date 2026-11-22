@@ -721,3 +721,45 @@ button.link { background: none; border: 0; padding: 0; color: var(--brand); text
 .hv-mark-btn:active, .hv-mark-btn.busy { background: var(--gold); color: var(--gold-ink); }
 .hv-mark-note { display: inline-flex; align-items: center; gap: 6px; background: rgba(8, 14, 30, .78); color: #fff; border-radius: 12px; padding: 6px 10px; font-size: .75rem; font-weight: 600; }
 .hv-say { border: none; background: var(--gold); color: var(--gold-ink); border-radius: 999px; width: 28px; height: 28px; cursor: pointer; }
+.my-distances summary { cursor: pointer; padding: 4px 0; }
+.dist-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px 12px; margin-top: 8px; }
+.dist-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-weight: 600; }
+.dist-row input { width: 80px; min-height: 38px; padding: 6px 8px; text-align: right; }
+
+/* ---------- Full-screen shot replay ---------- */
+body.replay-open { overflow: hidden; }
+body.replay-open .tabbar { display: none; }
+.replay { position: fixed; inset: 0; z-index: 3000; background: #050a14; color: #fff; overflow: hidden; }
+.replay-map { position: absolute; inset: 0; }
+.replay-shade { fill: rgba(5, 10, 20, .18); }
+.replay-green { fill: rgba(120, 220, 120, .12); stroke: rgba(170, 255, 170, .55); stroke-width: 1.5; }
+.replay-flag line { stroke: #fff; stroke-width: 2; }
+.replay-flag path { fill: #ff3b30; }
+.replay-flag circle { fill: #fff; }
+.replay-tee { fill: #fff; stroke: #050a14; stroke-width: 2; }
+.replay-trail, .replay-line { fill: none; stroke-linecap: round; stroke-dasharray: 1; stroke-dashoffset: 1; animation-name: replay-draw; animation-fill-mode: forwards; animation-timing-function: cubic-bezier(.2, .6, .4, 1); }
+.replay-trail { stroke: rgba(198, 244, 50, .35); stroke-width: 10; filter: blur(3px); }
+.replay-line { stroke: var(--gold); stroke-width: 3.5; }
+@keyframes replay-draw { to { stroke-dashoffset: 0; } }
+.replay-ball { fill: #fff; stroke: rgba(0, 0, 0, .4); stroke-width: 1; }
+.replay-tag { opacity: 0; animation: replay-pop .35s ease-out forwards; }
+.replay-tag rect { fill: rgba(8, 14, 30, .88); stroke: var(--gold); stroke-width: 1; }
+.replay-tag text { fill: #fff; font-size: 11.5px; font-weight: 700; text-anchor: middle; }
+.replay-land { fill: var(--gold); }
+@keyframes replay-pop { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; } }
+.replay-head { position: absolute; top: 0; left: 0; right: 0; display: flex; align-items: center; gap: 12px; padding: calc(12px + env(safe-area-inset-top)) 14px 12px; background: linear-gradient(rgba(5, 10, 20, .92), rgba(5, 10, 20, 0)); }
+.replay-hole { width: 46px; height: 46px; border-radius: 14px; background: var(--gold); color: var(--gold-ink); font-weight: 900; font-size: 1.4rem; display: grid; place-items: center; }
+.replay-head .small { opacity: .85; }
+.replay-close { margin-left: auto; width: 42px; height: 42px; border-radius: 50%; border: none; background: rgba(255, 255, 255, .14); color: #fff; display: grid; place-items: center; cursor: pointer; }
+.replay > .replay-close { position: absolute; top: calc(14px + env(safe-area-inset-top)); right: 14px; }
+.replay-empty { position: absolute; top: 40%; left: 24px; right: 24px; text-align: center; }
+.replay-foot { position: absolute; left: 0; right: 0; bottom: 0; padding: 18px 14px calc(14px + env(safe-area-inset-bottom)); background: linear-gradient(rgba(5, 10, 20, 0), rgba(5, 10, 20, .94) 35%); display: flex; flex-direction: column; gap: 10px; }
+.replay-controls { display: flex; gap: 8px; justify-content: center; }
+.replay-btn { min-width: 46px; height: 46px; border-radius: 23px; border: 1px solid rgba(255, 255, 255, .2); background: rgba(255, 255, 255, .1); color: #fff; display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-weight: 700; font-size: 1.1rem; cursor: pointer; }
+.replay-btn.wide { padding: 0 18px; background: var(--gold); color: var(--gold-ink); border-color: var(--gold); font-size: .95rem; }
+.replay-btn:disabled { opacity: .35; }
+.replay-btn svg { width: 20px; height: 20px; }
+.replay-holes { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; }
+.replay-holes .chip { flex: none; min-width: 38px; }
+.replay-credit { margin: 0; font-size: .62rem; opacity: .6; text-align: center; }
+.live-friend.done { border-color: var(--line); } .done-dot { width: 22px; height: 22px; border-radius: 50%; background: var(--gold); color: var(--gold-ink); display: grid; place-items: center; font-weight: 900; font-size: .8rem; flex: none; }

@@ -11,19 +11,16 @@ export function LiveFriendsCard({ go }: { go: Go }) {
       {live.map((n) => {
         const mins = Math.max(0, Math.round((Date.now() - n.at) / 60000));
         return (
-          <button key={n.code} className="live-friend" onClick={() => go({ name: 'live', code: n.code })}>
-            <span className="live-dot synced" />
+          <button key={n.code} className={`live-friend ${n.final ? 'done' : ''}`} onClick={() => go({ name: 'live', code: n.code })}>
+            {n.final ? <span className="done-dot">✓</span> : <span className="live-dot synced" />}
             <span className="grow">
-              <strong>
-                {n.name} is live at {n.course}
-              </strong>
+              <strong>{n.final ? `${n.name} finished at ${n.course}` : `${n.name} is live at ${n.course}`}</strong>
               <span className="muted small">
-                {n.headline ? `${n.headline} · ` : ''}on hole {n.hole} · {mins < 1 ? 'just now' : `${mins} min ago`}
+                {n.headline ? `${n.headline} · ` : ''}
+                {n.final ? (mins < 60 ? `${Math.max(1, mins)} min ago` : `${Math.round(mins / 60)} h ago`) : `on hole ${n.hole} · ${mins < 1 ? 'just now' : `${mins} min ago`}`}
               </span>
             </span>
-            <span className="watch">
-              <Radio /> Watch
-            </span>
+            <span className="watch">{n.final ? '▶ Replay' : (<><Radio /> Watch</>)}</span>
           </button>
         );
       })}

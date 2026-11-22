@@ -110,7 +110,7 @@ export function MateWatcher({ go }: { go: (r: { name: 'friends' } | { name: 'liv
         watchFriendsLive(crewKey.split(','), (live) => {
           if (stop) return;
           setLiveFriends(live);
-          const fresh = live.filter((n) => !seen.has(n.code));
+          const fresh = live.filter((n) => !n.final && !seen.has(n.code));
           fresh.forEach((n) => seen.add(n.code));
           // Don't pop up for rounds already on when the app opened; Home shows those
           if (!first && fresh.length) setToast(`🔴 ${fresh.map((n) => n.name).join(' and ')} just went live at ${fresh[0].course}. Tap to watch`);
