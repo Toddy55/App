@@ -185,7 +185,7 @@ export function CompDetail({ go, id }: { go: Go; id: string }) {
   };
   const shareComp = async () => {
     const { counted, b } = compBundle();
-    const how = await shareLink(comp.name, `"${comp.name}" in Fairway Coach (${counted.length} round${counted.length === 1 ? '' : 's'} so far). Tap to update your table:`, shareUrl(await encodeBundle(b)));
+    const how = await shareLink(comp.name, `"${comp.name}" in Shotmate (${counted.length} round${counted.length === 1 ? '' : 's'} so far). Tap to update your table:`, shareUrl(await encodeBundle(b)));
     setMsg(how === 'copied' ? 'Link copied. Paste it in the group chat.' : null);
   };
   const members = comp.memberIds.map((m) => nameOf(m));
@@ -248,7 +248,7 @@ export function CompDetail({ go, id }: { go: Go; id: string }) {
           {inviteUrl ? (
             <InviteSheet
               title={`Join ${comp.name}`}
-              intro={`${store.settings().me.name} has invited you to "${comp.name}" on Fairway Coach, our golf scoring and comp app ⛳🏆 Tap the link to join:`}
+              intro={`${store.settings().me.name} has invited you to "${comp.name}" on Shotmate, our golf scoring and comp app ⛳🏆 Tap the link to join:`}
               url={inviteUrl}
               onClose={() => setInviteUrl(null)}
               personal

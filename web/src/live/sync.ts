@@ -214,7 +214,8 @@ export async function startSync(): Promise<void> {
 export async function turnOnSync(): Promise<string> {
   const k = syncKey() ?? newKey();
   setKey(k);
-  await startSync();
+  // The link works straight away; the backup carries on in the background (even with no signal yet)
+  startSync().catch(() => undefined);
   return k;
 }
 

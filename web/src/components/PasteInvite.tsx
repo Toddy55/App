@@ -8,7 +8,7 @@ export function PasteInvite() {
   const [err, setErr] = useState<string | null>(null);
   const open = (t: string) => {
     const h = inviteHash(t);
-    if (!h) return setErr("That doesn't look like a Fairway Coach invite. Copy the whole link from the message.");
+    if (!h) return setErr("That doesn't look like a Shotmate invite. Copy the whole link from the message.");
     setErr(null);
     location.hash = h;
   };

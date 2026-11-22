@@ -1,6 +1,6 @@
 import type { Format } from '../types';
 import type { ReactNode } from 'react';
-import { ChevronLeft, Flag } from 'lucide-react';
+import { ChevronLeft } from 'lucide-react';
 
 export type Route =
   | { name: 'home' }
@@ -86,6 +86,17 @@ export function Segmented<T extends string>({
   );
 }
 
+/** The Shotmate mark: a shot tracer arcing up to the ball. */
+export function ShotmateMark({ size = 22 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="8 8 50 46" fill="none">
+      <path d="M14 49 C 18 22, 34 12, 47 17" stroke="#c6f432" strokeWidth="4.5" strokeLinecap="round" />
+      <circle cx="48.5" cy="17.8" r="6" fill="#ffffff" />
+      <circle cx="14" cy="49" r="3" fill="#c6f432" />
+    </svg>
+  );
+}
+
 export function Header({ title, onBack, right }: { title: string; onBack?: () => void; right?: ReactNode }) {
   return (
     <header className="topbar">
@@ -95,7 +106,7 @@ export function Header({ title, onBack, right }: { title: string; onBack?: () =>
         </button>
       ) : (
         <span className="logo-mark" aria-hidden>
-          <Flag />
+          <ShotmateMark />
         </span>
       )}
       <h1>{title}</h1>

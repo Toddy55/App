@@ -44,7 +44,7 @@ export function Summary({ go, roundId }: { go: Go; roundId: string }) {
   const shareRound = async () => {
     try {
       const b = makeBundle({ me: settings.me, friends: store.friends(), rounds: [round], comps: comps.filter((c) => round.compIds?.includes(c.id)) });
-      const how = await shareLink(`${round.courseName} round`, `${result.headline} at ${round.courseName}. Tap to add the round to your Fairway Coach:`, shareUrl(await encodeBundle(b)));
+      const how = await shareLink(`${round.courseName} round`, `${result.headline} at ${round.courseName}. Tap to add the round to your Shotmate:`, shareUrl(await encodeBundle(b)));
       setShareMsg(how === 'copied' ? 'Link copied. Paste it in the group chat.' : null);
     } catch (e) {
       setShareMsg(e instanceof Error ? e.message : String(e));

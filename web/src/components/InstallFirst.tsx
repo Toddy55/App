@@ -35,7 +35,7 @@ export function InstallFirst({ after, link }: { after?: boolean; link?: string }
           Tap Safari's <strong>Share</strong> button (square with the arrow) → <strong>Add to Home Screen</strong> → <strong>Add</strong>.
         </li>
         <li>
-          Open <strong>Fairway Coach</strong> from your Home Screen and tap <strong>Paste an invite</strong>.
+          Open <strong>Shotmate</strong> from your Home Screen and tap <strong>Paste an invite</strong>.
         </li>
       </ol>
       <button className="btn primary block" onClick={copy}>

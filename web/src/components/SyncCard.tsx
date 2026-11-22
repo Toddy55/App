@@ -30,7 +30,7 @@ export function SyncCard() {
     if (!link) return;
     const nav = navigator as Navigator & { share?: (d: ShareData) => Promise<void> };
     try {
-      if (nav.share) await nav.share({ title: 'Fairway Coach sync', text: 'Open this on my other phone (or the Home Screen app) to link it:', url: link });
+      if (nav.share) await nav.share({ title: 'Shotmate sync', text: 'Open this on my other phone (or the Home Screen app) to link it:', url: link });
       else {
         await navigator.clipboard.writeText(link);
         setMsg('Link copied. Paste it in the other copy: Friends → Paste an invite.');

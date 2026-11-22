@@ -109,12 +109,12 @@ export function Friends({ go }: { go: Go }) {
           <>
           {/iPhone|iPad|iPod/.test(navigator.userAgent) && !isStandalone() && (
             <p className="warn small">
-              ⚠️ You're in Safari. On iPhone, Safari and the Fairway Coach app on your Home Screen keep separate lists, so mates who accept this invite land in Safari's list. If you use the Home Screen app, send invites from there.
+              ⚠️ You're in Safari. On iPhone, Safari and the Shotmate app on your Home Screen keep separate lists, so mates who accept this invite land in Safari's list. If you use the Home Screen app, send invites from there.
             </p>
           )}
           <InviteSheet
-            title="Get on Fairway Coach"
-            intro={`${store.settings().me.name} wants you on Fairway Coach, the app for our scores, comps, live leaderboards and banter ⛳🍻 Tap the link to link up:`}
+            title="Get on Shotmate"
+            intro={`${store.settings().me.name} wants you on Shotmate, the app for our scores, comps, live leaderboards and banter ⛳🍻 Tap the link to link up:`}
             url={inviting}
             onClose={() => setInviting(null)}
             personal
@@ -151,13 +151,13 @@ export function MoveToApp() {
   return (
     <Card title="Use the app on your Home Screen?">
       <p className="small">
-        You're in Safari. On iPhone, Safari and the Fairway Coach app on your Home Screen are <strong>two separate copies</strong>. Link them once and they share everything (friends, rounds, comps and settings) from then on:
+        You're in Safari. On iPhone, Safari and the Shotmate app on your Home Screen are <strong>two separate copies</strong>. Link them once and they share everything (friends, rounds, comps and settings) from then on:
       </p>
       <button className="btn primary block" disabled={!url} onClick={copy}>
         🔗 {done ? 'Copied ✓ Now open the app' : 'Link Safari and the app'}
       </button>
       <p className="muted small">
-        Then open Fairway Coach from your Home Screen → <strong>Friends</strong> → <strong>Paste an invite</strong>. That's it: anything added in either one shows up in both. No need to re-pin the app; it updates itself.
+        Then open Shotmate from your Home Screen → <strong>Friends</strong> → <strong>Paste an invite</strong>. That's it: anything added in either one shows up in both. No need to re-pin the app; it updates itself.
       </p>
     </Card>
   );

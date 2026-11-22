@@ -1,7 +1,7 @@
 {
-  "name": "Fairway Coach",
-  "short_name": "Fairway",
-  "description": "Golf scoring, GPS distances, wind and post-round coaching.",
+  "name": "Shotmate",
+  "short_name": "Shotmate",
+  "description": "Golf with your mates: live scores, comps, banter, AI caddie, shot tracking and replays.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
