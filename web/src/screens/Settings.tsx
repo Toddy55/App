@@ -111,7 +111,7 @@ export function Settings({ go }: { go: Go }) {
             <summary>
               <strong>My distances</strong> <span className="muted small">(so the caddie uses your numbers)</span>
             </summary>
-            <p className="muted small">How far you normally hit each club in total, carry plus roll, on a calm day. Leave a club blank and the caddie uses your tracked shots, or typical numbers for your handicap.</p>
+            <p className="muted small">How far a normal <strong>full swing</strong> goes with each club in total, carry plus roll, on a calm day. For wedges, that's your full shot, not chips or pitches around the green. Leave a club blank and the caddie uses your tracked shots, or typical numbers for your handicap.</p>
             <div className="dist-grid">
               {s.clubs
                 .filter((c) => !/putt/i.test(c))

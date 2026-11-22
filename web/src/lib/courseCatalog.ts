@@ -22,7 +22,7 @@ export interface CatalogHole {
 
 export interface CatalogHazard {
   /** b = bunker, w = water, f = fairway */
-  k: 'b' | 'w' | 'f';
+  k: 'b' | 'w' | 'f' | 't';
   p: [number, number][];
 }
 
@@ -104,7 +104,7 @@ export function catalogToCourse(c: CatalogCourse): Course {
     state: 'QLD',
     location: P(c.at),
     holes,
-    hazards: c.hz?.map((z) => ({ kind: z.k === 'b' ? 'bunker' : z.k === 'w' ? 'water' : 'fairway', poly: z.p.map(P) })),
+    hazards: c.hz?.map((z) => ({ kind: z.k === 'b' ? 'bunker' : z.k === 'w' ? 'water' : z.k === 't' ? 'trees' : 'fairway', poly: z.p.map(P) })),
     source: 'osm',
     osmRef: c.ref,
     updatedAt: Date.now(),
@@ -138,7 +138,12 @@ export async function refreshCourse(course: Course): Promise<Course | null> {
     if (JSON.stringify(next) !== JSON.stringify(h)) changed = true;
     return next;
   });
-  const hazards = course.hazards?.length ? course.hazards : fresh.hazards;
+  let hazards = course.hazards?.length ? course.hazards : fresh.hazards;
+  // Courses saved before trees were mapped: add them now
+  if (course.hazards?.length && !course.hazards.some((z) => z.kind === 'trees')) {
+    const trees = (fresh.hazards ?? []).filter((z) => z.kind === 'trees');
+    if (trees.length) hazards = [...course.hazards, ...trees];
+  }
   if (hazards !== course.hazards) changed = true;
   return changed ? { ...course, holes, hazards } : null;
 }

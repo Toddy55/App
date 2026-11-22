@@ -92,8 +92,8 @@ async function main() {
   if (featuresOrNot) console.log(`  ${featuresOrNot.length} holes/greens`);
   // Only hazards that sit on a golf course (otherwise every dam and creek in SEQ comes back)
   const hazardsOrNot = await optional(
-    'bunkers, water and fairways',
-    `[out:json][timeout:300];nwr["leisure"="golf_course"](${B})->.c;.c map_to_area->.a;(way["golf"~"^(bunker|fairway|water_hazard|lateral_water_hazard)$"](area.a);way["natural"="water"](area.a););out geom tags;`,
+    'bunkers, water, fairways and trees',
+    `[out:json][timeout:300];nwr["leisure"="golf_course"](${B})->.c;.c map_to_area->.a;(way["golf"~"^(bunker|fairway|water_hazard|lateral_water_hazard)$"](area.a);way["natural"="water"](area.a);way["natural"~"^(wood|scrub|tree_row)$"](area.a);relation["natural"="wood"](area.a);way["landuse"="forest"](area.a);node["natural"="tree"](area.a););out geom tags;`,
   );
   if (hazardsOrNot) console.log(`  ${hazardsOrNot.length} hazards/fairways`);
   const placesOrNot = await optional('town names', `[out:json][timeout:120];node["place"~"^(suburb|town|city|village)$"](${B});out tags;`);
@@ -106,7 +106,7 @@ async function main() {
   const owned = new Map<OsmElement, OsmElement[]>(courses.map((c) => [c, []]));
   const isHazard = new Set(hazards);
   for (const f of [...features, ...hazards]) {
-    const g = f.geometry ?? f.members?.find((m) => m.geometry)?.geometry;
+    const g = f.geometry ?? f.members?.find((m) => m.geometry)?.geometry ?? (f.lat != null && f.lon != null ? [{ lat: f.lat, lon: f.lon }] : undefined);
     if (!g?.length) continue;
     const probe = ll(g[Math.floor(g.length / 2)]);
     let home = bounds.find((b) => b.polys.some((p) => pointInPolygon(probe, p) || g.some((q) => pointInPolygon(ll(q), p))))?.c;
@@ -142,8 +142,17 @@ async function main() {
           ...(h.siEst ? { se: 1 as const } : {}),
         }))
       : undefined;
-    const hz = built.hazards?.length
-      ? built.hazards.map((z) => ({ k: z.kind === 'bunker' ? ('b' as const) : z.kind === 'water' ? ('w' as const) : ('f' as const), p: z.poly.map(pt) }))
+    // Trees can be thousands of points on a leafy course: keep the biggest stands and fewer points each
+    const treesKept = (built.hazards ?? [])
+      .filter((z) => z.kind === 'trees')
+      .map((z) => ({ z, size: z.poly.length > 8 ? 1e9 : 1 }))
+      .slice(0, 400)
+      .sort((a, b) => b.size - a.size)
+      .slice(0, 160)
+      .map(({ z }) => ({ ...z, poly: z.poly.length > 10 ? z.poly.filter((_, i, a) => i % Math.ceil(a.length / 10) === 0) : z.poly }));
+    const hzList = [...(built.hazards ?? []).filter((z) => z.kind !== 'trees'), ...treesKept];
+    const hz = hzList.length
+      ? hzList.map((z) => ({ k: z.kind === 'bunker' ? ('b' as const) : z.kind === 'water' ? ('w' as const) : z.kind === 'trees' ? ('t' as const) : ('f' as const), p: z.poly.map(pt) }))
       : undefined;
     out.push({
       ref,

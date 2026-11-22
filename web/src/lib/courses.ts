@@ -1,5 +1,5 @@
 import type { Course, Green, Hazard, HazardKind, Hole, LatLon } from '../types';
-import { centroid, distanceM, pathLength, pointInPolygon } from './geo';
+import { centroid, distanceM, fromLocal, pathLength, pointInPolygon, toLocal } from './geo';
 
 /**
  * Course data comes from OpenStreetMap. Name and town searches use Nominatim
@@ -187,6 +187,10 @@ export async function loadCourse(hit: CourseHit): Promise<Course> {
   relation["golf"="green"]${scope};
   way["golf"~"^(bunker|fairway|water_hazard|lateral_water_hazard)$"]${scope};
   way["natural"="water"]${scope};
+  way["natural"~"^(wood|scrub|tree_row)$"]${scope};
+  relation["natural"="wood"]${scope};
+  way["landuse"="forest"]${scope};
+  node["natural"="tree"]${scope};
 );
 out geom tags;`;
   let els: OsmElement[] = [];
@@ -216,7 +220,32 @@ function hazardKind(e: OsmElement): HazardKind | null {
   if (g === 'bunker') return 'bunker';
   if (g === 'fairway') return 'fairway';
   if (g === 'water_hazard' || g === 'lateral_water_hazard' || e.tags?.natural === 'water') return 'water';
+  const n = e.tags?.natural;
+  if (n === 'wood' || n === 'scrub' || n === 'tree_row' || n === 'tree' || e.tags?.landuse === 'forest') return 'trees';
   return null;
+}
+
+/** A ring of points `r` metres round a spot (a single mapped tree). */
+function ring(c: LatLon, r: number, n = 8): LatLon[] {
+  return Array.from({ length: n }, (_, i) => fromLocal(c, Math.sin((i / n) * 2 * Math.PI) * r, Math.cos((i / n) * 2 * Math.PI) * r));
+}
+
+/** A line of trees as a thin band either side of it. */
+function band(line: LatLon[], half: number): LatLon[] {
+  const o = line[0];
+  const pts = line.map((p) => toLocal(o, p));
+  const left: LatLon[] = [];
+  const right: LatLon[] = [];
+  for (let i = 0; i < pts.length; i++) {
+    const a = pts[Math.max(0, i - 1)];
+    const b = pts[Math.min(pts.length - 1, i + 1)];
+    const len = Math.hypot(b.x - a.x, b.y - a.y) || 1;
+    const nx = (b.y - a.y) / len;
+    const ny = -(b.x - a.x) / len;
+    left.push(fromLocal(o, pts[i].x - nx * half, pts[i].y - ny * half));
+    right.push(fromLocal(o, pts[i].x + nx * half, pts[i].y + ny * half));
+  }
+  return [...left, ...right.reverse()];
 }
 
 export function buildHazards(els: OsmElement[]): Hazard[] {
@@ -224,8 +253,14 @@ export function buildHazards(els: OsmElement[]): Hazard[] {
   for (const e of els) {
     const kind = hazardKind(e);
     if (!kind) continue;
-    const poly = geom(e);
-    if (poly.length >= 3) out.push({ kind, poly: thin(poly, kind === 'water' ? 24 : 16) });
+    if (kind === 'trees' && e.type === 'node' && e.lat != null && e.lon != null) {
+      // A single tree: about a 5 m canopy
+      out.push({ kind, poly: ring({ lat: e.lat, lon: e.lon }, 5) });
+      continue;
+    }
+    let poly = geom(e);
+    if (kind === 'trees' && e.tags?.natural === 'tree_row' && poly.length >= 2) poly = band(thin(poly, 12), 4);
+    if (poly.length >= 3) out.push({ kind, poly: thin(poly, kind === 'water' || kind === 'trees' ? 24 : 16) });
   }
   return out;
 }

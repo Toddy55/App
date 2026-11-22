@@ -1,5 +1,5 @@
-import type { Player } from '../types';
-import { encodeBundle, friendUrl, makeBundle, personKey } from '../lib/share';
+import type { Player, Round } from '../types';
+import { applyBundle, autoMap, encodeBundle, friendUrl, makeBundle, personKey, type Bundle } from '../lib/share';
 import { store, uid } from '../lib/storage';
 import { liveAvailable } from './config';
 
@@ -251,22 +251,44 @@ export async function retryPendingLinkUps(): Promise<number> {
   return sent;
 }
 
-/** A link that copies this copy's friends (and its crew code) into your other copy of the app. */
+/** A link that copies this copy's friends, rounds (with shots) and comps into your other copy of the app. */
 export async function myMoveFriendsUrl(): Promise<string> {
   const s = store.settings();
-  const b = {
-    ...makeBundle({ me: s.me, friends: [], rounds: [], comps: [] }),
-    people: store.friends().map((f) => ({
-      key: personKey(f.name),
-      name: f.name,
-      ga: f.gaHandicap,
-      ...(f.gaNumber ? { gaNo: f.gaNumber } : {}),
-      ...(f.hcpSource ? { src: f.hcpSource } : {}),
-      ...(f.crew ? { crew: f.crew } : {}),
-    })),
-    crew: myCrewCode(),
-  };
-  return `${location.origin}${location.pathname}#move=${await encodeBundle(b)}`;
+  const b = makeBundle({ me: s.me, friends: store.friends(), rounds: store.rounds(), comps: store.comps(), keepShotsOf: 'all' });
+  // Every friend, not just the ones in a round, with their crew codes
+  const seen = new Set(b.people.map((p) => p.key));
+  for (const f of store.friends()) {
+    const key = personKey(f.name);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    b.people.push({ key, name: f.name, ga: f.gaHandicap, ...(f.gaNumber ? { gaNo: f.gaNumber } : {}), ...(f.hcpSource ? { src: f.hcpSource } : {}), ...(f.crew ? { crew: f.crew } : {}) });
+  }
+  return `${location.origin}${location.pathname}#move=${await encodeBundle({ ...b, crew: myCrewCode() })}`;
+}
+
+/** Rounds and comps from your other copy of the app (after its friends are in). */
+export function takeMovedRounds(b: Bundle): { rounds: number; comps: number } {
+  const me = store.settings().me;
+  const plan = applyBundle(b, autoMap(b, me, store.friends()), uid);
+  plan.newFriends.forEach((f) => store.saveFriend(f));
+  let rounds = 0;
+  for (const r of plan.rounds) {
+    const mine: Round = { ...r, sharedBy: undefined };
+    const have = store.round(r.id);
+    const scored = (x: Round) => Object.values(x.scores).reduce((n, h) => n + Object.keys(h ?? {}).length, 0) + Object.values(x.shots ?? {}).reduce((n, sh) => n + sh.length, 0);
+    if (have && scored(have) >= scored(mine)) continue;
+    store.saveRound(mine);
+    rounds++;
+  }
+  let comps = 0;
+  for (const c of plan.comps) {
+    const have = store.comp(c.id);
+    const members = new Set([...(have?.memberIds ?? []), ...c.memberIds]);
+    if (have && members.size === have.memberIds.length) continue;
+    store.saveComp({ ...(have ?? c), ...c, memberIds: [...members] });
+    comps++;
+  }
+  return { rounds, comps };
 }
 
 /** Take friends from your other copy of the app. Returns the names added. */

@@ -208,7 +208,7 @@ export function HoleView(p: Props) {
     if (!from || !p.hazards) return [];
     const out: { at: LatLon; reach: number; carry: number; kind: 'water' | 'bunker'; v: number }[] = [];
     for (const z of p.hazards) {
-      if (z.kind === 'fairway' || z.poly.length < 3) continue;
+      if (z.kind === 'fairway' || z.kind === 'trees' || z.poly.length < 3) continue;
       const c = centroid(z.poly);
       const a = along(from, lineBearing, c);
       if (a.v < 15 || a.v > toGreen + 25 || Math.abs(a.u) > 45) continue;
@@ -252,6 +252,7 @@ export function HoleView(p: Props) {
   // The caddy's aim and landing zone clutter the green close-up when the slope map is on
   const caddyOverlay = p.showCaddy && p.advice && !slopeOn;
   const aim = caddyOverlay ? p.advice!.best.aim : undefined;
+  const caddyTrees = caddyOverlay ? p.advice!.trees : undefined;
   const zone = caddyOverlay ? landingEllipse(p.advice!.best.landing, p.advice!.from) : undefined;
 
   // ---- Touch: tap to place the target (or the pin), drag the target ring
@@ -364,7 +365,11 @@ export function HoleView(p: Props) {
         ))}
 
         {zone && <polygon points={pts(zone)} className="hv-zone" />}
-        {aim && youPt && <line x1={youPt.x} y1={youPt.y} x2={P(aim).x} y2={P(aim).y} className="hv-aimline" />}
+        {aim && youPt && (caddyTrees?.kind === 'shape' ? (
+          <polyline points={caddyTrees.path.map((q) => `${P(q).x},${P(q).y}`).join(' ')} className="hv-aimline hv-shape" />
+        ) : (
+          <line x1={youPt.x} y1={youPt.y} x2={P(aim).x} y2={P(aim).y} className="hv-aimline" />
+        ))}
 
         {/* Shots you've marked on this hole */}
         {p.shots.length > 0 && <polyline points={pts([...p.shots, ...(p.onHole && p.player ? [p.player] : [])])} className="hv-shots" />}

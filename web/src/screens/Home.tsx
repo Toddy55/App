@@ -6,6 +6,8 @@ import { JoinLive } from '../live/LiveView';
 import { InstallTip } from '../components/InstallTip';
 import { PasteInvite } from '../components/PasteInvite';
 import { LiveFriendsCard } from '../components/LiveFriendsCard';
+import { MoveToApp } from './Friends';
+import { isIOS, isStandalone } from '../lib/install';
 import { HomeBgCredit } from '../components/HomeBackdrop';
 import { ChartColumn, ChevronRight, Flag, Map as MapIcon, Settings as SettingsIcon, Trophy, Users, Video } from 'lucide-react';
 
@@ -39,6 +41,7 @@ export function Home({ go }: { go: Go }) {
       />
       <div className="content">
         <LiveFriendsCard go={go} />
+        {isIOS() && !isStandalone() && (rounds.length > 0 || store.friends().length > 0) && <MoveToApp />}
         <section className="hero">
           <div className="hero-hi">G'day</div>
           <div className="hero-name">{settings.me.name === 'Me' ? 'legend' : settings.me.name}</div>

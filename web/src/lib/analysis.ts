@@ -471,24 +471,57 @@ export function toPar(n: number): string {
 }
 
 /** Average carry per club from GPS-marked shots across rounds. */
-export function clubDistances(rounds: Round[]): { club: string; avg: number; n: number; max: number }[] {
-  const acc: Record<string, number[]> = {};
+/** Shots that start this close to the green are chips, pitches and bunker shots, not full swings. */
+export const GREENSIDE_M = 50;
+
+/**
+ * Average distance per club from tracked shots. Full swings and shots around
+ * the green are kept apart: a 25 m chip with the sand wedge would drag the
+ * full-swing average right down. `avg`/`n`/`max` are full swings only (what the
+ * caddie uses); `short` is the around-the-green numbers.
+ */
+export function clubDistances(rounds: Round[]): { club: string; avg: number; n: number; max: number; short?: { avg: number; n: number }; partial: number }[] {
+  const full: Record<string, number[]> = {};
+  const short: Record<string, number[]> = {};
   for (const r of rounds) {
     for (const [holeNo, shots] of Object.entries(r.shots ?? {})) {
       const hole = r.holes.find((h) => h.number === Number(holeNo));
+      const flag = r.pins?.[Number(holeNo)] ?? hole?.green?.centre;
       for (let i = 0; i < shots.length; i++) {
         const s = shots[i];
         if (!s.club || /putt/i.test(s.club)) continue;
-        const next = shots[i + 1] ?? (hole?.green ? { ...hole.green.centre } : undefined);
+        const next = shots[i + 1] ?? (flag ? { ...flag } : undefined);
         if (!next) continue;
         const d = distanceM(s, next);
-        if (d < 5 || d > 350) continue;
-        (acc[s.club] ??= []).push(d);
+        if (d < 3 || d > 350) continue;
+        const fromGreen = flag ? distanceM(s, flag) : Infinity;
+        if (fromGreen <= GREENSIDE_M) (short[s.club] ??= []).push(d);
+        else (full[s.club] ??= []).push(d);
       }
     }
   }
-  return Object.entries(acc)
-    .map(([club, ds]) => ({ club, n: ds.length, avg: ds.reduce((a, b) => a + b, 0) / ds.length, max: Math.max(...ds) }))
+  const avg = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / xs.length;
+  const median = (xs: number[]) => {
+    const t = [...xs].sort((a, b) => a - b);
+    return t[Math.floor(t.length / 2)];
+  };
+  const clubs = new Set([...Object.keys(full), ...Object.keys(short)]);
+  return [...clubs]
+    .map((club) => {
+      const all = full[club] ?? [];
+      // Half swings, punch-outs and knock-downs from the fairway: well short of your usual
+      const m = all.length >= 3 ? median(all) : 0;
+      const swings = m ? all.filter((d) => d >= m * 0.6) : all;
+      const sh = short[club] ?? [];
+      return {
+        club,
+        n: swings.length,
+        avg: swings.length ? avg(swings) : 0,
+        max: swings.length ? Math.max(...swings) : 0,
+        partial: all.length - swings.length,
+        ...(sh.length ? { short: { avg: avg(sh), n: sh.length } } : {}),
+      };
+    })
     .sort((a, b) => b.avg - a.avg);
 }
 
