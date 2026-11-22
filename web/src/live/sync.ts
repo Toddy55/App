@@ -226,6 +226,11 @@ export async function joinSync(key: string): Promise<void> {
   running?.stop();
   running = null;
   setKey(key);
+  try {
+    localStorage.setItem('gtg.rebrandSeen', '1');
+  } catch {
+    /* fine */
+  }
   await startSync();
 }
 
