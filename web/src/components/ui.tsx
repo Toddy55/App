@@ -17,9 +17,9 @@ export type Route =
   | { name: 'comp'; id: string }
   | { name: 'compEdit'; id?: string }
   | { name: 'import'; data: string }
-  | { name: 'joinComp'; data: string }
+  | { name: 'joinComp'; data: string; to?: string }
   | { name: 'chat'; compId: string }
-  | { name: 'friendJoin'; data: string }
+  | { name: 'friendJoin'; data: string; to?: string }
   | { name: 'live'; code: string }
   | { name: 'tracer' }
   | { name: 'livetracer' };

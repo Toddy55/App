@@ -4,6 +4,7 @@ import { liveAvailable } from './config';
 import { livePayload, liveUrl, newEventCode, newGroupId } from './payload';
 import { shareLink } from '../lib/share';
 import { Card, type Go } from '../components/ui';
+import { store } from '../lib/storage';
 
 /**
  * Scorer's control on the hole screen: go live, share the link, and keep the
@@ -36,6 +37,11 @@ export function LiveControl({ round, hole, onLive, go }: { round: Round; hole: n
             .then(({ announceLive }) => announceLive(round.compIds!, code, group, round.courseName, payload.scorer))
             .catch(() => (announced.current = null));
         }
+        import('./crewChannel')
+          .then(({ announcePresence }) =>
+            announcePresence({ name: payload.scorer, code, course: round.courseName, hole, headline: payload.headline, final: round.completed }),
+          )
+          .catch(() => undefined);
         setState('synced');
         setSyncedAt(Date.now());
         setErr(null);
@@ -48,6 +54,16 @@ export function LiveControl({ round, hole, onLive, go }: { round: Round; hole: n
       if (timer.current) clearTimeout(timer.current);
     };
   }, [round, hole]);
+
+  // Rounds go live by themselves so friends can check in without a link (Settings to turn off)
+  const autoTried = useRef(false);
+  useEffect(() => {
+    if (autoTried.current || round.liveCode || round.completed || !liveAvailable()) return;
+    if (store.settings().shareLive === false) return;
+    autoTried.current = true;
+    onLive(newEventCode(), newGroupId());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [round.liveCode, round.completed]);
 
   useEffect(() => {
     const t = setInterval(() => tick((n) => n + 1), 5000);
@@ -101,6 +117,7 @@ export function LiveControl({ round, hole, onLive, go }: { round: Round; hole: n
             <span className={`live-dot ${state}`} /> LIVE · {round.liveCode}
           </strong>
           <div className="muted small">
+            {store.settings().shareLive !== false && 'Your friends can watch from their app. '}
             {state === 'synced' && ago != null
               ? `Your group's card is up to date${ago > 4 ? ` (${ago}s ago)` : ''}`
               : state === 'error'
@@ -128,6 +145,8 @@ export async function pushFinal(round: Round, hole: number) {
   try {
     const [{ pushGroup }, payload] = await Promise.all([import('./live'), livePayload(round, hole)]);
     await pushGroup(round.liveCode, round.liveGroup, payload);
+    const { announcePresence } = await import('./crewChannel');
+    await announcePresence({ name: payload.scorer, code: round.liveCode, course: round.courseName, hole, headline: payload.headline, final: true });
   } catch {
     /* the next edit will retry */
   }

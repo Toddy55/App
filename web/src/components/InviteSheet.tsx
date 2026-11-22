@@ -27,12 +27,27 @@ function inviteMessage(intro: string, url: string) {
  * Send an invite by text, email, the phone's share sheet, or copy it.
  * The message always includes the install steps.
  */
-export function InviteSheet({ title, intro, url, onClose }: { title: string; intro: string; url: string; onClose?: () => void }) {
+export function InviteSheet({
+  title,
+  intro,
+  url: baseUrl,
+  onClose,
+  personal,
+}: {
+  title: string;
+  intro: string;
+  url: string;
+  onClose?: () => void;
+  /** Ask for the mate's name and put it in the link, so they're linked without typing anything. */
+  personal?: boolean;
+}) {
+  const [who, setWho] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [msg, setMsg] = useState<string | null>(null);
   const [picked, setPicked] = useState<{ name: string; tel?: string; email?: string }[]>([]);
-  const text = inviteMessage(intro, url);
+  const url = personal && who.trim() ? `${baseUrl}&to=${encodeURIComponent(who.trim())}` : baseUrl;
+  const text = inviteMessage(personal && who.trim() ? intro.replace(/^/, `G'day ${who.trim().split(' ')[0]}! `) : intro, url);
   const canShare = typeof navigator !== 'undefined' && 'share' in navigator;
   // Android (Chrome) can open the phone's contacts and let you tick several; iPhone can't (yet)
   const contacts = (navigator as Navigator & { contacts?: ContactsManager }).contacts;
@@ -45,7 +60,11 @@ export function InviteSheet({ title, intro, url, onClose }: { title: string; int
       const add = got
         .map((c) => ({ name: c.name?.[0] ?? c.tel?.[0] ?? c.email?.[0] ?? 'Mate', tel: c.tel?.[0], email: c.email?.[0] }))
         .filter((c) => c.tel || c.email);
-      setPicked((prev) => [...prev, ...add.filter((a) => !prev.some((p) => p.tel === a.tel && p.email === a.email))]);
+      setPicked((prev) => {
+        const next = [...prev, ...add.filter((a) => !prev.some((p) => p.tel === a.tel && p.email === a.email))];
+        if (personal) setWho(next.length === 1 ? next[0].name : '');
+        return next;
+      });
     } catch {
       /* cancelled */
     }
@@ -94,6 +113,13 @@ export function InviteSheet({ title, intro, url, onClose }: { title: string; int
           </button>
         )}
       </div>
+      {personal && (
+        <label className="field">
+          <span>Who's it for? (optional: their name goes in the link, so they're linked up without typing anything)</span>
+          <input value={who} onChange={(e) => setWho(e.target.value)} placeholder="e.g. Jarrod" autoComplete="off" />
+        </label>
+      )}
+      {personal && picked.length > 1 && <p className="muted small">Sending to a few at once? Each mate types their name once when they open it. For a no-typing link, invite them one at a time.</p>}
       {canPick && (
         <button className="btn block" onClick={pick}>
           <BookUser /> Choose from my contacts

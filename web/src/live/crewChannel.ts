@@ -13,6 +13,20 @@ export interface CrewMate {
   ga: number;
   gaNo?: string;
   src?: 'ga' | 'manual';
+  /** The mate's own crew code (so you can see when they're live). */
+  crew?: string;
+  at: number;
+}
+
+/** "I'm playing live": posted on your own crew channel for your friends' phones to see. */
+export interface LiveNote {
+  kind: 'live';
+  name: string;
+  code: string;
+  course: string;
+  hole: number;
+  headline: string;
+  final: boolean;
   at: number;
 }
 
@@ -34,7 +48,7 @@ const channel = (code: string) => `crew-${code}`;
 export async function announceLinkUp(code: string, me: Player): Promise<void> {
   if (!liveAvailable()) throw new Error('Live sync is not set up');
   const { pushGroup } = await import('./live');
-  const mate: CrewMate = { name: me.name, ga: me.gaHandicap, gaNo: me.gaNumber, src: me.hcpSource, at: Date.now() };
+  const mate: CrewMate = { name: me.name, ga: me.gaHandicap, gaNo: me.gaNumber, src: me.hcpSource, crew: myCrewCode(), at: Date.now() };
   let slot = '';
   try {
     slot = localStorage.getItem(`gtg.crewSlot.${code}`) ?? '';
@@ -63,7 +77,8 @@ export async function watchMyCrew(onAdded: (names: string[]) => void): Promise<(
       const latest = new Map<string, CrewMate>();
       for (const d of Object.values(docs ?? {})) {
         try {
-          const m = JSON.parse(d.data) as CrewMate;
+          const m = JSON.parse(d.data) as CrewMate & { kind?: string };
+          if (m.kind) continue; // not a link-up (e.g. this phone's own live note)
           const name = String(m.name ?? '').trim().slice(0, 40);
           if (!name) continue;
           const key = personKey(name);
@@ -76,13 +91,14 @@ export async function watchMyCrew(onAdded: (names: string[]) => void): Promise<(
       }
       for (const [key, m] of latest) {
         const details = {
+          ...(typeof m.crew === 'string' && m.crew ? { crew: m.crew.slice(0, 20) } : {}),
           gaHandicap: Number(m.ga) || 0,
           ...(m.gaNo ? { gaNumber: String(m.gaNo) } : {}),
           ...(m.src === 'manual' || m.src === 'ga' ? { hcpSource: m.src } : {}),
         };
         const have = friends.find((f) => personKey(f.name) === key);
         if (have) {
-          const changed = have.gaHandicap !== details.gaHandicap || (details.gaNumber && have.gaNumber !== details.gaNumber) || (details.hcpSource && have.hcpSource !== details.hcpSource);
+          const changed = (details.crew && have.crew !== details.crew) || have.gaHandicap !== details.gaHandicap || (details.gaNumber && have.gaNumber !== details.gaNumber) || (details.hcpSource && have.hcpSource !== details.hcpSource);
           if (changed) {
             store.saveFriend({ ...have, ...details });
             updated = true;
@@ -99,4 +115,41 @@ export async function watchMyCrew(onAdded: (names: string[]) => void): Promise<(
     },
     () => undefined,
   );
+}
+
+/** Tell your friends you're playing live (and where you're up to). Cheap: one small entry, overwritten. */
+export async function announcePresence(note: Omit<LiveNote, 'kind' | 'at'>): Promise<void> {
+  if (!liveAvailable()) return;
+  const { pushGroup } = await import('./live');
+  const full: LiveNote = { kind: 'live', ...note, at: Date.now() };
+  await pushGroup(channel(myCrewCode()), 'live', { data: JSON.stringify(full), status: note.final ? 'final' : 'live', hole: note.hole, headline: note.headline, scorer: note.name });
+}
+
+/** Friends who are playing live right now (rounds started or updated in the last 6 hours). */
+export async function watchFriendsLive(crews: string[], onLive: (live: LiveNote[]) => void): Promise<() => void> {
+  if (!liveAvailable() || !crews.length) return () => undefined;
+  const { watchPrefix } = await import('./live');
+  const current = new Map<string, LiveNote>();
+  const emit = () => onLive([...current.values()].filter((n) => !n.final && Date.now() - n.at < 6 * 3600 * 1000).sort((a, b) => b.at - a.at));
+  const unsubs = await Promise.all(
+    crews.map((c) =>
+      watchPrefix(
+        channel(c),
+        'live',
+        (docs) => {
+          const d = docs?.live;
+          try {
+            const n = d ? (JSON.parse(d.data) as LiveNote) : null;
+            if (n?.kind === 'live' && typeof n.code === 'string') current.set(c, n);
+            else current.delete(c);
+          } catch {
+            current.delete(c);
+          }
+          emit();
+        },
+        () => undefined,
+      ),
+    ),
+  );
+  return () => unsubs.forEach((u) => u());
 }

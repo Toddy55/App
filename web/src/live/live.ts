@@ -22,7 +22,24 @@ export interface GroupDoc {
 let app: FirebaseApp | null = null;
 let db: Database | null = null;
 
-async function init(): Promise<{ db: Database; uid: string }> {
+let ready: Promise<{ db: Database; uid: string }> | null = null;
+
+/**
+ * Connect and sign in once. Several parts of the app start up together (the
+ * mate watcher, a link-up, live scoring); without sharing one sign-in they'd
+ * each create a different anonymous user and the writes would be refused.
+ */
+function init(): Promise<{ db: Database; uid: string }> {
+  if (!ready) {
+    ready = connect().catch((e) => {
+      ready = null;
+      throw e;
+    });
+  }
+  return ready;
+}
+
+async function connect(): Promise<{ db: Database; uid: string }> {
   if (!firebaseConfig) throw new Error("Live scoring isn't set up yet (no Firebase config).");
   if (!app) {
     app = initializeApp(firebaseConfig);

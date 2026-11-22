@@ -4,6 +4,7 @@ import { applyBundle, autoMap, decodeBundle, type Bundle, type Mapping } from '.
 import { roundDay } from '../lib/comps';
 import { FORMAT_LABELS } from '../lib/scoring';
 import { Card, Header, type Go } from '../components/ui';
+import { learnCrews } from '../live/liveFriends';
 
 export function Import({ go, data }: { go: Go; data: string }) {
   const [bundle, setBundle] = useState<Bundle | null>(null);
@@ -37,6 +38,7 @@ export function Import({ go, data }: { go: Go; data: string }) {
     if (!bundle) return;
     const plan = applyBundle({ ...bundle, rounds: bundle.rounds.filter((r) => !skip[r.id]) }, mapping, uid);
     plan.newFriends.forEach((f) => store.saveFriend(f));
+    learnCrews(bundle);
     for (const c of plan.comps) {
       const mine = store.comp(c.id);
       store.saveComp(mine ? { ...c, memberIds: [...new Set([...mine.memberIds, ...c.memberIds])] } : c);

@@ -13,6 +13,8 @@ export interface Person {
   gaNo?: string;
   /** 'manual' for players without a GA handicap. */
   src?: 'ga' | 'manual';
+  /** Their crew code, so friends can see when they're live. */
+  crew?: string;
 }
 
 export interface Bundle {
@@ -50,7 +52,8 @@ export function makeBundle(opts: { me: Player; friends: Player[]; rounds: Round[
     const key = personKey(name);
     if (!people.has(key)) {
       const f = id === 'me' ? opts.me : opts.friends.find((x) => x.id === id);
-      people.set(key, { key, name, ga: f?.gaHandicap ?? ga, ...(f?.gaNumber ? { gaNo: f.gaNumber } : {}), ...(f?.hcpSource ? { src: f.hcpSource } : {}) });
+      const crew = id === 'me' ? myCrew() : f?.crew;
+      people.set(key, { key, name, ga: f?.gaHandicap ?? ga, ...(f?.gaNumber ? { gaNo: f.gaNumber } : {}), ...(f?.hcpSource ? { src: f.hcpSource } : {}), ...(crew ? { crew } : {}) });
     }
     return key;
   };
@@ -94,7 +97,7 @@ export function applyBundle(bundle: Bundle, mapping: Mapping, makeId: () => stri
     if (m === 'new') {
       const id = makeId();
       ids[p.key] = id;
-      newFriends.push({ id, name: p.name, gaHandicap: p.ga, ...(p.gaNo ? { gaNumber: p.gaNo } : {}), ...(p.src ? { hcpSource: p.src } : {}) });
+      newFriends.push({ id, name: p.name, gaHandicap: p.ga, ...(p.gaNo ? { gaNumber: p.gaNo } : {}), ...(p.src ? { hcpSource: p.src } : {}), ...(p.crew ? { crew: p.crew } : {}) });
     } else ids[p.key] = m;
   }
   const map = (k: string) => ids[k] ?? k;
@@ -184,4 +187,13 @@ export async function shareText(title: string, text: string): Promise<'shared' |
   }
   await navigator.clipboard.writeText(text);
   return 'copied';
+}
+
+/** This phone's crew code, if it has one yet (made when you first invite or link up). */
+function myCrew(): string | undefined {
+  try {
+    return localStorage.getItem('gtg.crew') ?? undefined;
+  } catch {
+    return undefined;
+  }
 }

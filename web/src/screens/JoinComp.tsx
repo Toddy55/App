@@ -7,14 +7,18 @@ import { liveAvailable } from '../live/config';
 import { StandingsTable } from './Leaderboards';
 import { HandicapEditor } from '../components/HandicapEditor';
 import { InstallFirst } from '../components/InstallFirst';
+import { learnCrews } from '../live/liveFriends';
 import { Card, Header, type Go } from '../components/ui';
 
 /** Someone opened a comp invite: show them the comp and let them join in one tap. */
-export function JoinComp({ go, data }: { go: Go; data: string }) {
+export function JoinComp({ go, data, to }: { go: Go; data: string; to?: string }) {
   const settings = store.settings();
   const [bundle, setBundle] = useState<Bundle | null>(null);
   const [err, setErr] = useState<string | null>(null);
-  const [name, setName] = useState(settings.me.name === 'Me' ? '' : settings.me.name);
+  // The inviter can put your name in the link, so a brand-new phone needn't type anything
+  const invitedAs = to?.trim().slice(0, 40) || '';
+  const [newPhone] = useState(() => !settings.me.name || settings.me.name === 'Me');
+  const [name, setName] = useState(settings.me.name && settings.me.name !== 'Me' ? settings.me.name : invitedAs);
   const [hcp, setHcp] = useState(settings.me);
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState<{ compId: string; synced: boolean } | null>(null);
@@ -27,7 +31,7 @@ export function JoinComp({ go, data }: { go: Go; data: string }) {
 
   const comp = bundle?.comps[0];
   // Known on this phone already? Join straight away
-  const knownName = settings.me.name && settings.me.name !== 'Me' ? settings.me.name : null;
+  const knownName = settings.me.name && settings.me.name !== 'Me' ? settings.me.name : invitedAs || null;
   const autoRan = useRef(false);
   const [inviteLink] = useState(() => location.href);
   useEffect(() => {
@@ -51,6 +55,7 @@ export function JoinComp({ go, data }: { go: Go; data: string }) {
       store.saveSettings({ ...settings, me });
       const plan = applyBundle(bundle, autoMap(bundle, me, store.friends()), uid);
       plan.newFriends.forEach((f) => store.saveFriend(f));
+      learnCrews(bundle);
       for (const r of plan.rounds) if (!store.round(r.id)) store.saveRound(r);
       for (const c of plan.comps) {
         const mine = store.comp(c.id);
@@ -134,6 +139,7 @@ export function JoinComp({ go, data }: { go: Go; data: string }) {
         {done && (
           <Card className="join-hero">
             <h2>You're in 🎉</h2>
+            {invitedAs && newPhone && <p className="muted small">You're set up as {invitedAs}. Not right? Change it in Settings.</p>}
             <InstallFirst after link={inviteLink} />
             {done.synced ? (
               <p>Everyone in the comp will see your name next time they open it. Tick the comp under "Counts towards" when you set up a round.</p>
