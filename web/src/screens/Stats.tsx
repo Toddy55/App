@@ -75,28 +75,39 @@ export function Stats({ go }: { go: Go }) {
           {clubs.length === 0 ? (
             <p className="muted">Use "Mark shot from here" during a round and your average distance per club shows up here.</p>
           ) : (
-            <table className="totals">
-              <thead>
-                <tr>
-                  <th>Club</th>
-                  <th>Avg ({units})</th>
-                  <th>Longest</th>
-                  <th>Shots</th>
-                </tr>
-              </thead>
-              <tbody>
-                {clubs.map((c) => (
-                  <tr key={c.club}>
-                    <td>{c.club}</td>
-                    <td>
-                      <strong>{fmtDist(c.avg, units)}</strong>
-                    </td>
-                    <td>{fmtDist(c.max, units)}</td>
-                    <td>{c.n}</td>
+            <>
+              <table className="totals">
+                <thead>
+                  <tr>
+                    <th>Club</th>
+                    <th>Full swing ({units})</th>
+                    <th>Longest</th>
+                    <th>Around green</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {clubs.map((c) => (
+                    <tr key={c.club}>
+                      <td>{c.club}</td>
+                      <td>
+                        {c.n ? (
+                          <>
+                            <strong>{fmtDist(c.avg, units)}</strong> <span className="muted small">×{c.n}</span>
+                          </>
+                        ) : (
+                          '–'
+                        )}
+                      </td>
+                      <td>{c.n ? fmtDist(c.max, units) : '–'}</td>
+                      <td>{c.short ? `${fmtDist(c.short.avg, units)} ×${c.short.n}` : '–'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <p className="muted small">
+                Full swing = shots from more than {fmtDist(50, units)}{units} out, minus half swings and punch-outs. Chips, pitches and bunker shots from within {fmtDist(50, units)}{units} of the green are kept separate under "Around green", so they don't drag your wedge numbers down. The caddie uses your full-swing numbers.
+              </p>
+            </>
           )}
           <p className="muted small">Distances are total (carry plus roll). Club off your average, not your best.</p>
         </Card>

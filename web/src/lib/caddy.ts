@@ -25,6 +25,10 @@ export interface ClubModel {
   sdLong: number;
   sdLat: number;
   source: 'tracked' | 'typical' | 'mine';
+  /** A part swing: fraction of the club's full distance (e.g. 0.7 = a three-quarter-ish pitch). */
+  partial?: number;
+  /** Full-swing total, when this is a part swing. */
+  fullTotal?: number;
 }
 
 /** Typical totals (m) for a 15-handicap club golfer. */
@@ -360,7 +364,8 @@ export function advise(opts: {
 }): Advice | null {
   const geo = holeGeo(opts.hole, opts.hazards, opts.pin);
   if (!geo || opts.bag.length === 0) return null;
-  const { from, bag, cond, tend, handicap, mood } = opts;
+  const { from, cond, tend, handicap, mood } = opts;
+  let bag = opts.bag;
   const toPin = distanceM(from, geo.pin);
   if (toPin < 25) return null; // short game: no club advice needed
   const brg = bearingDeg(from, geo.pin);
@@ -368,6 +373,16 @@ export function advise(opts: {
   const plPin = playsLike(toPin, eff, cond.elevDiff ?? 0, cond.tempC);
   const reachable = bag[0].total * 1.05 >= plPin.distance - 15;
   const mode: Advice['mode'] = reachable ? 'approach' : 'tee';
+
+  // Inside your shortest full wedge: a part swing with the wedges, not a full club that flies the green
+  const shortest = bag[bag.length - 1];
+  if (mode === 'approach' && shortest && plPin.distance < shortest.total - 6) {
+    const wedges = bag.filter((c) => c.total >= plPin.distance && c.total < plPin.distance * 1.9).slice(-2);
+    bag = (wedges.length ? wedges : [shortest]).map((c) => {
+      const f = Math.max(0.3, Math.min(1, plPin.distance / c.total));
+      return { ...c, total: plPin.distance, roll: c.roll * f, sdLat: c.sdLat * (0.6 + f * 0.4), sdLong: c.sdLong * (0.7 + f * 0.3), partial: f, fullTotal: c.total };
+    });
+  }
 
   // which clubs are worth trying: around the distance when going for it, anything shorter for lay-ups
   const clubs = bag.filter((c) => (mode === 'approach' ? c.total > plPin.distance - 70 && c.total < plPin.distance + 45 : c.total < plPin.distance + 30));
@@ -411,7 +426,12 @@ export function advise(opts: {
     .filter((t) => t.pct >= 3);
 
   const lines: string[] = [];
-  lines.push(`${best.club.club} goes about ${fmt(best.club.total)}${best.club.source === 'tracked' ? ' (from your tracked shots)' : best.club.source === 'mine' ? ' (your distance)' : ''}; here it flies ${fmt(best.carryReal)}.`);
+  if (best.club.partial && best.club.fullTotal) {
+    const pct = Math.round(best.club.partial * 100);
+    const swing = pct >= 85 ? 'a smooth, slightly shorter swing' : pct >= 70 ? 'a three-quarter swing' : pct >= 50 ? 'a half swing' : 'a pitch (short backswing)';
+    lines.push(`${best.club.club}, ${swing}: about ${pct}% of your full ${best.club.club} (${fmt(best.club.fullTotal)}${best.club.source === 'mine' ? ', your distance' : best.club.source === 'tracked' ? ', from your tracked shots' : ''}).`);
+  } else
+    lines.push(`${best.club.club} goes about ${fmt(best.club.total)}${best.club.source === 'tracked' ? ' (from your tracked shots)' : best.club.source === 'mine' ? ' (your distance)' : ''}; here it flies ${fmt(best.carryReal)}.`);
   if (eff && eff.label !== 'Calm') {
     const parts: string[] = [];
     if (Math.abs(eff.head) >= 3) parts.push(`${Math.round(Math.abs(eff.head))} km/h ${eff.head > 0 ? 'into you' : 'behind you'}`);
@@ -459,7 +479,7 @@ export function advise(opts: {
     toPin,
     best,
     alt,
-    headline: best.club.club,
+    headline: best.club.partial ? `${best.club.club} · ${best.club.partial >= 0.85 ? 'smooth' : best.club.partial >= 0.7 ? '¾' : best.club.partial >= 0.5 ? '½' : 'pitch'} swing` : best.club.club,
     aimText,
     lines,
     trouble,
