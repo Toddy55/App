@@ -5,6 +5,7 @@ import { bearingDeg, centroid, distanceM, fmtDist, greenDistances, pointInPolygo
 import { along, ESRI, makeFrame, project, tileLayout, unproject, type Frame, type Imagery } from '../lib/holeFrame';
 import { landingEllipse, type Advice } from '../lib/caddy';
 import { DEM_CREDIT, type Dem } from '../lib/greenDem';
+import { speak } from '../lib/spotMark';
 import { readPutt } from '../lib/greenRead';
 import { GreenSlopeLayer, fallWords, useGreenSlope } from './GreenSlope';
 
@@ -23,6 +24,12 @@ interface Props {
   pinMode: boolean;
   onPinMode: (on: boolean) => void;
   onClearPin: () => void;
+  /** Your ball on the green, marked by standing on it. */
+  ball?: LatLon;
+  /** Stand at the pin / your ball and mark it with GPS. */
+  onMarkHere?: (what: 'pin' | 'ball') => void;
+  /** A mark in progress (taking a few GPS readings), or how sharp the last one was. */
+  marking?: { what: 'pin' | 'ball' | null; note?: string };
   shots: Shot[];
   advice?: Advice | null;
   showCaddy: boolean;
@@ -229,10 +236,19 @@ export function HoleView(p: Props) {
   const slopeOn = !!slope && showSlope && view === 'green';
   // The putt read: from where you tapped, or from you if you're on the green
   const onGreen = !!p.player && p.onHole && (green.polygon?.length ? distanceM(p.player, green.centre) < 30 : distanceM(p.player, green.centre) < 16);
-  const ball = view === 'green' ? (target ?? (onGreen ? p.player : undefined)) : undefined;
+  const ball = view === 'green' ? (target ?? p.ball ?? (onGreen ? p.player : undefined)) : undefined;
   // Only read putts from on (or right on the edge of) the green
   const ballOnGreen = !!ball && (green.polygon?.length ? pointInPolygon(ball, green.polygon) || distanceToPoly(ball, green.polygon) < 2 : distanceM(ball, green.centre) < 15);
   const putt = slope && ball && ballOnGreen ? readPutt(slope.dem, ball, p.pin ?? green.centre) : null;
+  // Read it out when you've just marked your ball
+  const spoken = useRef('');
+  useEffect(() => {
+    if (!p.ball || target || !putt) return;
+    const key = `${p.ball.lat},${p.ball.lon},${p.pin?.lat},${p.pin?.lon}`;
+    if (spoken.current === key) return;
+    spoken.current = key;
+    speak(putt.text);
+  }, [p.ball, p.pin, putt, target]);
   // The caddy's aim and landing zone clutter the green close-up when the slope map is on
   const caddyOverlay = p.showCaddy && p.advice && !slopeOn;
   const aim = caddyOverlay ? p.advice!.best.aim : undefined;
@@ -497,6 +513,28 @@ export function HoleView(p: Props) {
         )}
       </div>
 
+      {view === 'green' && p.onMarkHere && (
+        <div className="hv-mark" style={{ top: pad.top + 6 }}>
+          <button className={`hv-mark-btn ${p.marking?.what === 'pin' ? 'busy' : ''}`} disabled={!!p.marking?.what} onClick={() => p.onMarkHere!('pin')}>
+            {p.marking?.what === 'pin' ? '📡 Hold still…' : "📍 I'm at the pin"}
+          </button>
+          <button className={`hv-mark-btn ${p.marking?.what === 'ball' ? 'busy' : ''}`} disabled={!!p.marking?.what} onClick={() => p.onMarkHere!('ball')}>
+            {p.marking?.what === 'ball' ? '📡 Hold still…' : "⚪ I'm at my ball"}
+          </button>
+          {p.ball && !target && (
+            <span className="hv-mark-note">
+              {putt ? (
+                <button className="hv-say" onClick={() => speak(putt.text)} aria-label="Read the putt out loud">
+                  🔊
+                </button>
+              ) : null}
+              Ball to pin {putt ? `${units === 'yd' ? (putt.distanceM * 1.0936).toFixed(1) : putt.distanceM.toFixed(1)}` : d(distanceM(p.ball, p.pin ?? green.centre))}{units}
+              {p.marking?.note ? ` · ${p.marking.note}` : ''}
+            </span>
+          )}
+          {!p.ball && p.marking?.note && <span className="hv-mark-note">{p.marking.note}</span>}
+        </div>
+      )}
       {slopeOn && slope && (
         <div className="hv-caddy hv-putt">
           {putt ? (
@@ -515,7 +553,7 @@ export function HoleView(p: Props) {
           </span>
         </div>
       )}
-      <div className="hv-zoom" style={{ bottom: pad.bottom + 10 }}>
+      <div className="hv-zoom" style={{ bottom: slopeOn && slope ? 118 : pad.bottom + 10 }}>
         <button className="hv-btn" onClick={() => zoomBy(1.6)} aria-label="Zoom in">
           +
         </button>
