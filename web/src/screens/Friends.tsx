@@ -8,7 +8,7 @@ import { InviteSheet } from '../components/InviteSheet';
 import { encodeBundle, friendUrl, makeBundle, personKey } from '../lib/share';
 import { PasteInvite } from '../components/PasteInvite';
 import { LiveFriendsCard } from '../components/LiveFriendsCard';
-import { HandicapEditor, handicapLabel, STALE_MS } from '../components/HandicapEditor';
+import { HandicapEditor, handicapLabel, parseHcp, STALE_MS } from '../components/HandicapEditor';
 
 export function Friends({ go }: { go: Go }) {
   const [friends, setFriends] = useState<Player[]>(store.friends());
@@ -36,7 +36,7 @@ export function Friends({ go }: { go: Go }) {
 
   const add = () => {
     if (!name.trim()) return;
-    store.saveFriend({ id: uid(), name: name.trim(), gaHandicap: Number(ga) || 0 });
+    store.saveFriend({ id: uid(), name: name.trim(), gaHandicap: parseHcp(ga) ?? 0 });
     setFriends(store.friends());
     setName('');
     setGa('');

@@ -15,6 +15,17 @@ export function handicapLabel(p: Player): string {
 }
 
 /**
+ * Read a typed handicap: "11.4", "11,4", "+2.1" (plus handicaps are stored as negatives).
+ * Null while it's half typed ("11.", "+") or out of range.
+ */
+export function parseHcp(text: string): number | null {
+  const v = text.trim().replace(',', '.');
+  if (!/^[+-]?(\d{1,2}(\.\d?)?|\.\d)$/.test(v) || /\.$/.test(v)) return null;
+  const n = v.startsWith('+') ? -Number(v.slice(1)) : Number(v);
+  return Number.isFinite(n) && n >= -10 && n <= 54 ? Math.round(n * 10) / 10 : null;
+}
+
+/**
  * Official GA Handicap (with GA number and a one-tap check on Golf Australia)
  * or a manual handicap for mates who don't have one.
  */
@@ -30,14 +41,14 @@ export function HandicapEditor({ player, onChange }: { player: Player; onChange:
   const hcpInput = (
     <input
       inputMode="text"
+      placeholder="e.g. 11.4"
       value={text}
       onChange={(e) => {
         const t = e.target.value.replace(/[^\d.,+-]/g, '');
         setText(t);
-        const v = t.replace(',', '.');
-        const n = v.startsWith('+') ? -Number(v.slice(1)) : Number(v);
-        if (v !== '' && v !== '+' && v !== '-' && Number.isFinite(n) && n >= -10 && n <= 54)
-          set({ gaHandicap: n, hcpCheckedAt: source === 'ga' ? Date.now() : player.hcpCheckedAt });
+        // Only save a finished number, so "11." keeps its dot while you type the 4
+        const n = parseHcp(t);
+        if (n != null) set({ gaHandicap: n, hcpCheckedAt: source === 'ga' ? Date.now() : player.hcpCheckedAt });
       }}
       onBlur={() => setText(show(player.gaHandicap))}
     />

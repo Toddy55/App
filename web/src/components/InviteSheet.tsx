@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { NotifyToggle } from './NotifyToggle';
 import { BookUser, Copy, Mail, MessageSquare, Share2, X } from 'lucide-react';
 import { Card } from './ui';
 
@@ -171,6 +172,7 @@ export function InviteSheet({
         </button>
       </div>
       {msg && <p className="ok small">{msg}</p>}
+      <NotifyToggle label={personal ? 'Notify me when they accept' : 'Notify me when they join'} />
       <details className="invite-preview">
         <summary className="muted small">What they'll get</summary>
         <pre>{text.replace(url, url.length > 70 ? url.slice(0, 60) + '…' : url)}</pre>

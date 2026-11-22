@@ -56,3 +56,16 @@ self.addEventListener('fetch', (e) => {
     );
   }
 });
+
+// Tapping a notification opens the app on the right screen
+self.addEventListener('notificationclick', (e) => {
+  e.notification.close();
+  const url = e.notification.data && e.notification.data.url;
+  e.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
+      const open = list.find((c) => 'focus' in c);
+      if (open) return open.focus().then((c) => (url && c && 'navigate' in c ? c.navigate(url) : c));
+      return self.clients.openWindow(url || './');
+    }),
+  );
+});
