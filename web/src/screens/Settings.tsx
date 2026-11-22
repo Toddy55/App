@@ -5,7 +5,7 @@ import { HandicapEditor } from '../components/HandicapEditor';
 import { NotifyToggle } from '../components/NotifyToggle';
 import { Card, Header, Segmented, type Go } from '../components/ui';
 import { HOME_BGS, readHomeBg, readOwnBg, saveHomeBg, saveOwnBg } from '../lib/homeBg';
-import { PALETTES, readAppearance, saveAppearance, type Mode, type Palette } from '../lib/appearance';
+import { PALETTES, readAppearance, saveAppearance, type Palette } from '../lib/appearance';
 
 export function Settings({ go }: { go: Go }) {
   const [s, setS] = useState<S>(store.settings());
@@ -17,11 +17,6 @@ export function Settings({ go }: { go: Go }) {
   const [look, setLook] = useState(readAppearance());
   const setPalette = (palette: Palette) => {
     const n = { ...look, palette };
-    setLook(n);
-    saveAppearance(n);
-  };
-  const setMode = (mode: Mode) => {
-    const n = { ...look, mode };
     setLook(n);
     saveAppearance(n);
   };
@@ -80,11 +75,7 @@ export function Settings({ go }: { go: Go }) {
             </div>
           </div>
           <div className="field">
-            <span>Mode</span>
-            <Segmented value={look.mode} onChange={setMode} options={[{ value: 'auto', label: 'Auto' }, { value: 'light', label: 'Light' }, { value: 'dark', label: 'Dark' }]} />
-          </div>
-          <div className="field">
-            <span>Home screen photo</span>
+            <span>Background photo (every screen)</span>
             <div className="bg-grid">
               {HOME_BGS.map((b) => (
                 <button key={b.id} className={`bg-pick ${bg === b.id ? 'on' : ''}`} style={{ backgroundImage: `url("${import.meta.env.BASE_URL}bg/${b.file}")` }} onClick={() => pickBg(b.id)}>
