@@ -45,6 +45,28 @@ export function myCrewCode(): string {
 
 const channel = (code: string) => `crew-${code}`;
 
+/**
+ * Crew codes from this person's other copies of the app (on iPhone, Safari and
+ * the Home Screen app keep separate data). Invites sent from those still land here.
+ */
+export function extraCrewCodes(): string[] {
+  try {
+    const v = JSON.parse(localStorage.getItem('gtg.extraCrews') || '[]');
+    return Array.isArray(v) ? v.filter((x) => typeof x === 'string' && x.length >= 6) : [];
+  } catch {
+    return [];
+  }
+}
+export function addExtraCrewCode(code: string) {
+  if (!code || code === myCrewCode() || extraCrewCodes().includes(code)) return;
+  try {
+    localStorage.setItem('gtg.extraCrews', JSON.stringify([...extraCrewCodes(), code].slice(-5)));
+  } catch {
+    /* private mode */
+  }
+}
+export const myCrewCodes = () => [myCrewCode(), ...extraCrewCodes()];
+
 export async function announceLinkUp(code: string, me: Player): Promise<void> {
   if (!liveAvailable()) throw new Error('Live sync is not set up');
   const { pushGroup } = await import('./live');
@@ -66,9 +88,7 @@ export async function announceLinkUp(code: string, me: Player): Promise<void> {
 export async function watchMyCrew(onAdded: (names: string[]) => void): Promise<() => void> {
   if (!liveAvailable()) return () => undefined;
   const { watchEvent } = await import('./live');
-  return watchEvent(
-    channel(myCrewCode()),
-    (docs) => {
+  const handle = (docs: Record<string, { data: string }> | null) => {
       const me = store.settings().me;
       const friends = store.friends();
       const added: string[] = [];
@@ -112,9 +132,9 @@ export async function watchMyCrew(onAdded: (names: string[]) => void): Promise<(
       }
       // Called when anyone was added or their details changed (names = the new ones)
       if (added.length || updated) onAdded(added);
-    },
-    () => undefined,
-  );
+  };
+  const unsubs = await Promise.all(myCrewCodes().map((c) => watchEvent(channel(c), handle, () => undefined)));
+  return () => unsubs.forEach((u) => u());
 }
 
 /** Tell your friends you're playing live (and where you're up to). Cheap: one small entry, overwritten. */
@@ -122,7 +142,10 @@ export async function announcePresence(note: Omit<LiveNote, 'kind' | 'at'>): Pro
   if (!liveAvailable()) return;
   const { pushGroup } = await import('./live');
   const full: LiveNote = { kind: 'live', ...note, at: Date.now() };
-  await pushGroup(channel(myCrewCode()), 'live', { data: JSON.stringify(full), status: note.final ? 'final' : 'live', hole: note.hole, headline: note.headline, scorer: note.name });
+  const doc = { data: JSON.stringify(full), status: note.final ? ('final' as const) : ('live' as const), hole: note.hole, headline: note.headline, scorer: note.name };
+  await pushGroup(channel(myCrewCode()), 'live', doc);
+  // Mates who linked up through your other copy of the app (e.g. Safari) watch that code
+  await Promise.all(extraCrewCodes().map((c) => pushGroup(channel(c), 'live', doc).catch(() => undefined)));
 }
 
 /** Friends who are playing live right now (rounds started or updated in the last 6 hours). */
@@ -216,4 +239,44 @@ export async function retryPendingLinkUps(): Promise<number> {
     }
   }
   return sent;
+}
+
+/** A link that copies this copy's friends (and its crew code) into your other copy of the app. */
+export async function myMoveFriendsUrl(): Promise<string> {
+  const s = store.settings();
+  const b = {
+    ...makeBundle({ me: s.me, friends: [], rounds: [], comps: [] }),
+    people: store.friends().map((f) => ({
+      key: personKey(f.name),
+      name: f.name,
+      ga: f.gaHandicap,
+      ...(f.gaNumber ? { gaNo: f.gaNumber } : {}),
+      ...(f.hcpSource ? { src: f.hcpSource } : {}),
+      ...(f.crew ? { crew: f.crew } : {}),
+    })),
+    crew: myCrewCode(),
+  };
+  return `${location.origin}${location.pathname}#move=${await encodeBundle(b)}`;
+}
+
+/** Take friends from your other copy of the app. Returns the names added. */
+export function takeMovedFriends(b: { crew?: string; people: { name: string; ga: number; gaNo?: string; src?: 'ga' | 'manual'; crew?: string }[] }): string[] {
+  const me = store.settings().me;
+  const friends = store.friends();
+  const added: string[] = [];
+  for (const p of b.people) {
+    const key = personKey(p.name);
+    if (key === personKey(me.name)) continue;
+    const have = friends.find((f) => personKey(f.name) === key);
+    if (have) {
+      if (p.crew && !have.crew) store.saveFriend({ ...have, crew: p.crew });
+      continue;
+    }
+    const f: Player = { id: uid(), name: p.name, gaHandicap: p.ga, ...(p.gaNo ? { gaNumber: p.gaNo } : {}), ...(p.src ? { hcpSource: p.src } : {}), ...(p.crew ? { crew: p.crew } : {}), linkedAt: Date.now() };
+    store.saveFriend(f);
+    friends.push(f);
+    added.push(p.name);
+  }
+  if (b.crew) addExtraCrewCode(b.crew);
+  return added;
 }

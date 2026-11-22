@@ -7,7 +7,7 @@ import { computeResult, FORMAT_LABELS } from '../lib/scoring';
 import { Card, Header, type Go } from '../components/ui';
 import { InviteSheet } from '../components/InviteSheet';
 import { PasteInvite } from '../components/PasteInvite';
-import { isStandalone } from '../lib/install';
+import { isIOS, isStandalone } from '../lib/install';
 import { LiveFriendsCard } from '../components/LiveFriendsCard';
 import { HandicapEditor, handicapLabel, parseHcp, STALE_MS } from '../components/HandicapEditor';
 
@@ -50,6 +50,7 @@ export function Friends({ go }: { go: Go }) {
       <Header title="Friends" onBack={() => go({ name: 'home' })} />
       <div className="content">
         <LiveFriendsCard go={go} />
+        {isIOS() && !isStandalone() && friends.length > 0 && <MoveToApp />}
         <Card title={`Your crew (${friends.length})`}>
           {friends.length === 0 && <p className="muted">No mates yet. Send an invite above, or add them here or when you set up a round.</p>}
           {friends.length > 0 && <p className="muted small">Tap ⛳ next to your mates to line them up, then tee off. Tap a name to see their details.</p>}
@@ -127,6 +128,39 @@ export function Friends({ go }: { go: Go }) {
         <PasteInvite />
       </div>
     </div>
+  );
+}
+
+/** In Safari on iPhone: copy these friends across to the Home Screen app (they keep separate lists). */
+function MoveToApp() {
+  const [done, setDone] = useState<'copied' | 'shared' | null>(null);
+  // Built up front: Safari only lets a tap copy straight away
+  const [url, setUrl] = useState<string | null>(null);
+  useEffect(() => {
+    import('../live/crewChannel').then(({ myMoveFriendsUrl }) => myMoveFriendsUrl()).then(setUrl).catch(() => undefined);
+  }, []);
+  const copy = async () => {
+    if (!url) return;
+    try {
+      await navigator.clipboard.writeText(url);
+      setDone('copied');
+    } catch {
+      prompt('Copy this link:', url);
+      setDone('copied');
+    }
+  };
+  return (
+    <Card title="Use the app on your Home Screen?">
+      <p className="small">
+        You're in Safari. On iPhone, Safari and the Fairway Coach app on your Home Screen keep <strong>separate friend lists</strong>. Move these mates across in two taps:
+      </p>
+      <button className="btn primary block" disabled={!url} onClick={copy}>
+        📲 {done ? 'Copied ✓ Now open the app' : 'Copy my friends for the app'}
+      </button>
+      <p className="muted small">
+        Then open Fairway Coach from your Home Screen → <strong>Friends</strong> → <strong>Paste an invite</strong>. Mates who accept invites you sent from Safari will show up in the app from then on too.
+      </p>
+    </Card>
   );
 }
 

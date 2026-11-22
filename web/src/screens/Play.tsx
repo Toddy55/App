@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { FairwayResult, HoleStats, LatLon, Round } from '../types';
+import { useSiriMarks } from '../live/siriChannel';
 import { store } from '../lib/storage';
 import { distanceM, fmtDist, greenDistances } from '../lib/geo';
 import { fetchElevations, fetchWeather, playsLike, windEffect } from '../lib/weather';
@@ -61,6 +62,21 @@ export function Play({ go, roundId }: { go: Go; roundId: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [round?.courseId, courseRev],
   );
+  // "Hey Siri, mark shot": spots marked with the phone in the pocket drop into the right holes
+  const [siriNote, setSiriNote] = useState<string | null>(null);
+  useSiriMarks(round, course?.holes ?? round?.holes ?? [], update, (added) => {
+    const holes = [...new Set(added.map((a) => a.hole))];
+    setSiriNote(
+      added.length === 1
+        ? `🎙️ Siri shot added on hole ${added[0].hole}${added[0].club ? ` (${added[0].club})` : ''}`
+        : `🎙️ ${added.length} shots from Siri added on hole${holes.length > 1 ? 's' : ''} ${holes.join(', ')}`,
+    );
+  });
+  useEffect(() => {
+    if (!siriNote) return;
+    const t = setTimeout(() => setSiriNote(null), 6000);
+    return () => clearTimeout(t);
+  }, [siriNote]);
   // Saved courses: pick up corrected pars, stroke indexes, bunkers, water and doglegs from the built-in list.
   // A round in progress follows the corrected card (pars and stroke indexes) too.
   const refreshed = useRef(false);
@@ -350,6 +366,11 @@ export function Play({ go, roundId }: { go: Go; roundId: string }) {
 
   return (
     <div className="screen play">
+      {siriNote && (
+        <button className="mate-toast" onClick={() => setSiriNote(null)}>
+          {siriNote}
+        </button>
+      )}
       <Header
         title={round.courseName}
         onBack={() => go({ name: 'home' })}
@@ -514,8 +535,31 @@ export function Play({ go, roundId }: { go: Go; roundId: string }) {
             </div>
             {lastShot && lastShotDist != null && (
               <p className="small">
-                Last shot ({lastShot.club}): <strong>{fmtDist(lastShotDist, units)}{units}</strong> to where you're standing now
+                Last shot{lastShot.club ? ` (${lastShot.club})` : lastShot.voice ? ' (Siri)' : ''}: <strong>{fmtDist(lastShotDist, units)}{units}</strong> to where you're standing now
               </p>
+            )}
+            {shots.some((x) => x.voice) && (
+              <div className="siri-shots">
+                <span className="muted small">🎙️ Marked with Siri. Check or pick the club (for your club distances).</span>
+                {shots.map((x, i) =>
+                  x.voice ? (
+                    <label key={x.t} className="row gap small">
+                      <span>Shot {i + 1}</span>
+                      <select
+                        value={x.club ?? ''}
+                        onChange={(e) =>
+                          update((r) => ({ ...r, shots: { ...r.shots, [hole.number]: (r.shots[hole.number] ?? []).map((y) => (y.t === x.t ? { ...y, club: e.target.value || undefined } : y)) } }))
+                        }
+                      >
+                        <option value="">Pick a club</option>
+                        {settings.clubs.map((c) => (
+                          <option key={c}>{c}</option>
+                        ))}
+                      </select>
+                    </label>
+                  ) : null,
+                )}
+              </div>
             )}
             {shots.length > 0 && (
               <button className="btn ghost small" onClick={() => update((r) => ({ ...r, shots: { ...r.shots, [hole.number]: shots.slice(0, -1) } }))}>
@@ -525,6 +569,9 @@ export function Play({ go, roundId }: { go: Go; roundId: string }) {
             <p className="muted small">Mark each shot before you hit it. Your club distances build up in My stats, and the shots are traced on the map.</p>
             <button className="btn ghost small" onClick={() => go({ name: 'tracer' })}>
               🎥 Film a shot with a tracer
+            </button>
+            <button className="btn ghost small" onClick={() => go({ name: 'siri' })}>
+              🎙️ Mark shots hands-free: "Hey Siri, mark shot"
             </button>
           </Card>
 

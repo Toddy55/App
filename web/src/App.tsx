@@ -16,6 +16,8 @@ import { JoinComp } from './screens/JoinComp';
 import { Chat } from './screens/Chat';
 import { FriendJoin } from './screens/FriendJoin';
 import { MateWatcher } from './components/MateWatcher';
+import { SiriSetup } from './screens/SiriSetup';
+import { MoveFriends } from './screens/MoveFriends';
 import { HomeBackdrop } from './components/HomeBackdrop';
 import { LiveView } from './live/LiveView';
 import { Tracer } from './screens/Tracer';
@@ -24,6 +26,7 @@ import { LiveTracer } from './screens/LiveTracer';
 function readHash(): Route {
   try {
     if (location.hash.startsWith('#import=')) return { name: 'import', data: location.hash.slice(8) };
+    if (location.hash.startsWith('#move=')) return { name: 'move', data: location.hash.slice(6) };
     if (location.hash.startsWith('#live=')) return { name: 'live', code: location.hash.slice(6).toUpperCase() };
     if (location.hash.startsWith('#join=')) {
       const [data, to] = location.hash.slice(6).split('&to=');
@@ -76,6 +79,10 @@ function renderScreen(route: Route, key: string, go: (r: Route) => void): ReactN
       return <Courses key={key} go={go} pick={route.pick} />;
     case 'course':
       return <CourseEditor key={key} go={go} id={route.id} />;
+    case 'move':
+      return <MoveFriends key={key} go={go} data={route.data} />;
+    case 'siri':
+      return <SiriSetup key={key} go={go} />;
     case 'setup':
       return <Setup key={key} go={go} courseId={route.courseId} join={route.liveCode ? { code: route.liveCode, format: route.format, holes: route.holes, compIds: route.compIds } : undefined} />;
     case 'play':

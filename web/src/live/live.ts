@@ -116,3 +116,13 @@ export async function getEntry(code: string, id: string): Promise<GroupDoc | nul
   const snap = await get(ref(db, `events/${code}/groups/${id}`));
   return snap.exists() ? (snap.val() as GroupDoc) : null;
 }
+
+/** "Hey Siri, mark shot" spots for this phone's mark key (newest 300). */
+export async function watchMarks(key: string, onMarks: (marks: Record<string, { lat: number; lon: number; club?: string }> | null) => void): Promise<() => void> {
+  const { db } = await init();
+  return onValue(
+    query(ref(db, `marks/${key}`), limitToLast(300)),
+    (snap) => onMarks(snap.exists() ? (snap.val() as Record<string, { lat: number; lon: number; club?: string }>) : null),
+    () => undefined,
+  );
+}

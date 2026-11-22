@@ -100,6 +100,7 @@ It runs in the browser and installs to your home screen (Share → Add to Home S
 - Built-in coach (no internet or key needed): compares your putts, fairways, GIR, up-and-downs, penalties, bunker play, blow-up holes, par-5 scoring and back-nine fade against typical numbers for your handicap. It ranks the areas costing you the most shots, lists your costliest holes and why, gives a drill and an on-course tip for each, and builds a 60-minute practice plan
 - Optional AI coach: a deeper Claude write-up of the round, using your own Anthropic API key (Settings)
 - Stats page: trends over your last 10 rounds, your recurring #1 weakness, and club distances
+- **"Hey Siri, mark shot"** (iPhone): a short Shortcut asks "Which club?", then posts where you're standing and the club ("seven iron", "56", "the big dog") to your private address while the phone stays in your pocket. When you next open the round, each mark drops into the right hole as a shot with the club. Set it up in Play → Shot tracker → "Mark shots hands-free"
 
 ## Run it
 
@@ -114,6 +115,8 @@ npm run build    # production build in web/dist
 ## Deploy
 
 `.github/workflows/deploy.yml` builds and publishes to GitHub Pages on every push to `main`. Turn it on under repo **Settings → Pages → Source: GitHub Actions**. GPS needs HTTPS, which Pages provides.
+
+**Database rules:** after changing `database.rules.json`, paste it into Firebase console → Realtime Database → Rules → Publish (it isn't deployed automatically). The `marks` section is what lets Siri Shortcuts post shots without signing in: write-once, only `lat`, `lon` and `club`, and only to a private key 16 or more characters long.
 
 ## Notes and limits
 

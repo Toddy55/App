@@ -6,6 +6,8 @@ export type Route =
   | { name: 'home' }
   | { name: 'courses'; pick?: boolean }
   | { name: 'course'; id: string }
+  | { name: 'siri' }
+  | { name: 'move'; data: string }
   | { name: 'setup'; courseId?: string; liveCode?: string; format?: Format; holes?: number[]; compIds?: string[] }
   | { name: 'play'; roundId: string }
   | { name: 'summary'; roundId: string }
