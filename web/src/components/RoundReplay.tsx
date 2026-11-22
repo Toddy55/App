@@ -8,8 +8,11 @@ import { GREENSIDE_M } from '../lib/analysis';
 import { inQueensland } from '../lib/greenDem';
 import { shotLegs } from '../lib/tracer';
 
-const LEG_S = 1.2;
-const GAP_S = 0.35;
+// Unhurried, so the map can load and you can read each distance
+const LEAD_S = 1.6; // settle on the hole before the first shot
+const LEG_S = 2.0; // each shot in the air
+const GAP_S = 0.9; // pause after it lands
+const ZOOM_S = 2.0; // time for the swoop into the green
 
 /**
  * Full-screen, TV-style replay: the hole turned so you're looking down it,
@@ -42,7 +45,10 @@ function ReplayInner({ round, units, who, onClose, startHole }: { round: Round; 
   const flag: LatLon | undefined = hole ? round.pins?.[hole.number] ?? hole.green?.centre : undefined;
   // The last putt drops in the hole (when the pin was marked)
   const legs = useMemo(() => shotLegs(shots, flag, !!(hole && round.pins?.[hole.number])), [shots, flag, hole, round]);
-  const total = legs.length * (LEG_S + GAP_S);
+  // When each shot starts: a lead-in, then shot by shot, with a pause for the zoom before the greenside ones
+  const zoomLeg = useMemo(() => (flag ? legs.findIndex((l) => distanceM(l.from, flag) <= GREENSIDE_M) : -1), [legs, flag]);
+  const startOf = (k: number) => LEAD_S + k * (LEG_S + GAP_S) + (zoomLeg > 0 && k >= zoomLeg ? ZOOM_S : 0);
+  const total = legs.length ? startOf(legs.length - 1) + LEG_S : 0;
 
   // The clock for this hole's replay: drives the live distance counter
   const [clock, setClock] = useState(0);
@@ -52,7 +58,7 @@ function ReplayInner({ round, units, who, onClose, startHole }: { round: Round; 
     const id = setInterval(() => {
       const t = (performance.now() - start) / 1000;
       setClock(t);
-      if (t > total + 1) clearInterval(id);
+      if (t > total + 2.5) clearInterval(id);
     }, 50);
     return () => clearInterval(id);
   }, [i, run, total]);
@@ -65,7 +71,7 @@ function ReplayInner({ round, units, who, onClose, startHole }: { round: Round; 
         setI(i + 1);
         setRun((n) => n + 1);
       } else setAuto(false);
-    }, (total + 1.8) * 1000);
+    }, (total + 3) * 1000);
     return () => clearTimeout(t);
   }, [auto, i, run, total, tracked.length]);
 
@@ -116,7 +122,7 @@ function ReplayInner({ round, units, who, onClose, startHole }: { round: Round; 
       <svg key={`${hole.number}-${run}`} className="replay-map" width={size.w} height={size.h} viewBox={`0 0 ${size.w} ${size.h}`}>
         {(() => {
           // Close-up on the green for the chips and putts, like the TV coverage
-          const zoomAt = view.zoom ? Math.max(0, view.zoom.fromLeg * (LEG_S + GAP_S) - 0.45) : Infinity;
+          const zoomAt = view.zoom ? Math.max(0, startOf(view.zoom.fromLeg) - ZOOM_S) : Infinity;
           const zoomed = clock >= zoomAt;
           const scene = (v: { frame: Frame; base: TileLayout; top: TileLayout | null }, opts: { fromLeg: number; big: boolean }) => {
             const PP = (p: LatLon) => project(v.frame, p);
@@ -174,7 +180,7 @@ function ReplayInner({ round, units, who, onClose, startHole }: { round: Round; 
                   const bend = putt ? 0 : Math.min(60, len * 0.16);
                   const c = { x: (a.x + b.x) / 2 + ((b.y - a.y) / (len || 1)) * bend * 0.35, y: (a.y + b.y) / 2 - ((b.x - a.x) / (len || 1)) * bend * 0.35 - bend * 0.25 };
                   const d = `M${a.x},${a.y} Q${c.x},${c.y} ${b.x},${b.y}`;
-                  const delay = k * (LEG_S + GAP_S);
+                  const delay = startOf(k);
                   // In the close-up, shots before the zoom are already done: draw them settled
                   const settled = k < opts.fromLeg;
                   const style = settled ? { animation: 'none', strokeDashoffset: 0 } : { animationDelay: `${delay}s`, animationDuration: `${LEG_S}s` };
@@ -228,7 +234,7 @@ function ReplayInner({ round, units, who, onClose, startHole }: { round: Round; 
           return scene(view, { fromLeg: 0, big: false });
         })()}
       </svg>
-      {view.zoom && clock >= Math.max(0, view.zoom.fromLeg * (LEG_S + GAP_S) - 0.45) && <div className="replay-zoom-tag">🔍 Around the green</div>}
+      {view.zoom && clock >= Math.max(0, startOf(view.zoom.fromLeg) - ZOOM_S) && <div className="replay-zoom-tag">🔍 Around the green</div>}
 
       <div className="replay-head">
         <div className="replay-hole">{hole.number}</div>
@@ -249,19 +255,29 @@ function ReplayInner({ round, units, who, onClose, startHole }: { round: Round; 
 
       {legs.length > 0 && (() => {
         // Which shot is flying now, and how far it's gone
-        const k = Math.min(legs.length - 1, Math.floor(clock / (LEG_S + GAP_S)));
-        const p = Math.max(0, Math.min(1, (clock - k * (LEG_S + GAP_S)) / LEG_S));
+        // The shot that's flying (or the last one that started)
+        let k = 0;
+        while (k < legs.length - 1 && clock >= startOf(k + 1)) k++;
+        const p = Math.max(0, Math.min(1, (clock - startOf(k)) / LEG_S));
         const eased = 1 - Math.pow(1 - p, 2.2);
         const l = legs[k];
         const landed = p >= 1;
         const left = flag ? distanceM(l.to, flag) : null;
-        const done = clock > total;
+        const done = clock > total + 1.5;
         const totalM = legs.reduce((a, x) => a + x.distance, 0);
         return (
           <>
             <div className="replay-bottom">
             <div className={`replay-ticker ${landed ? 'landed' : ''} ${done ? 'done' : ''}`}>
-              {done ? (
+              {clock < startOf(0) ? (
+                <>
+                  <span className="rt-club">Hole {hole.number}</span>
+                  <span className="rt-dist">
+                    Par {hole.par}
+                  </span>
+                  <span className="rt-left">{hole.lengthM ? `${fmtDist(hole.lengthM, units)}${units}` : '\u00a0'}</span>
+                </>
+              ) : done ? (
                 <>
                   <span className="rt-club">Hole {hole.number} done</span>
                   <span className="rt-dist">
@@ -280,13 +296,13 @@ function ReplayInner({ round, units, who, onClose, startHole }: { round: Round; 
                     {l.distance < 30 ? ((units === 'yd' ? 1.0936 : 1) * l.distance * eased).toFixed(1) : fmtDist(l.distance * eased, units)}
                     <small>{units}</small>
                   </span>
-                  <span className="rt-left">{landed && left != null ? (left < 1.5 ? 'In the hole 🎉' : `${fmtDist(left, units)}${units} to the pin`) : '\u00a0'}</span>
+                  <span className="rt-left">{landed && left != null ? (left < 0.25 ? 'In the hole 🎉' : `${left < 30 ? ((units === 'yd' ? 1.0936 : 1) * left).toFixed(1) : fmtDist(left, units)}${units} to the pin`) : '\u00a0'}</span>
                 </>
               )}
             </div>
             <div className="replay-shots">
               {legs.map((x, j) => {
-                const shown = clock >= j * (LEG_S + GAP_S) + LEG_S;
+                const shown = clock >= startOf(j) + LEG_S;
                 return (
                   <span key={j} className={`rs-chip ${shown ? 'on' : ''}`}>
                     <b>{j + 1}</b> {x.club ?? 'Shot'} <strong>{x.distance < 30 ? (units === 'yd' ? x.distance * 1.0936 : x.distance).toFixed(1) : fmtDist(x.distance, units)}{units}</strong>

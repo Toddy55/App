@@ -815,8 +815,8 @@ body.replay-open .tabbar { display: none; }
 .inline-ico { width: 14px; height: 14px; vertical-align: -2px; }
 .rebrand-head { display: flex; gap: 12px; align-items: center; }
 .rebrand-mark { width: 48px; height: 48px; border-radius: 14px; background: linear-gradient(135deg, #08162e, #13315c); display: grid; place-items: center; flex: none; border: 1px solid rgba(255, 255, 255, .15); }
-.replay-scene { transition: transform 1s cubic-bezier(.45, 0, .2, 1), opacity .55s ease .45s; }
-.replay-scene.close { transition: opacity .6s ease .5s; }
+.replay-scene { transition: transform 1.7s cubic-bezier(.45, 0, .2, 1), opacity .8s ease .9s; }
+.replay-scene.close { transition: opacity .9s ease .9s; }
 .replay-settled .replay-trail { opacity: .5; }
 .replay-line.putt { stroke: #fff; stroke-width: 3; }
 .replay-tag.big text { font-size: 13.5px; }
