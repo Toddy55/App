@@ -1,6 +1,7 @@
 // Offline support: cache the app shell, and serve map tiles from cache when there's no signal.
 const SHELL = 'fc-shell-v1';
 const TILES = 'fc-tiles-v2';
+const PHOTOS = 'fc-photos-v1';
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(SHELL).then((c) => c.addAll(['./', './index.html', './manifest.webmanifest'])));
@@ -8,7 +9,7 @@ self.addEventListener('install', (e) => {
 });
 self.addEventListener('activate', (e) => {
   e.waitUntil(
-    caches.keys().then((keys) => Promise.all(keys.filter((k) => ![SHELL, TILES].includes(k)).map((k) => caches.delete(k)))),
+    caches.keys().then((keys) => Promise.all(keys.filter((k) => ![SHELL, TILES, PHOTOS].includes(k)).map((k) => caches.delete(k)))),
   );
   self.clients.claim();
 });
@@ -24,6 +25,19 @@ self.addEventListener('fetch', (e) => {
         if (hit) return hit;
         const res = await fetch(e.request);
         if (res.ok || res.type === 'opaque') c.put(e.request, res.clone());
+        return res;
+      }),
+    );
+    return;
+  }
+  if (url.origin === location.origin && url.pathname.includes('/bg/')) {
+    // Home photos never change: keep them on the phone so Home opens instantly with no signal
+    e.respondWith(
+      caches.open(PHOTOS).then(async (c) => {
+        const hit = await c.match(e.request);
+        if (hit) return hit;
+        const res = await fetch(e.request);
+        if (res.ok) c.put(e.request, res.clone());
         return res;
       }),
     );

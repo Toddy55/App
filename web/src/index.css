@@ -662,3 +662,17 @@ button.link { background: none; border: 0; padding: 0; color: var(--brand); text
 .live-friend .grow { display: flex; flex-direction: column; min-width: 0; }
 .live-friend .watch { display: flex; align-items: center; gap: 4px; background: var(--birdie); color: #fff; border-radius: 999px; padding: 6px 10px; font-weight: 800; font-size: .8rem; white-space: nowrap; }
 .live-friend .watch svg { width: 14px; height: 14px; }
+
+/* ---------- Home background photo ---------- */
+.home-screen { position: relative; z-index: 0; }
+.home-bg { position: fixed; inset: 0; z-index: -1; background-size: cover; background-repeat: no-repeat; background-color: var(--bg); }
+.home-bg::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(8, 14, 30, .10) 0%, rgba(8, 14, 30, .05) 40%, rgba(8, 14, 30, .35) 100%); }
+.home-screen .card, .home-screen .tile { box-shadow: 0 6px 22px rgba(0, 0, 0, .22); background: color-mix(in srgb, var(--card) 80%, transparent); -webkit-backdrop-filter: blur(16px) saturate(1.2); backdrop-filter: blur(16px) saturate(1.2); border-color: rgba(255, 255, 255, .35); }
+.home-bg-credit { color: rgba(255, 255, 255, .85); font-size: .68rem; text-align: center; text-shadow: 0 1px 3px rgba(0, 0, 0, .7); margin: 4px 0 0; }
+.bg-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.bg-pick { position: relative; aspect-ratio: 3 / 4; border-radius: 12px; overflow: hidden; border: 2px solid var(--line); padding: 0; background: var(--bg) center / cover no-repeat; cursor: pointer; }
+.bg-pick.on { border-color: var(--gold); box-shadow: 0 0 0 2px var(--gold); }
+.bg-pick span { position: absolute; left: 0; right: 0; bottom: 0; padding: 14px 6px 6px; font-size: .68rem; font-weight: 650; color: #fff; background: linear-gradient(transparent, rgba(0, 0, 0, .7)); text-align: left; line-height: 1.2; }
+.bg-pick.plain { display: flex; align-items: center; justify-content: center; color: var(--muted); }
+.bg-pick.plain span { color: var(--ink, inherit); background: none; text-shadow: none; }
+.bg-pick input { display: none; }
