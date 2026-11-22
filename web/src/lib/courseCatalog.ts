@@ -1,5 +1,6 @@
 import type { Course, Hole } from '../types';
 import { blankHoles, parFromLength } from './courses';
+import type { TeesFile } from './clubTees';
 
 /**
  * Built-in course list (generated from OpenStreetMap by
@@ -46,8 +47,37 @@ let cache: Promise<Catalog> | null = null;
 
 /** Loaded on first use and cached by the app for offline use. */
 export function loadCatalog(): Promise<Catalog> {
-  cache ??= import('../data/seq-courses.json').then((m) => (m.default ?? m) as unknown as Catalog);
+  cache ??= Promise.all([
+    import('../data/seq-courses.json').then((m) => (m.default ?? m) as unknown as Catalog),
+    import('./clubTees').then(({ loadClubTees }) => loadClubTees()).catch(() => null),
+  ]).then(([cat, tees]) => withListedCourses(cat, tees));
   return cache;
+}
+
+/**
+ * Courses OpenStreetMap doesn't have (Royal Queensland, Indooroopilly…), added from
+ * the SEQ course list with the club's scorecard: pars and lengths, no map yet.
+ */
+export function withListedCourses(cat: Catalog, tees: TeesFile | null): Catalog {
+  const extra = Object.entries(tees?.extra ?? {}).filter(([ref]) => tees!.courses[ref] && !cat.courses.some((c) => c.ref === ref));
+  if (!extra.length) return cat;
+  const added: CatalogCourse[] = extra.map(([ref, x]) => {
+    const card = tees!.courses[ref].tees.find((t) => t.g === 'm') ?? tees!.courses[ref].tees[0];
+    return {
+      ref,
+      name: x.name,
+      suburb: x.suburb,
+      at: x.at,
+      holes: card.len.map((len, i) => ({
+        n: i + 1,
+        par: card.par[i] || 4,
+        si: card.si?.[i] || i + 1,
+        len,
+        ...(card.si?.[i] ? {} : { se: 1 as const }),
+      })),
+    };
+  });
+  return { ...cat, courses: [...cat.courses, ...added].sort((a, b) => a.name.localeCompare(b.name)) };
 }
 
 const norm = (s: string) =>
