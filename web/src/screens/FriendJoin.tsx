@@ -19,6 +19,7 @@ export function FriendJoin({ go, data, to }: { go: Go; data: string; to?: string
   const [hcp, setHcp] = useState(settings.me);
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState<string | null>(null);
+  const [sendBack, setSendBack] = useState(false);
   // If this phone already knows who you are, link up straight away: no form, no button
   const knownName = settings.me.name && settings.me.name !== 'Me' ? settings.me.name : invitedAs || null;
   const autoRan = useRef(false);
@@ -51,16 +52,18 @@ export function FriendJoin({ go, data, to }: { go: Go; data: string; to?: string
       if (known && bundle.crew && known.crew !== bundle.crew) store.saveFriend({ ...known, crew: bundle.crew });
       let told = false;
       if (bundle.crew && liveAvailable()) {
-        try {
-          const { announceLinkUp } = await import('../live/crewChannel');
-          await announceLinkUp(bundle.crew, me);
-          told = true;
-        } catch {
-          told = false;
-        }
+        const { linkUpWithRetry } = await import('../live/crewChannel');
+        told = await linkUpWithRetry(bundle.crew, me);
       }
       history.replaceState(null, '', location.pathname);
-      setDone(told ? `You're now mates with ${bundle.from} on Fairway Coach, and you'll show up in ${bundle.from}'s Friends.` : `${bundle.from} is in your Friends now.`);
+      setSendBack(!told);
+      setDone(
+        told
+          ? `You're now mates with ${bundle.from} on Fairway Coach, and you'll show up in ${bundle.from}'s Friends.`
+          : bundle.crew && liveAvailable()
+            ? `${bundle.from} is in your Friends now. We couldn't reach ${bundle.from}'s phone just yet (signal?), so we'll keep trying. To be sure, send ${bundle.from} your link too:`
+            : `${bundle.from} is in your Friends now. This invite is an older one, so send ${bundle.from} your link back and you'll land on their list too:`,
+      );
     } catch (e) {
       setErr(e instanceof Error ? e.message : String(e));
     } finally {
@@ -109,8 +112,20 @@ export function FriendJoin({ go, data, to }: { go: Go; data: string; to?: string
             <h2>Sorted 🤝</h2>
             {invitedAs && newPhone && <p className="muted small">You're set up as {invitedAs}. Not right? Change it in Settings.</p>}
             <p>{done}</p>
+            {sendBack && bundle && (
+              <button
+                className="btn primary block"
+                onClick={async () => {
+                  const { myFriendInviteUrl } = await import('../live/crewChannel');
+                  const { shareLink } = await import('../lib/share');
+                  await shareLink('Fairway Coach', `It's ${store.settings().me.name}. Tap to add me to your Friends on Fairway Coach:`, await myFriendInviteUrl());
+                }}
+              >
+                🔗 Send {bundle.from} my link
+              </button>
+            )}
             <InstallFirst after link={inviteLink} />
-            <button className="btn primary block" onClick={() => go({ name: 'home' })}>
+            <button className={`btn block ${sendBack ? '' : 'primary'}`} onClick={() => go({ name: 'home' })}>
               Let's go
             </button>
           </Card>

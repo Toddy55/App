@@ -1,5 +1,5 @@
 import type { Player } from '../types';
-import { personKey } from '../lib/share';
+import { encodeBundle, friendUrl, makeBundle, personKey } from '../lib/share';
 import { store, uid } from '../lib/storage';
 import { liveAvailable } from './config';
 
@@ -152,4 +152,68 @@ export async function watchFriendsLive(crews: string[], onLive: (live: LiveNote[
     ),
   );
   return () => unsubs.forEach((u) => u());
+}
+
+/** Your own friend invite link (your name, handicap and crew code). */
+export async function myFriendInviteUrl(): Promise<string> {
+  const s = store.settings();
+  const b = {
+    ...makeBundle({ me: s.me, friends: [], rounds: [], comps: [] }),
+    people: [{ key: personKey(s.me.name), name: s.me.name, ga: s.me.gaHandicap, ...(s.me.gaNumber ? { gaNo: s.me.gaNumber } : {}), ...(s.me.hcpSource ? { src: s.me.hcpSource } : {}) }],
+    crew: myCrewCode(),
+  };
+  return friendUrl(await encodeBundle(b));
+}
+
+// Link-ups that didn't get through (no signal, server hiccup): kept and retried until they land
+const PENDING = 'gtg.pendingLinkUps';
+function readPending(): string[] {
+  try {
+    const v = JSON.parse(localStorage.getItem(PENDING) || '[]');
+    return Array.isArray(v) ? v.filter((x) => typeof x === 'string') : [];
+  } catch {
+    return [];
+  }
+}
+function writePending(codes: string[]) {
+  try {
+    if (codes.length) localStorage.setItem(PENDING, JSON.stringify([...new Set(codes)]));
+    else localStorage.removeItem(PENDING);
+  } catch {
+    /* private mode */
+  }
+}
+
+// With no signal Firebase just waits, so give up after a bit (the write still goes once the signal's back)
+const within = <T,>(p: Promise<T>, ms: number) => Promise.race([p, new Promise<never>((_, bad) => setTimeout(() => bad(new Error('timeout')), ms))]);
+
+/** Tell the inviter's phone you've linked up; if it can't get through now, it's retried later. */
+export async function linkUpWithRetry(code: string, me: Player): Promise<boolean> {
+  try {
+    await within(announceLinkUp(code, me), 8000);
+    writePending(readPending().filter((c) => c !== code));
+    return true;
+  } catch {
+    writePending([...readPending(), code]);
+    return false;
+  }
+}
+
+/** Retry any link-ups still waiting (called when the app opens and when the signal comes back). */
+export async function retryPendingLinkUps(): Promise<number> {
+  const codes = readPending();
+  if (!codes.length || !liveAvailable()) return 0;
+  const me = store.settings().me;
+  if (!me.name || me.name === 'Me') return 0;
+  let sent = 0;
+  for (const c of codes) {
+    try {
+      await within(announceLinkUp(c, me), 15000);
+      writePending(readPending().filter((x) => x !== c));
+      sent++;
+    } catch {
+      /* still no luck: try again next time */
+    }
+  }
+  return sent;
 }

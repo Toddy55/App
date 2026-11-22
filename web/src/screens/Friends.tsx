@@ -5,8 +5,8 @@ import { headToHead } from '../lib/comps';
 import { computeResult, FORMAT_LABELS } from '../lib/scoring';
 import { Card, Header, type Go } from '../components/ui';
 import { InviteSheet } from '../components/InviteSheet';
-import { encodeBundle, friendUrl, makeBundle, personKey } from '../lib/share';
 import { PasteInvite } from '../components/PasteInvite';
+import { isStandalone } from '../lib/install';
 import { LiveFriendsCard } from '../components/LiveFriendsCard';
 import { HandicapEditor, handicapLabel, parseHcp, STALE_MS } from '../components/HandicapEditor';
 
@@ -22,15 +22,8 @@ export function Friends({ go }: { go: Go }) {
     return () => window.removeEventListener('gtg:friends', on);
   }, []);
   const startInvite = async () => {
-    const { myCrewCode } = await import('../live/crewChannel');
-    const s = store.settings();
-    // Just you: your name and handicap, plus your crew code so you hear when they link up
-    const b = {
-      ...makeBundle({ me: s.me, friends: [], rounds: [], comps: [] }),
-      people: [{ key: personKey(s.me.name), name: s.me.name, ga: s.me.gaHandicap, ...(s.me.gaNumber ? { gaNo: s.me.gaNumber } : {}), ...(s.me.hcpSource ? { src: s.me.hcpSource } : {}) }],
-      crew: myCrewCode(),
-    };
-    setInviting(friendUrl(await encodeBundle(b)));
+    const { myFriendInviteUrl } = await import('../live/crewChannel');
+    setInviting(await myFriendInviteUrl());
   };
   const rounds = store.rounds();
 
@@ -56,6 +49,12 @@ export function Friends({ go }: { go: Go }) {
         </Card>
         <LiveFriendsCard go={go} />
         {inviting ? (
+          <>
+          {/iPhone|iPad|iPod/.test(navigator.userAgent) && !isStandalone() && (
+            <p className="warn small">
+              ⚠️ You're in Safari. On iPhone, Safari and the Fairway Coach app on your Home Screen keep separate lists, so mates who accept this invite land in Safari's list. If you use the Home Screen app, send invites from there.
+            </p>
+          )}
           <InviteSheet
             title="Get on Fairway Coach"
             intro={`${store.settings().me.name} wants you on Fairway Coach, the app for our scores, comps, live leaderboards and banter ⛳🍻 Tap the link to link up:`}
@@ -63,6 +62,7 @@ export function Friends({ go }: { go: Go }) {
             onClose={() => setInviting(null)}
             personal
           />
+          </>
         ) : (
           <button className="btn primary block" onClick={startInvite}>
             📲 Invite mates to the app
