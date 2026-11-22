@@ -46,7 +46,7 @@ export function FriendJoin({ go, data, to }: { go: Go; data: string; to?: string
       const me = { ...hcp, id: settings.me.id, name: name.trim() };
       store.saveSettings({ ...store.settings(), me });
       const plan = applyBundle({ ...bundle, rounds: [], comps: [] }, autoMap(bundle, me, store.friends()), uid);
-      plan.newFriends.forEach((f) => store.saveFriend(bundle.crew && personKey(f.name) === personKey(bundle.from) ? { ...f, crew: bundle.crew } : f));
+      plan.newFriends.forEach((f) => store.saveFriend(personKey(f.name) === personKey(bundle.from) ? { ...f, ...(bundle.crew ? { crew: bundle.crew } : {}), linkedAt: Date.now() } : f));
       // Already friends? Just pick up their crew code
       const known = store.friends().find((f) => personKey(f.name) === personKey(bundle.from));
       if (known && bundle.crew && known.crew !== bundle.crew) store.saveFriend({ ...known, crew: bundle.crew });

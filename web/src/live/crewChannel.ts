@@ -105,7 +105,7 @@ export async function watchMyCrew(onAdded: (names: string[]) => void): Promise<(
           }
           continue;
         }
-        const f: Player = { id: uid(), name: m.name, ...details };
+        const f: Player = { id: uid(), name: m.name, ...details, linkedAt: Date.now() };
         store.saveFriend(f);
         friends.push(f);
         added.push(m.name);

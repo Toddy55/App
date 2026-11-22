@@ -65,6 +65,8 @@ export interface Player {
   hcpCheckedAt?: number;
   /** Their phone's crew code: lets this phone see when they're playing live. */
   crew?: string;
+  /** When they linked up with you through an invite (shows a "new" badge for a couple of days). */
+  linkedAt?: number;
 }
 
 export type Format =
