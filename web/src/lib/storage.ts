@@ -114,3 +114,31 @@ export const store = {
     return store.friends().find((f) => f.id === id)?.name ?? fallback ?? 'Unknown';
   },
 };
+
+/**
+ * Tidy-up: a friend called "Me" is really you (the placeholder name of a copy
+ * that wasn't set up yet when it linked). Point their rounds and comps back at
+ * you and remove them.
+ */
+export function fixMeFriend() {
+  const ghosts = store.friends().filter((f) => f.name.trim().toLowerCase() === 'me');
+  for (const g of ghosts) {
+    for (const r of store.rounds()) {
+      if (!r.players.some((p) => p.id === g.id)) continue;
+      // Already in the round as yourself: just drop the duplicate
+      const hasMe = r.players.some((p) => p.id === 'me');
+      const swap = (id: string) => (id === g.id ? 'me' : id);
+      const scores: Round['scores'] = {};
+      for (const [k, v] of Object.entries(r.scores)) if (!(hasMe && k === g.id)) scores[swap(k)] = v;
+      store.saveRound({
+        ...r,
+        players: hasMe ? r.players.filter((p) => p.id !== g.id) : r.players.map((p) => (p.id === g.id ? { ...p, id: 'me', name: store.settings().me.name } : p)),
+        teams: r.teams?.map((t) => ({ ...t, playerIds: [...new Set(t.playerIds.map(swap))] })),
+        scores,
+        meId: swap(r.meId),
+      });
+    }
+    for (const c of store.comps()) if (c.memberIds.includes(g.id)) store.saveComp({ ...c, memberIds: [...new Set(c.memberIds.map((id) => (id === g.id ? 'me' : id)))] });
+    store.deleteFriend(g.id);
+  }
+}

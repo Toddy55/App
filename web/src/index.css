@@ -824,3 +824,4 @@ body.replay-open .tabbar { display: none; }
 
 .replay-bottom { position: absolute; left: 12px; right: 12px; bottom: calc(148px + env(safe-area-inset-bottom)); display: flex; flex-direction: column; align-items: center; gap: 8px; pointer-events: none; }
 .replay-tagline { stroke: var(--gold); stroke-width: 1.2; opacity: .8; }
+.games-head { margin-top: 6px; }

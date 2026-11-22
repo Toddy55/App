@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { Aids, Competition } from '../types';
 import { store, uid } from '../lib/storage';
-import { AIDS_BLURB, AIDS_LABELS, COMP_PRESETS, computeComp, newComp, SCORING_BLURB, SCORING_LABELS, standingsText, valueLabel } from '../lib/comps';
+import { AIDS_BLURB, AIDS_LABELS, COMP_PRESETS, computeComp, GAME_SCORINGS, newComp, SCORING_BLURB, SCORING_LABELS, standingsText, valueLabel } from '../lib/comps';
 import { encodeBundle, joinUrl, makeBundle, personKey, shareLink, shareText, shareUrl } from '../lib/share';
 import { Card, Header, Segmented, type Go } from '../components/ui';
 import { liveAvailable } from '../live/config';
@@ -77,7 +77,7 @@ export function StandingsTable({ comp, standings }: { comp: Competition; standin
         <tr>
           <th>#</th>
           <th>Player</th>
-          <th>{comp.scoring === 'league' ? 'Pts' : comp.scoring === 'stableford_total' ? 'Total' : 'Avg'}</th>
+          <th>{comp.scoring === 'skins' ? 'Skins' : comp.scoring === 'league' || (GAME_SCORINGS as readonly string[]).includes(comp.scoring) ? 'Pts' : comp.scoring === 'stableford_total' ? 'Total' : 'Avg'}</th>
           <th>Rds</th>
           <th>Wins</th>
           <th>Form</th>
@@ -291,8 +291,9 @@ export function CompDetail({ go, id }: { go: Go; id: string }) {
                   <li key={e.playerId}>
                     <span className="pos">{e.position}</span> {e.name}{' '}
                     <span className="muted small">
+                      {e.note ? `${e.note} · ` : ''}
                       {e.stableford != null ? `${e.stableford} stb` : `net ${e.net}`}
-                      {comp.scoring === 'league' ? ` → ${e.points} pts` : ''}
+                      {comp.scoring === 'league' ? ` → ${e.points} pts` : e.note && comp.scoring !== 'skins' ? ` → ${e.points} pt${e.points === 1 ? '' : 's'}` : ''}
                       {e.birdies ? ` · 🐦${e.birdies}` : ''}
                     </span>
                   </li>
@@ -405,8 +406,18 @@ export function CompEditor({ go, id }: { go: Go; id?: string }) {
 
         <Card title="Scoring">
           <div className="format-grid">
-            {(Object.keys(SCORING_LABELS) as Competition['scoring'][]).map((k) => (
-              <button key={k} className={`format ${c.scoring === k ? 'on' : ''}`} onClick={() => set({ scoring: k })}>
+            {(Object.keys(SCORING_LABELS) as Competition['scoring'][])
+              .filter((k) => !(GAME_SCORINGS as readonly string[]).includes(k))
+              .map((k) => (
+                <button key={k} className={`format ${c.scoring === k ? 'on' : ''}`} onClick={() => set({ scoring: k })}>
+                  {SCORING_LABELS[k]}
+                </button>
+              ))}
+          </div>
+          <span className="eyebrow games-head">Mates' games · 2 to 4 players</span>
+          <div className="format-grid">
+            {GAME_SCORINGS.map((k) => (
+              <button key={k} className={`format ${c.scoring === k ? 'on' : ''}`} onClick={() => set({ scoring: k, minPlayers: Math.max(2, c.minPlayers) })}>
                 {SCORING_LABELS[k]}
               </button>
             ))}
@@ -439,7 +450,10 @@ export function CompEditor({ go, id }: { go: Go; id?: string }) {
               <input inputMode="numeric" value={c.minRounds} onChange={(e) => set({ minRounds: Math.max(1, Number(e.target.value) || 1) })} />
             </label>
           )}
-          {c.scoring !== 'league' && <p className="muted small">Ambrose rounds only count in League mode (there's no individual score).</p>}
+          {(GAME_SCORINGS as readonly string[]).includes(c.scoring) && (
+            <p className="muted small">Played between the comp's members in the same group, off their handicaps (net). Each round's points add up over the season. Ambrose rounds don't count.</p>
+          )}
+          {c.scoring !== 'league' && !(GAME_SCORINGS as readonly string[]).includes(c.scoring) && <p className="muted small">Ambrose rounds only count in League mode (there's no individual score).</p>}
         </Card>
 
         <Card title={`Players (${c.memberIds.length})`}>

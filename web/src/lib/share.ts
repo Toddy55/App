@@ -80,7 +80,8 @@ export type Mapping = Record<string, string | 'new'>;
 export function autoMap(bundle: Bundle, me: Player, friends: Player[]): Mapping {
   const m: Mapping = {};
   for (const p of bundle.people) {
-    if (personKey(me.name) === p.key) m[p.key] = 'me';
+    // "Me" is the name a copy has before it's set up: that's you, not a mate called Me
+    if (personKey(me.name) === p.key || p.key === personKey('Me')) m[p.key] = 'me';
     else m[p.key] = friends.find((f) => personKey(f.name) === p.key)?.id ?? 'new';
   }
   return m;
