@@ -43,6 +43,15 @@ export function FriendJoin({ go, data, to }: { go: Go; data: string; to?: string
     if (!bundle || !name.trim()) return;
     setBusy(true);
     try {
+      // Your own invite, opened in your other copy of the app (Safari vs Home Screen on iPhone)
+      if (personKey(bundle.from) === personKey(name)) {
+        const { addExtraCrewCode } = await import('../live/crewChannel');
+        if (bundle.crew) addExtraCrewCode(bundle.crew);
+        history.replaceState(null, '', location.pathname);
+        window.dispatchEvent(new Event('gtg:friends'));
+        setDone("That's your own invite 👍 Mates who accept invites you sent from your other copy of the app (like Safari) will now show up here too. To bring across mates already linked there, open Friends in Safari and tap \"Copy my friends for the app\".");
+        return;
+      }
       const me = { ...hcp, id: settings.me.id, name: name.trim() };
       store.saveSettings({ ...store.settings(), me });
       const plan = applyBundle({ ...bundle, rounds: [], comps: [] }, autoMap(bundle, me, store.friends()), uid);

@@ -26,7 +26,13 @@ export function MateWatcher({ go }: { go: (r: { name: 'friends' } | { name: 'liv
     window.dispatchEvent(new Event('gtg:friends'));
   };
 
-  // Your friend links
+  // Your friend links (on every crew code this person uses, e.g. Safari's too)
+  const [crewCodes, setCrewCodes] = useState(() => readCrewCodes());
+  useEffect(() => {
+    const on = () => setCrewCodes(readCrewCodes());
+    window.addEventListener('gtg:friends', on);
+    return () => window.removeEventListener('gtg:friends', on);
+  }, []);
   useEffect(() => {
     if (!liveAvailable()) return;
     let unsub: (() => void) | undefined;
@@ -39,7 +45,7 @@ export function MateWatcher({ go }: { go: (r: { name: 'friends' } | { name: 'liv
       stop = true;
       unsub?.();
     };
-  }, []);
+  }, [crewCodes]);
 
   // Link-ups this phone couldn't send earlier (no signal): keep trying
   useEffect(() => {
@@ -151,3 +157,11 @@ const crewsKey = () =>
     .filter((c): c is string => !!c)
     .sort()
     .join(',');
+
+function readCrewCodes(): string {
+  try {
+    return [localStorage.getItem('gtg.crew') ?? '', localStorage.getItem('gtg.extraCrews') ?? ''].join('|');
+  } catch {
+    return '';
+  }
+}
