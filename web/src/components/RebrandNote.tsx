@@ -5,18 +5,38 @@ import { Card, ShotmateMark } from './ui';
 const SEEN = 'gtg.rebrandSeen';
 
 /**
+ * Nothing left to do here when:
+ *  - you said keep the old icon, or this copy was set up from a link after the rename (a new Shotmate icon), or
+ *  - this copy is already linked with another one (the new icon has your data, or Safari does).
+ */
+function sorted(): boolean {
+  try {
+    if (localStorage.getItem(SEEN) === '1') return true;
+    return JSON.parse(localStorage.getItem('gtg.extraCrews') || '[]').length > 0;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * We're Shotmate now. The app itself updates by itself, but iPhone keeps the
  * old name and icon on the Home Screen until the icon is added again, so walk
  * people through it without losing anything (the new icon links up by sync).
  */
 export function RebrandNote() {
-  const [hidden, setHidden] = useState(() => {
-    try {
-      return localStorage.getItem(SEEN) === '1';
-    } catch {
-      return false;
-    }
-  });
+  const [hidden, setHidden] = useState(sorted);
+  // Linking can happen while this is open (the new icon pastes the link): hide as soon as it does
+  useEffect(() => {
+    const on = () => setHidden(sorted());
+    window.addEventListener('gtg:friends', on);
+    window.addEventListener('gtg:synced', on);
+    const t = setInterval(on, 4000);
+    return () => {
+      window.removeEventListener('gtg:friends', on);
+      window.removeEventListener('gtg:synced', on);
+      clearInterval(t);
+    };
+  }, []);
   const [link, setLink] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const show = !hidden && isIOS() && isStandalone();
