@@ -75,7 +75,7 @@ export function Settings({ go }: { go: Go }) {
             </div>
           </div>
           <div className="field">
-            <span>Home screen photo</span>
+            <span>Background photo (every screen)</span>
             <div className="bg-grid">
               {HOME_BGS.map((b) => (
                 <button key={b.id} className={`bg-pick ${bg === b.id ? 'on' : ''}`} style={{ backgroundImage: `url("${import.meta.env.BASE_URL}bg/${b.file}")` }} onClick={() => pickBg(b.id)}>

@@ -6,7 +6,7 @@ import { JoinLive } from '../live/LiveView';
 import { InstallTip } from '../components/InstallTip';
 import { PasteInvite } from '../components/PasteInvite';
 import { LiveFriendsCard } from '../components/LiveFriendsCard';
-import { HomeBackdrop, HomeBgCredit } from '../components/HomeBackdrop';
+import { HomeBgCredit } from '../components/HomeBackdrop';
 import { ChartColumn, ChevronRight, Flag, Map as MapIcon, Settings as SettingsIcon, Trophy, Users, Video } from 'lucide-react';
 
 const ordinal = (n: number) => (n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] ?? 'th');
@@ -29,7 +29,6 @@ export function Home({ go }: { go: Go }) {
 
   return (
     <div className="screen home-screen">
-      <HomeBackdrop />
       <Header
         title="Fairway Coach"
         right={

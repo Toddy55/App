@@ -16,6 +16,7 @@ import { JoinComp } from './screens/JoinComp';
 import { Chat } from './screens/Chat';
 import { FriendJoin } from './screens/FriendJoin';
 import { MateWatcher } from './components/MateWatcher';
+import { HomeBackdrop } from './components/HomeBackdrop';
 import { LiveView } from './live/LiveView';
 import { Tracer } from './screens/Tracer';
 import { LiveTracer } from './screens/LiveTracer';
@@ -59,6 +60,7 @@ export default function App() {
   const screen = renderScreen(route, key, go);
   return (
     <>
+      <HomeBackdrop />
       {screen}
       {withNav && <TabBar route={route} go={go} />}
       <MateWatcher go={go} />

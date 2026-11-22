@@ -664,8 +664,8 @@ button.link { background: none; border: 0; padding: 0; color: var(--brand); text
 .live-friend .watch svg { width: 14px; height: 14px; }
 
 /* ---------- Home background photo ---------- */
-.home-screen { position: relative; z-index: 0; }
-.home-bg { position: fixed; inset: 0; z-index: -1; background-size: cover; background-repeat: no-repeat; background-color: var(--bg); }
+.screen { position: relative; z-index: 1; }
+.home-bg { position: fixed; inset: 0; z-index: 0; background-size: cover; background-repeat: no-repeat; background-color: var(--bg); }
 .home-bg::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(8, 14, 30, .10) 0%, rgba(8, 14, 30, .05) 40%, rgba(8, 14, 30, .35) 100%); }
 .card, .tile {
   /* Every box in the app wears the hero's colours (no white boxes) */
@@ -678,9 +678,11 @@ button.link { background: none; border: 0; padding: 0; color: var(--brand); text
 .card input::placeholder, .card textarea::placeholder { color: rgba(255, 255, 255, .55); }
 .card select option { color: #111a2e; }
 .tile small { color: rgba(255, 255, 255, .72); }
-/* On Home the course photo peeks through */
-.home-screen .card, .home-screen .tile { box-shadow: 0 8px 26px rgba(0, 0, 0, .3); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); }
-.home-screen .card::before, .home-screen .tile::before { opacity: .9; }
+/* The course photo peeks through on every screen (solid on the Play screen, so it stays quick and easy to read in the sun) */
+.card, .tile { box-shadow: 0 8px 26px rgba(0, 0, 0, .3); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); }
+.card::before, .tile::before { opacity: .9; }
+.play .card, .play .tile { -webkit-backdrop-filter: none; backdrop-filter: none; }
+.play .card::before, .play .tile::before { opacity: 1; }
 .home-bg-credit { color: rgba(255, 255, 255, .85); font-size: .68rem; text-align: center; text-shadow: 0 1px 3px rgba(0, 0, 0, .7); margin: 4px 0 0; }
 .bg-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
 .bg-pick { position: relative; aspect-ratio: 3 / 4; border-radius: 12px; overflow: hidden; border: 2px solid var(--line); padding: 0; background: var(--bg) center / cover no-repeat; cursor: pointer; }
