@@ -1,11 +1,17 @@
 import type { Aids, Competition, Round } from '../types';
 import { sideRows, sidesFor, type LeaderRow } from './scoring';
+import { playGame, type Game } from './compGames';
 
 export const SCORING_LABELS: Record<Competition['scoring'], string> = {
   league: 'League points (by finishing position)',
   stableford_total: 'Total Stableford points',
   stableford_avg: 'Average Stableford',
   net_avg: 'Average net score',
+  skins: 'Skins',
+  matchplay: 'Match play',
+  nassau: 'Nassau',
+  sixes: 'Sixes (4 players)',
+  nines: 'Nines (3 players)',
 };
 
 export const SCORING_BLURB: Record<Competition['scoring'], string> = {
@@ -13,7 +19,16 @@ export const SCORING_BLURB: Record<Competition['scoring'], string> = {
   stableford_total: 'Add up everyone\'s Stableford points. Rewards turning up, so pair it with "best N rounds" to keep it fair.',
   stableford_avg: 'Average Stableford per round. Fair when people play different numbers of rounds.',
   net_avg: 'Average net score per round, lowest wins. Best for 18-hole stroke rounds.',
+  skins: 'Win a hole outright (net) for a skin; ties carry the skin to the next hole. Most skins over the season wins. 2 or more players in the group.',
+  matchplay: 'Everyone in the group plays everyone else, hole by hole (net): win a match for 1 point, halve it for ½. 2 to 4 players.',
+  nassau: 'Every pairing is three bets: the front 9, the back 9 and the full 18 (net). 1 point each, ½ for a halve. 2 to 4 players.',
+  sixes: 'Four players, partners change every 6 holes (better ball, net): holes 1–6, 7–12 and 13–18. 1 point for each 6-hole match you win.',
+  nines: 'Three players, 9 points a hole (net): 5 for the best score, 3 for second, 1 for third; ties share. Most points wins.',
 };
+
+/** The mates' games (scored from hole-by-hole net scores between the members in the group). */
+export const GAME_SCORINGS = ['skins', 'matchplay', 'nassau', 'sixes', 'nines'] as const;
+const isGame = (s: Competition['scoring']): s is Game => (GAME_SCORINGS as readonly string[]).includes(s);
 
 export const COMP_PRESETS: { label: string; make: () => Partial<Competition> }[] = [
   {
@@ -68,6 +83,8 @@ export interface Entry {
   points: number;
   birdies: number;
   teamName?: string;
+  /** Mates' games: what they got this round, e.g. "3 skins". */
+  note?: string;
 }
 
 export interface CompRound {
@@ -132,6 +149,26 @@ export function scoreRound(comp: Competition, round: Round, nameOf: (id: string)
   }
   if (entries.length < Math.max(1, comp.minPlayers)) return null;
 
+  // Mates' games: points from the hole-by-hole net scores of the members in this group
+  if (isGame(comp.scoring)) {
+    if (round.format === 'ambrose') return null;
+    const rows = sideRows(round, round.players.map((p) => ({ id: p.id, name: p.name, handicap: p.playingHandicap, memberIds: [p.id] }))).filter((r) =>
+      entries.some((e) => e.playerId === r.id),
+    );
+    // Keep the order they played in (Sixes partners go by it)
+    rows.sort((a, b) => round.players.findIndex((p) => p.id === a.id) - round.players.findIndex((p) => p.id === b.id));
+    const holes = (round.scoreHoles ?? round.holes.map((h) => h.number)).slice();
+    const res = playGame(comp.scoring, rows, holes);
+    if (!res) return null;
+    for (const e of entries) {
+      e.points = res.points.get(e.playerId) ?? 0;
+      e.note = res.note.get(e.playerId);
+    }
+    const byPts = [...entries].sort((a, b) => b.points - a.points);
+    byPts.forEach((e, i) => (e.position = i > 0 && byPts[i - 1].points === e.points ? byPts[i - 1].position : i + 1));
+    return { round, entries: byPts };
+  }
+
   // Rank: Stableford high-to-low, or team net low-to-high for Ambrose
   const key = (e: Entry) => (round.format === 'ambrose' ? e.net! : -(e.stableford ?? 0));
   const sorted = [...entries].sort((a, b) => key(a) - key(b));
@@ -178,7 +215,7 @@ export function computeComp(comp: Competition, rounds: Round[], nameOf: (id: str
   const standings: Standing[] = comp.memberIds.map((id) => {
     const mine = scored.map((cr) => cr.entries.find((e) => e.playerId === id)).filter((e): e is Entry => !!e);
     const metric = (e: Entry) =>
-      comp.scoring === 'league' ? e.points : comp.scoring === 'net_avg' ? (e.net ?? 0) : (e.stableford ?? 0);
+      comp.scoring === 'league' || isGame(comp.scoring) ? e.points : comp.scoring === 'net_avg' ? (e.net ?? 0) : (e.stableford ?? 0);
     let counted = mine.map(metric);
     if (comp.countBest && counted.length > comp.countBest) {
       counted = [...counted].sort((a, b) => (lowerIsBetter ? a - b : b - a)).slice(0, comp.countBest);
@@ -248,6 +285,10 @@ export function valueLabel(comp: Competition, s: Standing): string {
       return `${s.value} avg`;
     case 'net_avg':
       return `${s.value} net`;
+    case 'skins':
+      return `${s.value} skin${s.value === 1 ? '' : 's'}`;
+    default:
+      return `${s.value} pts`;
   }
 }
 

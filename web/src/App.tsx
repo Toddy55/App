@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react';
+import { fixMeFriend } from './lib/storage';
 import { TabBar, TAB_SCREENS } from './components/TabBar';
 import type { Route } from './components/ui';
 import { Home } from './screens/Home';
@@ -60,6 +61,7 @@ export default function App() {
   // Your data in every copy of the app (Safari, Home Screen app, other phones): on by itself
   const [rev, setRev] = useState(0);
   useEffect(() => {
+    fixMeFriend();
     import('./live/sync').then(({ turnOnSync }) => turnOnSync()).catch(() => undefined);
     const on = () => {
       // Another copy changed something: show it (unless you're mid-typing)

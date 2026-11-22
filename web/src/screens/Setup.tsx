@@ -4,6 +4,7 @@ import type { Format, Round, RoundPlayer, Team } from '../types';
 import { store, uid } from '../lib/storage';
 import { ambroseTeamHandicap, dailyHandicap, DEFAULT_ALLOWANCE, playingHandicap } from '../lib/handicap';
 import { FORMAT_BLURB, FORMAT_LABELS } from '../lib/scoring';
+import { GameInfo } from '../components/GameInfo';
 import { aidsFor, AIDS_BLURB, AIDS_LABELS, suggestedComps } from '../lib/comps';
 import { newGroupId } from '../live/payload';
 import { Card, Header, Segmented, type Go } from '../components/ui';
@@ -270,9 +271,12 @@ export function Setup({ go, courseId, join }: { go: Go; courseId?: string; join?
         <Card title="Format">
           {!join && <div className="format-grid">
             {FORMATS.map((f) => (
-              <button key={f} className={`format ${format === f ? 'on' : ''}`} onClick={() => pickFormat(f)}>
-                {FORMAT_LABELS[f]}
-              </button>
+              <div key={f} className="format-wrap">
+                <button className={`format ${format === f ? 'on' : ''}`} onClick={() => pickFormat(f)}>
+                  {FORMAT_LABELS[f]}
+                </button>
+                <GameInfo id={f} />
+              </div>
             ))}
           </div>}
           {join && <strong>{FORMAT_LABELS[format]}</strong>}

@@ -196,7 +196,7 @@ export interface Settings {
   myDistances?: Record<string, number>;
 }
 
-export type CompScoring = 'league' | 'stableford_total' | 'stableford_avg' | 'net_avg';
+export type CompScoring = 'league' | 'stableford_total' | 'stableford_avg' | 'net_avg' | 'skins' | 'matchplay' | 'nassau' | 'sixes' | 'nines';
 
 /** A season-long comp between mates, e.g. "Friday Arvo League". */
 export interface Competition {
