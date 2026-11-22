@@ -111,14 +111,16 @@ export interface ShotLeg {
 }
 
 /** Each marked shot runs to where the next one was hit from; the last one to the green if it's mapped. */
-export function shotLegs(shots: { lat: number; lon: number; club?: string }[], greenCentre?: LatLon): ShotLeg[] {
+export function shotLegs(shots: { lat: number; lon: number; club?: string }[], greenCentre?: LatLon, lastPuttHoled = false): ShotLeg[] {
   const legs: ShotLeg[] = [];
   for (let i = 0; i < shots.length; i++) {
     const from = shots[i];
-    const to = shots[i + 1] ?? (greenCentre && !/putt/i.test(from.club ?? '') ? greenCentre : undefined);
+    // The last shot finishes at the green (or, for a putt, in the hole when we know where the hole is)
+    const to = shots[i + 1] ?? (greenCentre && (lastPuttHoled || !/putt/i.test(from.club ?? '')) ? greenCentre : undefined);
     if (!to) continue;
     const distance = distanceM(from, to);
-    if (distance < 3) continue;
+    // Short putts count; anything else under 3 m is GPS jitter
+    if (distance < (/putt/i.test(from.club ?? '') ? 0.3 : 3)) continue;
     legs.push({ from, to, club: from.club, distance, index: i });
   }
   return legs;
