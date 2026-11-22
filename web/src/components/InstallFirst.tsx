@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { isIOS, isStandalone } from '../lib/install';
 import { Card } from './ui';
 
@@ -9,10 +9,16 @@ import { Card } from './ui';
  */
 export function InstallFirst({ after, link }: { after?: boolean; link?: string } = {}) {
   const [copied, setCopied] = useState(false);
+  // After joining in Safari: hand the app this copy's sync link, so it gets everything joined here (and stays in step)
+  const [sync, setSync] = useState<string | null>(null);
+  useEffect(() => {
+    if (!after || !isIOS() || isStandalone()) return;
+    import('../live/sync').then(({ turnOnSync, syncLink }) => turnOnSync().then(() => setSync(syncLink()))).catch(() => undefined);
+  }, [after]);
   if (!isIOS() || isStandalone()) return null;
   const copy = async () => {
     try {
-      await navigator.clipboard.writeText(link ?? location.href);
+      await navigator.clipboard.writeText(after && sync ? sync : (link ?? location.href));
       setCopied(true);
     } catch {
       setCopied(false);
@@ -37,7 +43,7 @@ export function InstallFirst({ after, link }: { after?: boolean; link?: string }
       </button>
       <p className="muted small">
         {after
-          ? "Your mates already have you. iPhone keeps the Home Screen app separate from Safari, so pasting the invite once there links that copy too."
+          ? "Your mates already have you. iPhone keeps the Home Screen app separate from Safari: pasting this once there links the two, so everything you do in either shows up in both."
           : "iPhone keeps the Home Screen app separate from Safari, so joining here in Safari won't show up in the app. Just using Safari? Carry on below."}
       </p>
     </Card>

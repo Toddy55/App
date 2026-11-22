@@ -8,6 +8,7 @@ export type Route =
   | { name: 'course'; id: string }
   | { name: 'siri' }
   | { name: 'move'; data: string }
+  | { name: 'syncJoin'; key: string }
   | { name: 'setup'; courseId?: string; liveCode?: string; format?: Format; holes?: number[]; compIds?: string[] }
   | { name: 'play'; roundId: string }
   | { name: 'summary'; roundId: string }

@@ -812,3 +812,4 @@ body.replay-open .tabbar { display: none; }
 .rs-chip strong { color: var(--gold); margin-left: 2px; }
 
 .replay-ticker.done .rt-dist { font-size: 1.3rem; white-space: nowrap; }
+.inline-ico { width: 14px; height: 14px; vertical-align: -2px; }

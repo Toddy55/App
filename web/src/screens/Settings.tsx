@@ -3,6 +3,7 @@ import type { Settings as S } from '../types';
 import { DEFAULT_CLUBS, store } from '../lib/storage';
 import { HandicapEditor } from '../components/HandicapEditor';
 import { NotifyToggle } from '../components/NotifyToggle';
+import { SyncCard } from '../components/SyncCard';
 import { Card, Header, Segmented, type Go } from '../components/ui';
 import { HOME_BGS, readHomeBg, readOwnBg, saveHomeBg, saveOwnBg } from '../lib/homeBg';
 import { PALETTES, readAppearance, saveAppearance, type Palette } from '../lib/appearance';
@@ -53,6 +54,7 @@ export function Settings({ go }: { go: Go }) {
           </label>
           <HandicapEditor player={s.me} onChange={(me) => save({ ...s, me })} />
         </Card>
+        <SyncCard />
         <Card title="Live rounds">
           <label className="check">
             <input type="checkbox" checked={s.shareLive !== false} onChange={(e) => save({ ...s, shareLive: e.target.checked })} />

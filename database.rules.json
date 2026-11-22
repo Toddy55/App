@@ -36,6 +36,23 @@
           }
         }
       }
+    },
+    "sync": {
+      "$key": {
+        ".read": "auth != null && $key.length >= 24 && $key.length <= 40",
+        ".write": "auth != null && $key.length >= 24 && $key.length <= 40",
+        "crews": {
+          "$code": {
+            ".validate": "$code.length <= 24 && newData.isNumber()"
+          }
+        },
+        "$kind": {
+          ".validate": "$kind === 's' || $kind === 'f' || $kind === 'r' || $kind === 'c' || $kind === 'k' || $kind === 'crews'",
+          "$id": {
+            ".validate": "$kind === 'crews' || (newData.hasChild('at') && newData.child('at').isNumber() && (!newData.hasChild('d') || (newData.child('d').isString() && newData.child('d').val().length < 500000)))"
+          }
+        }
+      }
     }
   }
 }

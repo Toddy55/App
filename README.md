@@ -116,6 +116,8 @@ npm run build    # production build in web/dist
 
 `.github/workflows/deploy.yml` builds and publishes to GitHub Pages on every push to `main`. Turn it on under repo **Settings → Pages → Source: GitHub Actions**. GPS needs HTTPS, which Pages provides.
 
+**Sync & backup:** every copy of the app keeps its rounds, friends, comps, courses and settings under a private sync key (`sync/<key>` in the database), newest change winning record by record. Linking another copy (Safari ↔ Home Screen app on iPhone, a new phone) is one link: Settings → Sync & backup, or the "Link Safari and the app" card in Safari. A mate added separately in both copies is merged into one.
+
 **Database rules:** after changing `database.rules.json`, paste it into Firebase console → Realtime Database → Rules → Publish (it isn't deployed automatically). The `marks` section is what lets Siri Shortcuts post shots without signing in: write-once, only `lat`, `lon` and `club`, and only to a private key 16 or more characters long.
 
 ## Notes and limits
