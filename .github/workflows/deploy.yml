@@ -7,6 +7,7 @@ on:
   workflow_dispatch:
   schedule:
     - cron: '23 17 * * *' # daily (3:23am in Brisbane): keep trying for fresh course data
+    - cron: '7 0 * * *' # daily (10:07am in Brisbane), just after GolfCourseAPI's daily allowance resets: club tees
 
 permissions:
   contents: read
@@ -45,13 +46,14 @@ jobs:
         # Updates go live in a few minutes even when the map servers are slow (the live list is used instead);
         # the nightly run gets longer to fetch fresh course data
         timeout-minutes: ${{ github.event_name == 'schedule' && 45 || 6 }}
-      # Nightly: look up club tees (lengths, pars, ratings) for any courses new to the list.
+      # Daily, just after the allowance resets at midnight UTC: look up club tees (lengths, pars, ratings)
+      # for courses that don't have them yet. Can also be run by hand (Actions → Deploy → Run workflow).
       # Needs the GolfCourseAPI key as a repo secret (Settings → Secrets and variables → Actions → GOLFCOURSEAPI_KEY).
       - name: Club tees for new courses
-        if: github.event_name == 'schedule'
+        if: github.event.schedule == '7 0 * * *' || github.event_name == 'workflow_dispatch'
         env:
           GOLFCOURSEAPI_KEY: ${{ secrets.GOLFCOURSEAPI_KEY }}
-        # The free plan allows ~50 requests a day, so each night carries on from the live app's list
+        # The free plan allows ~50 requests a day, so each day carries on from the live app's list
         run: |
           if [ -n "$GOLFCOURSEAPI_KEY" ]; then
             npx tsx scripts/fetch-course-tees.ts "--from=https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/course-tees.json"
