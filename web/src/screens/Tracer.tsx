@@ -219,10 +219,15 @@ export function Tracer({ go }: { go: Go }) {
       <div className="content">
         {!url && (
           <Card>
-            <p>
-              Film a shot, tap where the ball starts, lands and peaks, and you'll get a TV-style tracer to send to the group chat.
+            <button className="btn primary block big" onClick={() => go({ name: 'livetracer' })}>
+              📡 Live tracer
+            </button>
+            <p className="muted small">
+              Phone on the bag behind you: it hears the strike, finds the ball and draws the tracer live, with carry, curve and
+              where it landed. Works on the range or into a net.
             </p>
-            <label className="btn primary block big">
+            <p>Or film a shot (or pick a video), tap where the ball starts, lands and peaks, and you'll get a TV-style tracer to send to the group chat.</p>
+            <label className="btn block">
               🎥 Film a shot
               <input type="file" accept="video/*" capture="environment" hidden onChange={(e) => load(e.target.files?.[0])} />
             </label>
@@ -233,9 +238,6 @@ export function Tracer({ go }: { go: Go }) {
             <p className="muted small">
               Best results: stand behind the golfer, hold the phone still (or lean it on the bag), and keep filming until the ball lands.
             </p>
-            <button className="btn block" onClick={() => go({ name: 'livetracer' })}>
-              📡 Sim mode: auto-trace with carry, curve & landing
-            </button>
           </Card>
         )}
 

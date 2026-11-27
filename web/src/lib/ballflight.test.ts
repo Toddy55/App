@@ -140,3 +140,30 @@ describe('robustness', () => {
     expect(Math.max(...carries) - Math.min(...carries)).toBeLessThan(4);
   });
 });
+
+describe('hitting into a net', () => {
+  // The net stops the ball a few metres out: the camera only sees the first fraction of a second
+  const seen = (cam: Camera, p: ShotParams, until: number, fps: number) => {
+    const path = simulate(p);
+    const obs = [];
+    let seed = 11;
+    const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647 - 0.5) * 1.0;
+    for (let t = 1 / fps; t < until; t += 1 / fps) {
+      const q = project(cam, sampleAt(path, t));
+      obs.push({ t, x: q.x + rnd(), y: q.y + rnd() });
+    }
+    return obs;
+  };
+  for (const [name, [p, club]] of Object.entries(CLUB_GOLFER)) {
+    it(`club golfer's ${name}: carry within 15% and start line within 2°, from 0.15 s before the net (60 fps)`, () => {
+      const cam = trueCamera();
+      const obs = seen(cam, p, 0.15, 60);
+      const est = makeCamera(cam.w, cam.h, 4, project(cam, { x: 0, d: 0, z: 0 }), 68, 1.0);
+      const res = fitShot(est, obs, undefined, 1, club)!;
+      const carry = simulate(p).at(-1)!.d;
+      expect(Math.abs(res.carry - carry) / carry).toBeLessThan(0.15);
+      // The start line shows straight away; the curve needs more flight than a net allows
+      expect(Math.abs(res.startDir - p.dir)).toBeLessThan(2);
+    });
+  }
+});

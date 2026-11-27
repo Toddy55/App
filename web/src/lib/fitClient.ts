@@ -20,13 +20,13 @@ function getWorker(): Worker | null {
 }
 
 /** Fit a shot in the background (falls back to the main thread if workers aren't available). */
-export function fitInBackground(cam: Camera, obs: Obs[], club: string | undefined, speedFactor: number): Promise<ShotResult | null> {
+export function fitInBackground(cam: Camera, obs: Obs[], club: string | undefined, speedFactor: number, straight = false): Promise<ShotResult | null> {
   const w = getWorker();
-  if (!w) return Promise.resolve(fitShot(cam, obs, undefined, 1, club, speedFactor));
+  if (!w) return Promise.resolve(fitShot(cam, obs, undefined, 1, club, speedFactor, { straight }));
   const id = nextId++;
   return new Promise((resolve) => {
     waiting.set(id, (v) => resolve(v.res ?? null));
-    w.postMessage({ id, kind: 'fit', cam, obs, club, speedFactor });
+    w.postMessage({ id, kind: 'fit', cam, obs, club, speedFactor, straight });
   });
 }
 

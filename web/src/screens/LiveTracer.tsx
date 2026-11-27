@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { BallTracker, diffBlobs, findBallAtAddress, StrikeDetector, toGray, type Flight } from '../lib/balltrack';
+import { BallTracker, diffBlobs, findBallAtAddress, implausible, StrikeDetector, toGray, type Flight } from '../lib/balltrack';
 import { cameraPitchFromOrientation, makeCamera, project, type Camera, type Obs, type ShotResult } from '../lib/ballflight';
 import { calibrateInBackground, fitInBackground } from '../lib/fitClient';
 import { drawTracer, type Pt } from '../lib/tracer';
@@ -14,6 +14,7 @@ const COLOUR = '#ff3b30';
 const DETECT_W = 640;
 const CAL_KEY = 'gtg.tracerSpeed';
 const HEIGHT_KEY = 'gtg.tracerPhoneHeight';
+const NET_KEY = 'gtg.tracerNet';
 
 interface SessionShot {
   n: number;
@@ -58,6 +59,10 @@ export function LiveTracer({ go }: { go: Go }) {
   const [cal, setCal] = useState(() => readNum(CAL_KEY, 1));
   const [height, setHeight] = useState(() => readNum(HEIGHT_KEY, 1.0));
   const [actual, setActual] = useState('');
+  // Hitting into a net (the ball's only seen for a moment) or out on the range
+  const [net, setNetState] = useState(() => readNum(NET_KEY, 0) === 1);
+  // Why the last swing wasn't traced (a leaf, the club, a bounce…), instead of drawing a wrong line
+  const [miss, setMiss] = useState<string | null>(null);
   // A live round on this phone: send each shot to the mates watching it
   const [liveRound] = useState(() => store.rounds().find((x) => !x.completed && x.liveCode && Date.now() - x.startedAt < 14 * 3600 * 1000));
   const [sendLive, setSendLive] = useState(true);
@@ -95,11 +100,20 @@ export function LiveTracer({ go }: { go: Go }) {
     height: 1,
     shotN: 0,
     diag: { maxPeak: 0, strikes: [] as number[], frames: 0, blobsLast: 0 },
+    net: false,
   });
   r.current.phase = phase;
   r.current.club = club;
   r.current.cal = cal;
   r.current.height = height;
+  r.current.net = net;
+  const setNet = (on: boolean) => {
+    setNetState(on);
+    r.current.net = on;
+    writeNum(NET_KEY, on ? 1 : 2);
+    // Re-arm so the next swing is read the new way
+    if (r.current.tracker && r.current.phase !== 'idle') arm(r.current.tapLaunch);
+  };
   (window as unknown as { __liveTracer?: unknown }).__liveTracer = r.current;
 
   useEffect(
@@ -197,6 +211,7 @@ export function LiveTracer({ go }: { go: Go }) {
     const dh = Math.round((v.videoHeight / v.videoWidth) * dw);
     s.tapLaunch = launch;
     s.tracker = new BallTracker(launch, dw, dh, !!s.analyser);
+    s.tracker.net = s.net;
     s.prev = null;
     s.flight = null;
     s.result = null;
@@ -218,9 +233,12 @@ export function LiveTracer({ go }: { go: Go }) {
     const cam = makeCamera(tr.w, tr.h, pitch, origin, undefined, s.height);
     const obs = f.tracked.slice(1).map((p) => ({ t: p.t - f.t0, x: p.x, y: p.y }));
     s.seen = { cam, obs };
-    const res = await fitInBackground(cam, obs, s.club, s.cal);
+    const res = await fitInBackground(cam, obs, s.club, s.cal, tr.net);
+    // Into a net only the start line shows, so say that rather than name a shape
+    if (res && tr.net) res.shape = Math.abs(res.startDir) < 1 ? 'Starts on line' : `Starts ${res.startDir > 0 ? 'right' : 'left'}`;
     (s.diag as Record<string, unknown>).lastSolve = { n: obs.length, error: res?.error, carry: res?.carry, pitch, origin, cam, obs: obs.slice(0, 60) };
-    if (!res || res.error > 25) return null;
+    // Not a believable full shot (e.g. it matched a speck that barely moved): don't make up numbers
+    if (!res || res.error > 25 || res.carry < 15 || res.hang < 1) return null;
     const k = vw / tr.w;
     const pts = res.path
       .filter((_, i) => i % 4 === 0 || i === res.path.length - 1)
@@ -376,6 +394,15 @@ export function LiveTracer({ go }: { go: Go }) {
       if (f) {
         s.flight = f;
         if (s.phase === 'armed') setPhase('flying');
+        if (tr.state === 'done' && !s.finishing) (s.diag as Record<string, unknown>).lastPts = tr.pts.slice();
+        const why = tr.state === 'done' && !s.finishing ? implausible(tr) : null;
+        if (why) {
+          // Not a ball flight: say so and get ready for the next one, rather than draw a wrong line
+          s.finishing = true;
+          setMiss(`Didn't trace that one: ${why}. Keep the ball in the green circle and the phone dead still.`);
+          arm(s.tapLaunch);
+          return next();
+        }
         if (tr.state === 'done' && !s.result && !s.finishing) {
           s.finishing = true;
           const tracker = tr;
@@ -385,6 +412,12 @@ export function LiveTracer({ go }: { go: Go }) {
             if (solved) {
               s.result = solved.res;
               s.shown = { pts: solved.pts, until: solved.pts[solved.pts.length - 1].t };
+              setMiss(null);
+            } else if (tracker.net) {
+              // In a net there's nothing to draw without the worked-out flight
+              setMiss("Couldn't work out the flight from that one. Check the club's right and go again.");
+              arm(s.tapLaunch);
+              return;
             }
             const endT = s.shown?.until ?? f.tEnd;
             setTimeout(() => finish(), Math.max(0, endT + 1.2 - performance.now() / 1000) * 1000);
@@ -393,6 +426,11 @@ export function LiveTracer({ go }: { go: Go }) {
         if (s.shown) {
           const pts = s.shown.pts.filter((p) => p.t <= t);
           if (pts.length > 1) drawTracer(ctx, pts, { color: COLOUR, width: lineW }, t < s.shown.until);
+        } else if (tr.net) {
+          // Net: just the bit of flight before the net, until the full flight is worked out
+          const k = c.width / tr.w;
+          const pts = tr.pts.map((p) => ({ x: p.x * k, y: p.y * k }));
+          if (pts.length > 1) drawTracer(ctx, pts, { color: COLOUR, width: lineW }, true);
         } else {
           const k = c.width / tr.w;
           const until = Math.min(t, f.tEnd);
@@ -469,6 +507,22 @@ export function LiveTracer({ go }: { go: Go }) {
               <li>Carry, apex, curve and where it landed come up after every shot, and it's ready for the next.</li>
             </ol>
             <div className="field">
+              <span>Where are you hitting?</span>
+              <Segmented
+                value={net ? 'net' : 'range'}
+                onChange={(v) => setNet(v === 'net')}
+                options={[
+                  { value: 'range', label: 'Range / course' },
+                  { value: 'net', label: 'Into a net' },
+                ]}
+              />
+              <span className="muted small">
+                {net
+                  ? 'Net mode reads the first metre or two of flight before the net and works out the rest: carry and start line are good, curve is a guess. Film at 60 fps if your phone lets you.'
+                  : 'It follows the ball all the way out and draws the real flight.'}
+              </span>
+            </div>
+            <div className="field">
               <span>Phone height</span>
               <Segmented
                 value={String(height) as '0.6' | '1' | '1.3'}
@@ -527,6 +581,7 @@ export function LiveTracer({ go }: { go: Go }) {
             </div>
           )}
         </div>
+        {miss && phase !== 'idle' && <p className="warn small">⚠️ {miss}</p>}
         {phase !== 'idle' && (
           <div className="row gap wrap">
             <select value={club} onChange={(e) => setClub(e.target.value)} aria-label="Club">
@@ -534,6 +589,14 @@ export function LiveTracer({ go }: { go: Go }) {
                 <option key={c}>{c}</option>
               ))}
             </select>
+            <Segmented
+              value={net ? 'net' : 'range'}
+              onChange={(v) => setNet(v === 'net')}
+              options={[
+                { value: 'range', label: 'Range' },
+                { value: 'net', label: 'Net' },
+              ]}
+            />
             <span className="muted small">
               {mic ? 'Listening for the strike' : 'No microphone: tap the ball, and keep others still'}
               {tilt ? '' : ' · tilt sensor off, so numbers are rougher'}
@@ -607,6 +670,7 @@ export function LiveTracer({ go }: { go: Go }) {
                 <button className="btn">Calibrate</button>
               </form>
             )}
+            {net && latest.result && <p className="muted small">Into a net: carry and start line are read from the launch. The curve can't be seen, so it's shown straight.</p>}
             <p className="muted small">
               Numbers are estimated from the ball's flight on camera, using the club you picked for ball speed
               {cal !== 1 ? ` (calibrated to your swing: ${cal >= 1 ? '+' : ''}${Math.round((cal - 1) * 100)}% speed)` : ''}. Calibrate once with a shot of known carry

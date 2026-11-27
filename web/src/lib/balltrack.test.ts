@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BallTracker, diffBlobs, fitQuad, StrikeDetector } from './balltrack';
+import { BallTracker, diffBlobs, fitQuad, implausible, StrikeDetector } from './balltrack';
 
 const W = 320, H = 480, FPS = 30;
 const LAUNCH = { x: 120, y: 400 };
@@ -8,7 +8,7 @@ const T0 = 1.0; // impact
 const truth = (u: number) => ({ x: LAUNCH.x + 40 * u + 3 * u * u, y: LAUNCH.y - 230 * u + 48 * u * u });
 
 /** Draw one frame: sky/ground, a "golfer" swinging next to the ball, and the ball. */
-function frame(t: number, ballVisibleUntil = 3.2): Uint8Array {
+function frame(t: number, ballVisibleUntil = 3.2, pos: (u: number) => { x: number; y: number } = truth): Uint8Array {
   const g = new Uint8Array(W * H);
   for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) g[y * W + x] = y < 300 ? 170 : 90;
   // golfer: a tall block left of the ball, plus a club that swings through the ball spot
@@ -20,7 +20,7 @@ function frame(t: number, ballVisibleUntil = 3.2): Uint8Array {
   rect(Math.round(100 + swing), Math.round(330 - Math.abs(swing)), 30, 30, 20);
   // ball
   const u = t - T0;
-  const p = u <= 0 ? LAUNCH : truth(u);
+  const p = u <= 0 ? LAUNCH : pos(u);
   if (u <= 0 || u < ballVisibleUntil) rect(Math.round(p.x - 2), Math.round(p.y - 2), 4, 4, 255);
   return g;
 }
@@ -130,4 +130,64 @@ describe('auto mode: no tap', () => {
       expect(Math.hypot(est.x - real.x, est.y - real.y)).toBeLessThan(8);
     });
   }
+});
+
+describe('hitting into a net', () => {
+  // The net stops the ball 0.25 s after impact; it then drops down the net
+  const NET = 0.25;
+  const intoNet = (u: number) => (u < NET ? truth(u) : { x: truth(NET).x, y: truth(NET).y + 80 * (u - NET) });
+  const runWith = (tr: BallTracker, pos: (u: number) => { x: number; y: number }) => {
+    let prev = frame(0, 3.2, pos);
+    for (let i = 1; i < 3 * FPS; i++) {
+      const t = i / FPS;
+      const cur = frame(t, 3.2, pos);
+      tr.feed(diffBlobs(prev, cur, W, H, 30, tr.maxArea * 4), t);
+      prev = cur;
+      if (tr.state === 'done') break;
+    }
+  };
+
+  it('follows the launch, stops at the net and keeps only the flight before it', () => {
+    const tr = new BallTracker(LAUNCH, W, H);
+    tr.net = true;
+    runWith(tr, intoNet);
+    expect(tr.state).toBe('done');
+    expect(tr.pts.length).toBeGreaterThanOrEqual(4);
+    // nothing after the ball hit the net
+    expect(Math.max(...tr.pts.map((p) => p.t))).toBeLessThan(T0 + NET + 0.02);
+    for (const p of tr.pts.slice(1)) {
+      const real = truth(p.t - T0);
+      expect(Math.hypot(p.x - real.x, p.y - real.y)).toBeLessThan(4);
+    }
+    expect(implausible(tr)).toBeNull();
+  });
+
+  it("without net mode, a ball dropping down the net isn't passed off as a shot", () => {
+    const tr = new BallTracker(LAUNCH, W, H);
+    runWith(tr, intoNet);
+    expect(implausible(tr)).not.toBeNull();
+  });
+});
+
+describe('throwing away traces that are not a ball flight', () => {
+  const mk = (pts: [number, number][]) => {
+    const tr = new BallTracker(LAUNCH, W, H);
+    tr.pts = pts.map(([x, y], i) => ({ t: T0 + i / FPS, x, y }));
+    return tr;
+  };
+  it('keeps a real launch', () => {
+    expect(implausible(mk([[120, 400], [121, 392], [123, 384], [124, 377], [126, 370], [127, 330], [130, 250]]))).toBeNull();
+  });
+  it("throws out a 'V' that goes down first (like a leaf or the club)", () => {
+    expect(implausible(mk([[200, 420], [205, 430], [210, 440], [214, 445], [216, 430], [217, 410]]))).toMatch(/climb/);
+  });
+  it('throws out something flying sideways across the picture', () => {
+    expect(implausible(mk([[120, 400], [140, 398], [160, 396], [180, 395], [200, 393]]))).toMatch(/sideways/);
+  });
+  it('throws out a blip that barely leaves the ground', () => {
+    expect(implausible(mk([[120, 400], [121, 393], [122, 387], [123, 382], [124, 379], [125, 378], [125, 378]]))).toMatch(/ground/);
+  });
+  it('throws out something drifting slowly up the picture (a leaf, a bug)', () => {
+    expect(implausible(mk([[255, 613], [272, 587], [274, 584], [276, 582], [278, 580], [280, 578], [282, 576]]))).toMatch(/slowly/);
+  });
 });

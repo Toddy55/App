@@ -278,7 +278,7 @@ export function fitShot(
   calibration = 1,
   club?: string,
   speedFactor = 1,
-  opts: { quick?: boolean } = {},
+  opts: { quick?: boolean; straight?: boolean } = {},
 ): ShotResult | null {
   const first = fitCore(cam, obs, landedAt, calibration, club, speedFactor, opts);
   if (!first || obs.length < 7) return first;
@@ -302,7 +302,7 @@ function fitCore(
   calibration: number,
   club: string | undefined,
   speedFactor: number,
-  opts: { quick?: boolean },
+  opts: { quick?: boolean; straight?: boolean },
 ): ShotResult | null {
   if (obs.length < 4) return null;
   const base = clubTypical(club);
@@ -322,7 +322,8 @@ function fitCore(
     // what golf shots usually look like: speed for the club (or for this launch angle), normal spin
     const vPrior = typical ? typical.v0 : speedForLaunch(p.launch) * speedFactor;
     const sd = typical ? 0.12 : 0.2;
-    const prior = ((p.v0 - vPrior) / (sd * vPrior)) ** 2 * 0.6 + ((p.lift - 0.21) / 0.04) ** 2 * 0.3;
+    // Into a net the curve never gets a chance to show: hold it straight rather than guess
+    const prior = ((p.v0 - vPrior) / (sd * vPrior)) ** 2 * 0.6 + ((p.lift - 0.21) / 0.04) ** 2 * 0.3 + (opts.straight ? (p.curve / 0.05) ** 2 : 0);
     return e + prior + raw.reduce((s, x) => s + x * x * 100, 0);
   };
   // The exact moment of impact is only known to within a frame or two, and the

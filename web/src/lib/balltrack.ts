@@ -120,6 +120,14 @@ export class BallTracker {
   readonly h: number;
   /** When true the tracker waits for strike() (microphone) before looking for the ball. */
   readonly needsStrike: boolean;
+  /**
+   * Hitting into a net: the ball is only in the air for a fraction of a second
+   * before the net stops it. Follow just that launch (the fit then works out the
+   * rest of the flight) and stop the moment it slows or drops.
+   */
+  net = false;
+  /** Stopped because the ball hit the net. */
+  netHit = false;
 
   constructor(launch: Pt | null, w: number, h: number, needsStrike = false) {
     this.launch = launch;
@@ -273,13 +281,38 @@ export class BallTracker {
       .filter((e) => e.d < gate)
       .sort((a, b) => a.d - b.d)[0];
     if (best) {
-      this.pts.push({ t, x: best.b.x, y: best.b.y });
+      const p = { t, x: best.b.x, y: best.b.y };
+      if (this.net && this.hitNet(p)) {
+        this.netHit = true;
+        this.state = 'done';
+        return;
+      }
+      this.pts.push(p);
       this.misses = 0;
     } else {
       this.misses++;
     }
+    // In a net the ball's gone in well under a second; anything after that isn't the ball
+    if (this.net && (this.misses > 3 || t - this.pts[0].t > 0.6)) {
+      this.state = 'done';
+      return;
+    }
     const offFrame = pred.x < -10 || pred.x > this.w + 10 || pred.y < -10;
     if (this.misses > 8 || offFrame || t - this.pts[0].t > 8) this.state = 'done';
+  }
+
+  /** The ball has reached the net: it suddenly slows right down, stops climbing, or turns back. */
+  private hitNet(p: TrackPoint): boolean {
+    const n = this.pts.length;
+    if (n < 3) return false;
+    const a = this.pts[n - 1];
+    const b = this.pts[n - 2];
+    const v0 = { x: (a.x - b.x) / (a.t - b.t || 1 / 30), y: (a.y - b.y) / (a.t - b.t || 1 / 30) };
+    const v1 = { x: (p.x - a.x) / (p.t - a.t || 1 / 30), y: (p.y - a.y) / (p.t - a.t || 1 / 30) };
+    const s0 = Math.hypot(v0.x, v0.y);
+    const s1 = Math.hypot(v1.x, v1.y);
+    const along = (v1.x * v0.x + v1.y * v0.y) / (s0 || 1);
+    return s1 < s0 * 0.4 || along < s0 * 0.3 || v1.y > 0;
   }
 
   /**
@@ -344,6 +377,38 @@ export class BallTracker {
       tracked: this.pts,
     };
   }
+}
+
+/**
+ * Does what the tracker followed look like a golf ball leaving the ground?
+ * Returns why not (so a stray leaf, the club or a bounce off the net doesn't
+ * get a tracer drawn on it), or null if it's fine.
+ */
+export function implausible(tr: BallTracker): string | null {
+  const pts = tr.pts;
+  const s = tr.s;
+  if (pts.length < 4) return 'only saw it for a moment';
+  const o = pts[0];
+  const early = pts.slice(1, Math.min(pts.length, 5));
+  // Off the ground and climbing from the first frames
+  if (early.some((p) => p.y > o.y - 1 * s)) return "it didn't climb away from the ball";
+  for (let i = 1; i < early.length; i++) if (early[i].y > early[i - 1].y + 1.5 * s) return 'it dropped straight away';
+  // A struck ball leaves fast; a leaf, a shadow or a bug drifts
+  const firstMoves = pts.slice(1, Math.min(pts.length, 5));
+  const fast = firstMoves.length > 1 && Math.hypot(firstMoves.at(-1)!.x - firstMoves[0].x, firstMoves.at(-1)!.y - firstMoves[0].y) / (firstMoves.at(-1)!.t - firstMoves[0].t || 1) >= 110 * s;
+  if (!fast) return 'it moved too slowly to be a struck ball';
+  // Heading away up the screen, not flying sideways across it
+  const e = early[early.length - 1];
+  if (Math.abs(e.x - o.x) > 1.6 * (o.y - e.y)) return 'it went sideways, not away';
+  // A real shot (not a net) climbs a good way up the picture
+  if (!tr.net && !tr.netHit) {
+    const top = pts.reduce((a, b) => (b.y < a.y ? b : a));
+    const rise = o.y - top.y;
+    if (rise < tr.h * 0.06) return 'it barely got off the ground';
+    // A real shot keeps climbing for a second or more; one that stops dead and drops has hit something
+    if (top.t - o.t < 0.8 && pts.some((p) => p.t > top.t && p.y > top.y + 0.5 * rise)) return 'it stopped dead, like it hit a net (turn on Net mode)';
+  }
+  return null;
 }
 
 /** Sharp-sound detector for the strike: a peak well above the background noise. */
