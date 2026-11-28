@@ -855,3 +855,9 @@ body.replay-open .tabbar { display: none; }
 .tee-lengths label { display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: .7rem; color: var(--muted); }
 .tee-lengths input { min-height: 36px; padding: 4px; text-align: center; font-size: .85rem; }
 .tee-ratings { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+/* Handicap worked out from your rounds */
+.app-hcp { display: flex; align-items: center; gap: 14px; margin: 8px 0; }
+.app-hcp-big { font-size: 2.4rem; font-weight: 800; color: var(--gold); line-height: 1; }
+.app-hcp-rounds summary { cursor: pointer; font-weight: 600; margin: 6px 0; }
+.app-hcp-rounds tr.counts td { font-weight: 700; }

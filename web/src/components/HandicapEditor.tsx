@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { ExternalLink } from 'lucide-react';
 import type { Player } from '../types';
+import { appHandicap, type AppHandicap } from '../lib/appHandicap';
+import { store } from '../lib/storage';
 import { Segmented } from './ui';
 
 /** Golf Australia's public handicap page for a GA (GOLF Link) number. */
@@ -11,7 +13,7 @@ export const STALE_MS = 7 * 24 * 3600 * 1000;
 
 export function handicapLabel(p: Player): string {
   const h = p.gaHandicap < 0 ? `+${Math.abs(p.gaHandicap)}` : String(p.gaHandicap);
-  return p.hcpSource === 'manual' ? `${h} (manual)` : p.gaNumber ? `GA ${h}` : `Hcp ${h}`;
+  return p.hcpSource === 'manual' ? `${h} (manual)` : p.hcpSource === 'app' ? `${h} (app)` : p.gaNumber ? `GA ${h}` : `Hcp ${h}`;
 }
 
 /**
@@ -38,6 +40,8 @@ export function HandicapEditor({ player, onChange }: { player: Player; onChange:
   // Keep what's typed (e.g. "+" on the way to "+2.1"); plus handicaps are stored as negatives
   const show = (h: number) => (h < 0 ? `+${Math.abs(h)}` : String(h));
   const [text, setText] = useState(show(player.gaHandicap));
+  // Worked out from the rounds scored in the app
+  const [app] = useState<AppHandicap>(() => appHandicap(player.id, store.rounds(), store.courses()));
   const hcpInput = (
     <input
       inputMode="text"
@@ -58,13 +62,22 @@ export function HandicapEditor({ player, onChange }: { player: Player; onChange:
     <div className="hcp-editor">
       <Segmented
         value={source}
-        onChange={(v) => set({ hcpSource: v })}
+        onChange={(v) => {
+          // Switching to "from my rounds" picks up the worked-out number straight away
+          if (v === 'app' && app.index != null) {
+            set({ hcpSource: v, gaHandicap: app.index, hcpCheckedAt: Date.now() });
+            setText(show(app.index));
+          } else set({ hcpSource: v });
+        }}
         options={[
           { value: 'ga', label: 'GA Handicap' },
-          { value: 'manual', label: 'No GA handicap' },
+          { value: 'app', label: 'From my rounds' },
+          { value: 'manual', label: 'Agreed' },
         ]}
       />
-      {source === 'ga' ? (
+      {source === 'app' ? (
+        <AppHcp app={app} hcpInput={hcpInput} />
+      ) : source === 'ga' ? (
         <>
           <label className="field">
             <span>GA number (10 digits, on the Golf Australia app or your club card)</span>
@@ -94,6 +107,11 @@ export function HandicapEditor({ player, onChange }: { player: Player; onChange:
                 : `Checked ${player.hcpCheckedAt ? new Date(player.hcpCheckedAt).toLocaleDateString('en-AU', { day: 'numeric', month: 'short' }) : ''}. GA Handicaps change after every round, so check before a comp.`
               : 'Put in the GA number and you can check the official handicap in one tap. Plus handicaps: type +2.1.'}
           </p>
+          {app.index != null && (
+            <p className="muted small">
+              📈 Your rounds in Shotmate work out to <strong>{show(app.index)}</strong> ({app.rounds.length} round{app.rounds.length === 1 ? '' : 's'}). Pick "From my rounds" to use that instead.
+            </p>
+          )}
         </>
       ) : (
         <>
@@ -101,9 +119,82 @@ export function HandicapEditor({ player, onChange }: { player: Player; onChange:
             <span>Handicap (agreed with the group)</span>
             {hcpInput}
           </label>
-          <p className="muted small">For mates without a GA handicap. It works the same in every format and comp, and shows as "manual" so everyone knows it's not official.</p>
+          <p className="muted small">A number the group agrees on, for mates without a GA handicap. It works the same in every format and comp, and shows as "manual" so everyone knows it's not official.</p>
         </>
       )}
     </div>
+  );
+}
+
+/** The handicap worked out from rounds in the app, and the rounds behind it. */
+function AppHcp({ app, hcpInput }: { app: AppHandicap; hcpInput: React.ReactNode }) {
+  const show = (h: number) => (h < 0 ? `+${Math.abs(h)}` : h.toFixed(1));
+  const n = Math.min(20, app.rounds.length);
+  const last20 = app.rounds.slice(0, 20);
+  const est = last20.some((r) => r.estimatedRatings);
+  return (
+    <>
+      {app.index != null ? (
+        <div className="app-hcp">
+          <div className="app-hcp-big">{show(app.index)}</div>
+          <div className="small">
+            Best {app.counting} of your last {n} round{n === 1 ? '' : 's'}
+            {app.adjustment ? ` (${app.adjustment} while there are only ${n})` : ''}. Updates after every round you finish.
+          </div>
+        </div>
+      ) : (
+        <>
+          <p className="small">
+            It needs <strong>3 rounds</strong> finished in the app ({app.rounds.length} so far). Until then it uses this:
+          </p>
+          <label className="field narrow">
+            <span>Starting handicap</span>
+            {hcpInput}
+          </label>
+        </>
+      )}
+      {last20.length > 0 && (
+        <details className="app-hcp-rounds">
+          <summary>The rounds behind it</summary>
+          <table className="totals">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Course</th>
+                <th>Score</th>
+                <th>Diff</th>
+              </tr>
+            </thead>
+            <tbody>
+              {last20.map((r) => (
+                <tr key={r.roundId} className={r.used ? 'counts' : ''}>
+                  <td>{new Date(r.at).toLocaleDateString('en-AU', { day: 'numeric', month: 'short' })}</td>
+                  <td>
+                    {r.courseName}
+                    {r.holes <= 9 ? ' (9)' : ''}
+                  </td>
+                  <td>
+                    {r.adjusted}
+                    {r.adjusted !== r.gross ? <small className="muted"> ({r.gross})</small> : null}
+                  </td>
+                  <td>
+                    {r.diff.toFixed(1)}
+                    {r.used ? ' ✓' : ''}
+                    {r.estimatedRatings ? '*' : ''}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <p className="muted small">
+            ✓ = counts. Score is capped at net double bogey per hole (actual in brackets). Diff = (113 ÷ slope) × (score − scratch rating); a 9-hole round adds the expected score for the other 9.
+            {est ? ' * No slope/scratch for that tee yet, so it used slope 113 and scratch = par: add the ratings in the course\'s Tees card.' : ''}
+          </p>
+        </details>
+      )}
+      <p className="muted small">
+        Worked out the World Handicap System way (best 8 of the last 20, net double bogey, slope and scratch from the tee you played). It only sees rounds in Shotmate, so it's not an official GA Handicap.
+      </p>
+    </>
   );
 }

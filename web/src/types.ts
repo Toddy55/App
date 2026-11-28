@@ -83,7 +83,7 @@ export interface Player {
   /** Golf Australia (GOLF Link) number, 10 digits, for checking the official handicap. */
   gaNumber?: string;
   /** 'ga' = official GA Handicap; 'manual' = no GA handicap, a number the group agreed on. */
-  hcpSource?: 'ga' | 'manual';
+  hcpSource?: 'ga' | 'manual' | 'app';
   /** When the GA Handicap was last checked against Golf Australia. */
   hcpCheckedAt?: number;
   /** Their phone's crew code: lets this phone see when they're playing live. */
@@ -179,6 +179,9 @@ export interface Round {
   shots: Record<number, Shot[]>;
   /** The tee box played from (name), e.g. "White". */
   teeName?: string;
+  /** That tee's ratings (18 holes) when the round was set up, for the handicap worked out from your rounds. */
+  slope?: number;
+  scratch?: number;
   /** Mark shots this round (shot tracker, Siri marks). Off = scores only. Default on. */
   trackShots?: boolean;
   /** Siri marks already added to this round (their ids). */

@@ -63,6 +63,10 @@ export default function App() {
   useEffect(() => {
     fixMeFriend();
     import('./live/sync').then(({ turnOnSync }) => turnOnSync()).catch(() => undefined);
+    // Handicaps worked out from your rounds: up to date with every round, here or synced from another copy
+    const hcp = () => import('./lib/appHandicapStore').then(({ refreshAppHandicaps }) => refreshAppHandicaps()).catch(() => undefined);
+    hcp();
+    window.addEventListener('gtg:synced', hcp);
     // Every saved course gets the club's tees (lengths, pars and ratings) where the list has them
     import('./lib/clubTees')
       .then(async ({ withClubTees }) => {
@@ -84,7 +88,10 @@ export default function App() {
       setRev((n) => n + 1);
     };
     window.addEventListener('gtg:synced', on);
-    return () => window.removeEventListener('gtg:synced', on);
+    return () => {
+      window.removeEventListener('gtg:synced', on);
+      window.removeEventListener('gtg:synced', hcp);
+    };
   }, []);
   // Only screens that just show data refresh (not ones you're filling in or playing on)
   const refreshes = ['home', 'friends', 'friend', 'leaderboards', 'comp', 'stats', 'summary', 'courses'].includes(route.name);
