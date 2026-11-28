@@ -393,6 +393,8 @@ export function Play({ go, roundId }: { go: Go; roundId: string }) {
     if (missing.length && !confirm(`No score yet for hole${missing.length > 1 ? 's' : ''} ${missing.join(', ')}. Finish anyway?`)) return;
     update((r) => ({ ...r, completed: true, finishedAt: Date.now() }));
     pushFinal({ ...round, completed: true, finishedAt: Date.now() }, hole.number);
+    // Handicaps kept from your rounds take this one in straight away
+    setTimeout(() => import('../lib/appHandicapStore').then(({ refreshAppHandicaps }) => refreshAppHandicaps()).catch(() => undefined), 0);
     go({ name: 'summary', roundId: round.id });
   };
 

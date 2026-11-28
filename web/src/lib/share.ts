@@ -12,7 +12,7 @@ export interface Person {
   /** GA (GOLF Link) number, if known. */
   gaNo?: string;
   /** 'manual' for players without a GA handicap. */
-  src?: 'ga' | 'manual';
+  src?: 'ga' | 'manual' | 'app';
   /** Their crew code, so friends can see when they're live. */
   crew?: string;
 }

@@ -207,6 +207,8 @@ export function Setup({ go, courseId, join }: { go: Go; courseId?: string; join?
       format,
       holes: played,
       teeName: tee?.name,
+      ...(slope ? { slope } : {}),
+      ...(scratch ? { scratch } : {}),
       players: rp,
       teams,
       meId,

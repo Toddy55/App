@@ -12,7 +12,7 @@ export interface CrewMate {
   name: string;
   ga: number;
   gaNo?: string;
-  src?: 'ga' | 'manual';
+  src?: 'ga' | 'manual' | 'app';
   /** The mate's own crew code (so you can see when they're live). */
   crew?: string;
   at: number;
@@ -115,7 +115,7 @@ export async function watchMyCrew(onAdded: (names: string[]) => void): Promise<(
           ...(typeof m.crew === 'string' && m.crew ? { crew: m.crew.slice(0, 20) } : {}),
           gaHandicap: Number(m.ga) || 0,
           ...(m.gaNo ? { gaNumber: String(m.gaNo) } : {}),
-          ...(m.src === 'manual' || m.src === 'ga' ? { hcpSource: m.src } : {}),
+          ...(m.src === 'manual' || m.src === 'ga' || m.src === 'app' ? { hcpSource: m.src } : {}),
         };
         void key;
         const have = (details.crew ? friends.find((f) => f.crew === details.crew) : undefined) ?? friends.find((f) => personKey(f.name) === personKey(m.name));
@@ -292,7 +292,7 @@ export function takeMovedRounds(b: Bundle): { rounds: number; comps: number } {
 }
 
 /** Take friends from your other copy of the app. Returns the names added. */
-export function takeMovedFriends(b: { crew?: string; people: { name: string; ga: number; gaNo?: string; src?: 'ga' | 'manual'; crew?: string }[] }): string[] {
+export function takeMovedFriends(b: { crew?: string; people: { name: string; ga: number; gaNo?: string; src?: 'ga' | 'manual' | 'app'; crew?: string }[] }): string[] {
   const me = store.settings().me;
   const friends = store.friends();
   const added: string[] = [];
